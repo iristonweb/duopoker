@@ -1,6 +1,7 @@
+import type { ReactNode } from 'react';
 import { GlassPanel } from './GlassPanel';
 
-export function VoiceChatPanel() {
+export function VoiceChatPanel({ children }: { children?: ReactNode }) {
   return (
     <GlassPanel interactive>
       <div className="flex items-center justify-between gap-3">
@@ -9,7 +10,7 @@ export function VoiceChatPanel() {
           <p className="text-sm text-muted">Push-to-talk ready when in match</p>
         </div>
         <span className="rounded-full border border-emerald/40 bg-emerald/10 px-2 py-0.5 text-xs font-medium text-emerald">
-          Standby
+          Beta
         </span>
       </div>
       <div
@@ -24,6 +25,7 @@ export function VoiceChatPanel() {
           />
         ))}
       </div>
+      {children ? <div className="mt-4 border-t border-white/5 pt-4">{children}</div> : null}
     </GlassPanel>
   );
 }

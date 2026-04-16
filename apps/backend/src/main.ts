@@ -8,12 +8,14 @@ import { authRouter } from './routes/auth.js';
 import { monetizationRouter } from './routes/monetization.js';
 import { oauthRouter } from './routes/oauth.js';
 import { profileRouter } from './routes/profile.js';
+import { stripeWebhookHandler } from './routes/stripe-webhook.js';
 import { createRealtimeServer } from './socket/server.js';
 import { renderMetrics } from './services/metrics.js';
 import { mongoClient } from './services/mongo.js';
 
 const app = express();
 app.use(cors());
+app.post('/monetization/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 app.use(express.json());
 app.use(requestContext);
 app.use(httpRateLimit);

@@ -10,7 +10,7 @@ Local-first monorepo for cross-platform poker platform with dual modes (Hold'em 
 
 ## Quick start
 1. Install dependencies: `pnpm install`
-2. Start infrastructure: `docker compose -f infra/docker-compose.yml up -d`
+2. Start infrastructure: `docker compose -f infra/docker-compose.yml up -d` (Redis is on host **6380** by default — matches backend `REDIS_URL=redis://localhost:6380`).
 3. Run all apps: `pnpm dev`
 
 ## Compliance

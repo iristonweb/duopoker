@@ -16,6 +16,11 @@ export const creditDailyBonus = async (userId: string, amount: number) => {
   });
 };
 
+const CHIP_PACKS: Record<string, number> = {
+  chips_2500: 2500,
+  chips_10000: 10000
+};
+
 export const recordPurchase = async (
   userId: string,
   itemId: string,
@@ -36,14 +41,22 @@ export const recordPurchase = async (
       metadata: { itemId }
     }
   });
-  await prisma.userItem.create({
-    data: {
-      userId,
-      itemId,
-      rarity: 'COMMON',
-      equipped: false
-    }
-  });
+  const chipGrant = CHIP_PACKS[itemId];
+  if (chipGrant) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { chips: { increment: chipGrant } }
+    });
+  } else {
+    await prisma.userItem.create({
+      data: {
+        userId,
+        itemId,
+        rarity: 'COMMON',
+        equipped: false
+      }
+    });
+  }
   await db.collection('transactions').insertOne({
     userId,
     itemId,

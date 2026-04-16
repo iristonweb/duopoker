@@ -4,12 +4,20 @@ import { Server } from 'socket.io';
 import { z } from 'zod';
 import { redis } from '../services/redis.js';
 import { getMongoDb } from '../services/mongo.js';
-import { enqueueMatchmaking, ensureSessionState, getSessionSnapshot, processPlayerAction } from '../services/game-session.js';
+import {
+  enqueueMatchmaking,
+  getSessionSnapshot,
+  joinTable,
+  processPlayerAction,
+  requestNextHand
+} from '../services/game-session.js';
+import { attachOptionalSocketAuth } from './socket-auth.js';
 
 const joinSchema = z.object({
   sessionId: z.string().min(1),
   userId: z.string().min(1),
-  mode: z.enum(['HOLDEM', 'RASPISNOY']).default('HOLDEM')
+  mode: z.enum(['HOLDEM', 'RASPISNOY']).default('HOLDEM'),
+  buyIn: z.number().int().positive().default(100)
 });
 
 const actionSchema = z.object({
@@ -29,6 +37,7 @@ const matchmakingSchema = z.object({
 export const createRealtimeServer = (app: Express) => {
   const httpServer = createServer(app);
   const io = new Server(httpServer, { cors: { origin: '*' } });
+  attachOptionalSocketAuth(io);
   const replayCollection = getMongoDb().collection('replays');
   const sub = redis.duplicate();
   sub.subscribe('matchmaking:ready');
@@ -48,9 +57,10 @@ export const createRealtimeServer = (app: Express) => {
         return;
       }
 
-      const { sessionId, userId, mode } = joined.data;
+      const { sessionId, mode, buyIn } = joined.data;
+      const userId = socket.data.userId ?? joined.data.userId;
       await socket.join(sessionId);
-      const state = ensureSessionState(sessionId, mode);
+      const state = joinTable(sessionId, userId, mode, buyIn);
       await redis.publish(`lobby:${sessionId}`, JSON.stringify({ type: 'join', userId }));
       io.to(sessionId).emit('sessionEvent', { type: 'PLAYER_JOINED', userId, state });
     });
@@ -62,7 +72,10 @@ export const createRealtimeServer = (app: Express) => {
         return;
       }
 
-      const result = processPlayerAction(parsed.data);
+      const result = await processPlayerAction({
+        ...parsed.data,
+        userId: socket.data.userId ?? parsed.data.userId
+      });
       if (result.rejected) {
         socket.emit('sessionError', { code: result.reason });
         return;
@@ -78,10 +91,27 @@ export const createRealtimeServer = (app: Express) => {
       io.to(parsed.data.sessionId).emit('reconciliation', { replay: result.replay });
     });
 
-    socket.on('reconnectSession', ({ sessionId }) => {
+    socket.on('reconnectSession', async ({ sessionId }) => {
       if (!sessionId) return;
       socket.join(sessionId);
-      socket.emit('sessionReconnected', { sessionId, snapshot: getSessionSnapshot(sessionId) });
+      const snapshot = await getSessionSnapshot(sessionId);
+      socket.emit('sessionReconnected', { sessionId, snapshot });
+    });
+
+    socket.on('readyNextHand', ({ sessionId }) => {
+      if (!sessionId || typeof sessionId !== 'string') return;
+      const result = requestNextHand(sessionId);
+      if (!result.ok) {
+        socket.emit('sessionError', { code: result.reason });
+        return;
+      }
+      io.to(sessionId).emit('stateUpdate', result.state);
+    });
+
+    socket.on('voiceSignal', (payload: Record<string, unknown>) => {
+      const sid = typeof payload.sessionId === 'string' ? payload.sessionId : '';
+      if (!sid) return;
+      socket.to(sid).emit('voiceSignal', { ...payload, from: socket.id });
     });
 
     socket.on('queueMatchmaking', async (payload) => {
@@ -90,7 +120,11 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: 'INVALID_MATCHMAKING_PAYLOAD' });
         return;
       }
-      const ready = enqueueMatchmaking({ ...parsed.data, createdAt: Date.now() });
+      const ready = enqueueMatchmaking({
+        ...parsed.data,
+        userId: socket.data.userId ?? parsed.data.userId,
+        createdAt: Date.now()
+      });
       if (!ready) return;
       const match = {
         sessionId: `sess-${Date.now()}`,

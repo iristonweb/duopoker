@@ -97,6 +97,8 @@ model GameSession {
   finishedAt DateTime?
   hands      Hand[]
   replayMeta ReplayMeta?
+  /** Serialized SessionState snapshot for reconnect / multi-instance recovery */
+  gameState  Json?
   @@map("game_sessions")
 }
 

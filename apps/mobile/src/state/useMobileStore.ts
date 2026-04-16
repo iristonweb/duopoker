@@ -4,21 +4,28 @@ import { io, Socket } from 'socket.io-client';
 
 type MobileStore = {
   userId: string;
+  accessToken?: string;
   refreshToken?: string;
   socket?: Socket;
-  setRefreshToken: (token: string) => Promise<void>;
+  setTokens: (access: string, refresh: string) => Promise<void>;
   connectSocket: () => void;
 };
 
 export const useMobileStore = create<MobileStore>((set, get) => ({
   userId: `mobile-${Math.random().toString(16).slice(2, 8)}`,
-  setRefreshToken: async (token) => {
-    await SecureStore.setItemAsync('refreshToken', token);
-    set({ refreshToken: token });
+  setTokens: async (access, refresh) => {
+    await SecureStore.setItemAsync('refreshToken', refresh);
+    set({ accessToken: access, refreshToken: refresh });
+    get().socket?.disconnect();
+    set({ socket: undefined });
+    get().connectSocket();
   },
   connectSocket: () => {
     if (get().socket) return;
-    const socket = io('http://localhost:4000');
+    const token = get().accessToken;
+    const socket = io('http://localhost:4000', {
+      auth: token ? { token } : undefined
+    });
     set({ socket });
   }
 }));

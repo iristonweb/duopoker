@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } from '../auth/jwt.js';
 import { AppError } from '../errors.js';
@@ -10,35 +11,78 @@ const authSchema = z.object({
   password: z.string().min(8)
 });
 
+const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  displayName: z.string().min(2)
+});
+
 export const authRouter = Router();
 
-authRouter.post('/login', async (req, res) => {
-  const parsed = authSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
-  }
-
-  const user = await prisma.user.upsert({
-    where: { email: parsed.data.email },
-    update: {},
-    create: {
-      email: parsed.data.email,
-      displayName: parsed.data.email.split('@')[0]
-    }
-  });
-  const accessToken = signAccessToken({ userId: user.id, email: user.email });
-  const refreshToken = signRefreshToken({ userId: user.id, email: user.email });
-  await redis.set(`session:${user.id}`, refreshToken, 'EX', 60 * 60 * 24 * 30);
+const issueSession = async (
+  userId: string,
+  email: string,
+  req: { headers: { [k: string]: string | string[] | undefined } }
+) => {
+  const accessToken = signAccessToken({ userId, email });
+  const refreshToken = signRefreshToken({ userId, email });
+  await redis.set(`session:${userId}`, refreshToken, 'EX', 60 * 60 * 24 * 30);
+  await prisma.deviceSession.deleteMany({ where: { userId } });
   await prisma.deviceSession.create({
     data: {
-      userId: user.id,
+      userId,
       refreshToken,
       deviceId: req.headers['x-device-id']?.toString() ?? 'web',
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30)
     }
   });
+  return { accessToken, refreshToken };
+};
 
-  return res.json({ accessToken, refreshToken, user });
+authRouter.post('/register', async (req, res, next) => {
+  try {
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+    const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (existing) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+    const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email: parsed.data.email,
+        passwordHash,
+        displayName: parsed.data.displayName
+      }
+    });
+    const tokens = await issueSession(user.id, user.email, req);
+    return res.status(201).json({ ...tokens, user: { id: user.id, email: user.email, displayName: user.displayName } });
+  } catch (e) {
+    return next(e);
+  }
+});
+
+authRouter.post('/login', async (req, res, next) => {
+  try {
+    const parsed = authSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (!user?.passwordHash) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const tokens = await issueSession(user.id, user.email, req);
+    return res.json({ ...tokens, user: { id: user.id, email: user.email, displayName: user.displayName } });
+  } catch (e) {
+    return next(e);
+  }
 });
 
 authRouter.post('/refresh', async (req, res, next) => {

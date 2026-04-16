@@ -1,11 +1,16 @@
+/**
+ * @deprecated Use `bestStrengthFromSeven` / `strengthFiveCards` from `poker-eval`.
+ * Kept for backwards compatibility with numeric rough scores in tests.
+ */
 import type { Card } from '@duopoker/shared-types/index';
+import { bestStrengthFromSeven, strengthFiveCards } from './poker-eval';
 
-const rankOrder = '23456789TJQKA';
-
-export const evaluateHoldem = (cards: Card[]): number => {
-  return cards.reduce((sum, card) => sum + rankOrder.indexOf(card[0]), 0);
+export const evaluateHoldem = (hole: Card[], board: Card[] = []): number => {
+  const s = bestStrengthFromSeven(hole, board);
+  return s.reduce((a, n, i) => a + n * 15 ** (7 - i), 0);
 };
 
 export const evaluateRaspisnoy = (cards: Card[]): number => {
-  return cards.reduce((sum, card) => sum + (card[0] === 'A' ? 15 : rankOrder.indexOf(card[0]) + 2), 0);
+  const s = strengthFiveCards(cards);
+  return s.reduce((a, n, i) => a + n * 15 ** (7 - i), 0);
 };

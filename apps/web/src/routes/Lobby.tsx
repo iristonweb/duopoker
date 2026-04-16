@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   AppBackground,
@@ -8,11 +8,16 @@ import {
   ModeCard,
   SkinSelector,
   SubscriptionTierCard,
-  VoiceChatPanel
+  VoiceChatPanel,
+  type CosmeticItem
 } from '@duopoker/ui-kit';
+import { PokerTable3D } from '../components/PokerTable3D';
+import { VoiceRoom } from '../components/VoiceRoom';
 import { useAppStore } from '../store/useAppStore';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
+
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 const section = {
   hidden: { opacity: 0, y: 12 },
@@ -32,12 +37,25 @@ const container = {
 };
 
 export const Lobby = () => {
-  const { mode, setMode, connect, queue, session } = useAppStore();
+  const { mode, setMode, connect, queue, session, loginDemo, userId, readyNextHand } = useAppStore();
+  const [cosmetics, setCosmetics] = useState<CosmeticItem[]>([]);
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     connect();
   }, [connect]);
+
+  useEffect(() => {
+    fetch(`${API}/monetization/catalog`)
+      .then((r) => r.json())
+      .then((d: { cosmetics?: CosmeticItem[] }) => setCosmetics(d.cosmetics ?? []))
+      .catch(() => undefined);
+  }, []);
+
+  const kettle = session
+    ? session.pot +
+      Object.values(session.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0)
+    : 0;
 
   return (
     <div className="relative min-h-screen">
@@ -67,10 +85,10 @@ export const Lobby = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
-            <Button variant="secondary" size="md" disabled title="Coming soon">
-              Profile
+            <Button variant="secondary" size="md" title="Creates a dev account" onClick={() => loginDemo()}>
+              {userId.startsWith('guest') ? 'Sign in (dev)' : `Id ${userId.slice(0, 8)}…`}
             </Button>
-            <Button variant="ghost" size="md" disabled title="Coming soon">
+            <Button variant="ghost" size="md" title="Settings placeholder">
               Settings
             </Button>
           </div>
@@ -103,10 +121,22 @@ export const Lobby = () => {
           <motion.div className="flex flex-col gap-4 lg:col-span-7" variants={reduceMotion ? undefined : section} custom={2}>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-subtle">Session</h2>
             <GlassPanel className="flex flex-col gap-4 border-white/10 p-0 overflow-hidden">
-              {!reduceMotion && (
+              {!reduceMotion && session && session.street && session.street !== 'LOBBY' ? (
                 <div className="border-b border-white/10 px-4 pt-4">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
-                    Live preview
+                    Table (3D)
+                  </p>
+                  <PokerTable3D
+                    communityCards={session.communityCards ?? []}
+                    pot={kettle}
+                    street={session.street}
+                  />
+                </div>
+              ) : null}
+              {!reduceMotion && (!session || session.street === 'LOBBY' || !session.street) && (
+                <div className="border-b border-white/10 px-4 pt-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
+                    Lobby preview
                   </p>
                   <Suspense fallback={<div className="h-36 w-full animate-pulse rounded-2xl bg-white/5" />}>
                     <LobbyChipPreview />
@@ -118,6 +148,11 @@ export const Lobby = () => {
                 <pre className="max-h-[220px] overflow-auto rounded-xl border border-white/10 bg-black/40 p-4 font-mono text-xs leading-relaxed text-emerald/90">
                   {JSON.stringify(session ?? { mode, phase: 'waiting' }, null, 2)}
                 </pre>
+                {session?.street === 'COMPLETE' ? (
+                  <Button variant="secondary" size="sm" className="mt-3" onClick={readyNextHand}>
+                    Next hand
+                  </Button>
+                ) : null}
               </div>
             </GlassPanel>
 
@@ -133,8 +168,10 @@ export const Lobby = () => {
           variants={reduceMotion ? undefined : section}
           custom={3}
         >
-          <SkinSelector />
-          <VoiceChatPanel />
+          <SkinSelector catalog={cosmetics} />
+          <VoiceChatPanel>
+            <VoiceRoom />
+          </VoiceChatPanel>
         </motion.div>
 
         <motion.footer

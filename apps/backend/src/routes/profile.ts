@@ -24,6 +24,9 @@ profileRouter.get('/:id', async (req, res) => {
 });
 
 profileRouter.put('/:id', async (req, res) => {
+  if (req.auth?.userId !== req.params.id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   const parsed = profileSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
