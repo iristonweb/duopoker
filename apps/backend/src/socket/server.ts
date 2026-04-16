@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import type { Express } from 'express';
 import { Server } from 'socket.io';
 import { z } from 'zod';
+import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb } from '../services/mongo.js';
 import {
@@ -34,22 +35,65 @@ const matchmakingSchema = z.object({
   buyIn: z.number().int().positive()
 });
 
+/** userId -> socket ids (tabs / reconnects) */
+const userToSockets = new Map<string, Set<string>>();
+
+const registerUserSocket = (userId: string, socketId: string) => {
+  let set = userToSockets.get(userId);
+  if (!set) {
+    set = new Set();
+    userToSockets.set(userId, set);
+  }
+  set.add(socketId);
+};
+
+const unregisterSocketEverywhere = (socketId: string) => {
+  for (const [uid, set] of userToSockets) {
+    set.delete(socketId);
+    if (set.size === 0) {
+      userToSockets.delete(uid);
+    }
+  }
+};
+
+const emitMatchFoundToPlayers = (
+  io: Server,
+  match: { sessionId: string; players: string[]; mode: string; buyIn: number }
+) => {
+  const payload = {
+    sessionId: match.sessionId,
+    buyIn: match.buyIn,
+    mode: match.mode
+  };
+  for (const userId of match.players) {
+    const set = userToSockets.get(userId);
+    if (!set) continue;
+    for (const socketId of set) {
+      io.to(socketId).emit('matchFound', payload);
+    }
+  }
+};
+
 export const createRealtimeServer = (app: Express) => {
   const httpServer = createServer(app);
-  const io = new Server(httpServer, { cors: { origin: '*' } });
+  const io = new Server(httpServer, {
+    cors: {
+      origin: config.corsOrigin === true ? true : config.corsOrigin,
+      credentials: true
+    }
+  });
   attachOptionalSocketAuth(io);
   const replayCollection = getMongoDb().collection('replays');
-  const sub = redis.duplicate();
-  sub.subscribe('matchmaking:ready');
-  sub.on('message', (_channel, message) => {
-    io.emit('matchFound', JSON.parse(message));
-  });
-
-  setInterval(() => {
-    io.emit('tick', { at: Date.now() });
-  }, 33);
 
   io.on('connection', (socket) => {
+    if (socket.data.userId) {
+      registerUserSocket(socket.data.userId, socket.id);
+    }
+
+    socket.on('disconnect', () => {
+      unregisterSocketEverywhere(socket.id);
+    });
+
     socket.on('joinSession', async (payload) => {
       const joined = joinSchema.safeParse(payload);
       if (!joined.success) {
@@ -59,10 +103,12 @@ export const createRealtimeServer = (app: Express) => {
 
       const { sessionId, mode, buyIn } = joined.data;
       const userId = socket.data.userId ?? joined.data.userId;
+      registerUserSocket(userId, socket.id);
       await socket.join(sessionId);
       const state = joinTable(sessionId, userId, mode, buyIn);
       await redis.publish(`lobby:${sessionId}`, JSON.stringify({ type: 'join', userId }));
       io.to(sessionId).emit('sessionEvent', { type: 'PLAYER_JOINED', userId, state });
+      io.to(sessionId).emit('stateUpdate', state);
     });
 
     socket.on('playerAction', async (payload) => {
@@ -91,14 +137,17 @@ export const createRealtimeServer = (app: Express) => {
       io.to(parsed.data.sessionId).emit('reconciliation', { replay: result.replay });
     });
 
-    socket.on('reconnectSession', async ({ sessionId }) => {
+    socket.on('reconnectSession', async ({ sessionId }: { sessionId?: string }) => {
       if (!sessionId) return;
       socket.join(sessionId);
       const snapshot = await getSessionSnapshot(sessionId);
       socket.emit('sessionReconnected', { sessionId, snapshot });
+      if (snapshot) {
+        socket.emit('stateUpdate', snapshot);
+      }
     });
 
-    socket.on('readyNextHand', ({ sessionId }) => {
+    socket.on('readyNextHand', ({ sessionId }: { sessionId?: string }) => {
       if (!sessionId || typeof sessionId !== 'string') return;
       const result = requestNextHand(sessionId);
       if (!result.ok) {
@@ -120,9 +169,11 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: 'INVALID_MATCHMAKING_PAYLOAD' });
         return;
       }
+      const userId = socket.data.userId ?? parsed.data.userId;
+      registerUserSocket(userId, socket.id);
       const ready = enqueueMatchmaking({
         ...parsed.data,
-        userId: socket.data.userId ?? parsed.data.userId,
+        userId,
         createdAt: Date.now()
       });
       if (!ready) return;
@@ -132,7 +183,7 @@ export const createRealtimeServer = (app: Express) => {
         mode: parsed.data.mode,
         buyIn: parsed.data.buyIn
       };
-      await redis.publish('matchmaking:ready', JSON.stringify(match));
+      emitMatchFoundToPlayers(io, match);
     });
   });
 

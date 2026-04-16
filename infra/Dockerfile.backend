@@ -1,0 +1,24 @@
+# Build from repository root:  docker build -f infra/Dockerfile.backend .
+FROM node:20-bookworm-slim
+
+RUN apt-get update && apt-get install -y openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
+
+WORKDIR /app
+
+# Full workspace needed for lockfile + optional workspace packages referenced from apps.
+COPY . .
+
+# Prisma generate requires a DATABASE_URL at build time (not used against a real server then).
+ENV DATABASE_URL="postgresql://duopoker:duopoker@localhost:5432/duopoker"
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @duopoker/db-schema run build
+
+ENV NODE_ENV=production
+ENV PORT=4000
+EXPOSE 4000
+
+CMD ["pnpm", "--filter", "@duopoker/backend", "exec", "tsx", "src/main.ts"]

@@ -1,6 +1,6 @@
 # HTTP API (backend)
 
-Base URL: `http://localhost:4000` (set `PUBLIC_WEB_URL`, `VITE_API_URL` in deployments).
+Base URL: `http://localhost:4000` (set `PUBLIC_WEB_URL`, `VITE_API_URL`, and `CORS_ORIGIN` in deployments — see [DEPLOY.md](./DEPLOY.md)).
 
 ## Auth
 

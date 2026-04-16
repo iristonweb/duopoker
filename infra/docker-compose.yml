@@ -25,6 +25,26 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.backend
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      DATABASE_URL: postgresql://duopoker:duopoker@postgres:5432/duopoker
+      REDIS_URL: redis://redis:6379
+      MONGO_URL: mongodb://mongo:27017
+      JWT_SECRET: dev-docker-jwt-change-me
+      JWT_REFRESH_SECRET: dev-docker-jwt-refresh-change-me
+      PUBLIC_WEB_URL: http://localhost:5173
+      CORS_ORIGIN: http://localhost:5173,http://127.0.0.1:5173
+    depends_on:
+      - postgres
+      - redis
+      - mongo
+
   prometheus:
     image: prom/prometheus:latest
     ports:

@@ -21,7 +21,8 @@ export const attachOptionalSocketAuth = (io: Server) => {
       socket.data.email = p.email;
       return next();
     } catch {
-      return next(new Error('INVALID_SOCKET_TOKEN'));
+      // Allow anonymous play with userId in payloads; client should refresh JWT for auth-only flows.
+      return next();
     }
   });
 };

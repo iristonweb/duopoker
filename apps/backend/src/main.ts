@@ -14,7 +14,12 @@ import { renderMetrics } from './services/metrics.js';
 import { mongoClient } from './services/mongo.js';
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: config.corsOrigin,
+    credentials: true
+  })
+);
 app.post('/monetization/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 app.use(express.json());
 app.use(requestContext);

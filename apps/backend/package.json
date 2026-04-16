@@ -10,6 +10,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@duopoker/game-engine": "workspace:*",
+    "@duopoker/shared-types": "workspace:*",
     "@prisma/client": "^6.6.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",

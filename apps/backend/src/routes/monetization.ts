@@ -26,10 +26,30 @@ export const monetizationRouter = Router();
 monetizationRouter.get('/catalog', (_req, res) => {
   res.json({
     subscriptions: [
-      { tier: 'SILVER', priceUsd: 4.99, chipsBonusPct: 50 },
-      { tier: 'GOLD', priceUsd: 9.99, voiceChat: true },
-      { tier: 'PLATINUM', priceUsd: 19.99, coach: true },
-      { tier: 'ROYAL', priceUsd: 49.99, apiStats: true }
+      {
+        tier: 'SILVER',
+        priceUsd: 4.99,
+        chipsBonusPct: 50,
+        stripePriceId: config.stripePriceSilver || undefined
+      },
+      {
+        tier: 'GOLD',
+        priceUsd: 9.99,
+        voiceChat: true,
+        stripePriceId: config.stripePriceGold || undefined
+      },
+      {
+        tier: 'PLATINUM',
+        priceUsd: 19.99,
+        coach: true,
+        stripePriceId: config.stripePricePlatinum || undefined
+      },
+      {
+        tier: 'ROYAL',
+        priceUsd: 49.99,
+        apiStats: true,
+        stripePriceId: config.stripePriceRoyal || undefined
+      }
     ],
     chipPacks: [
       { id: 'chips_2500', chips: 2500, priceUsd: 2.99 },

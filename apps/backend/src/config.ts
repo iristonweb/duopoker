@@ -1,3 +1,12 @@
+const splitOrigins = (raw?: string): string[] | true => {
+  if (!raw?.trim()) return true;
+  const list = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return list.length ? list : true;
+};
+
 export const config = {
   port: Number(process.env.PORT ?? 4000),
   jwtSecret: process.env.JWT_SECRET ?? 'dev-jwt-secret',
@@ -10,5 +19,12 @@ export const config = {
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
-  publicWebUrl: process.env.PUBLIC_WEB_URL ?? 'http://localhost:5173'
+  /** Optional Stripe Price IDs for subscriptions (Dashboard → Products → Price ID) */
+  stripePriceSilver: process.env.STRIPE_PRICE_SILVER ?? '',
+  stripePriceGold: process.env.STRIPE_PRICE_GOLD ?? '',
+  stripePricePlatinum: process.env.STRIPE_PRICE_PLATINUM ?? '',
+  stripePriceRoyal: process.env.STRIPE_PRICE_ROYAL ?? '',
+  publicWebUrl: process.env.PUBLIC_WEB_URL ?? 'http://localhost:5173',
+  /** Comma-separated list, e.g. https://app.example.com,https://www.example.com */
+  corsOrigin: splitOrigins(process.env.CORS_ORIGIN ?? process.env.PUBLIC_WEB_URL),
 };
