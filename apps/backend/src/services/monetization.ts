@@ -1,19 +1,24 @@
-import { getMongoDb } from './mongo.js';
+import { getMongoDb, isMongoReady } from './mongo.js';
 import { prisma } from './prisma.js';
 
 export const creditDailyBonus = async (userId: string, amount: number) => {
-  const db = getMongoDb();
   await prisma.user.update({
     where: { id: userId },
     data: { chips: { increment: amount } }
   });
-  await db.collection('chip_ledger').insertOne({
-    userId,
-    amount,
-    direction: 'CREDIT',
-    reason: 'daily_bonus',
-    createdAt: new Date()
-  });
+  if (isMongoReady()) {
+    try {
+      await getMongoDb().collection('chip_ledger').insertOne({
+        userId,
+        amount,
+        direction: 'CREDIT',
+        reason: 'daily_bonus',
+        createdAt: new Date()
+      });
+    } catch {
+      /* ledger optional when Mongo degraded */
+    }
+  }
 };
 
 const CHIP_PACKS: Record<string, number> = {
@@ -28,7 +33,6 @@ export const recordPurchase = async (
   amount: number,
   providerEventId: string
 ) => {
-  const db = getMongoDb();
   await prisma.paymentEvent.upsert({
     where: { providerEventId },
     update: { status: 'SUCCEEDED' },
@@ -57,13 +61,19 @@ export const recordPurchase = async (
       }
     });
   }
-  await db.collection('transactions').insertOne({
-    userId,
-    itemId,
-    provider,
-    amount,
-    providerEventId,
-    disclaimer: 'Virtual chips and items are non-refundable and non-withdrawable.',
-    createdAt: new Date()
-  });
+  if (isMongoReady()) {
+    try {
+      await getMongoDb().collection('transactions').insertOne({
+        userId,
+        itemId,
+        provider,
+        amount,
+        providerEventId,
+        disclaimer: 'Virtual chips and items are non-refundable and non-withdrawable.',
+        createdAt: new Date()
+      });
+    } catch {
+      /* mirror log optional */
+    }
+  }
 };

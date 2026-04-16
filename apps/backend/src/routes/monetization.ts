@@ -25,6 +25,7 @@ export const monetizationRouter = Router();
 
 monetizationRouter.get('/catalog', (_req, res) => {
   res.json({
+    mockCheckout: config.mockCheckout,
     subscriptions: [
       {
         tier: 'SILVER',
@@ -97,13 +98,19 @@ monetizationRouter.post('/shop/cosmetic', async (req, res, next) => {
 
 monetizationRouter.post('/checkout-session', async (req, res, next) => {
   try {
+    const parsed = checkoutSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+    const uid = req.auth!.userId;
+
+    if (config.mockCheckout) {
+      const url = `${config.publicWebUrl.replace(/\/$/, '')}/lobby?checkout=mock&success=1&tier=${encodeURIComponent(parsed.data.priceId)}`;
+      return res.json({ id: 'mock_checkout_session', url });
+    }
+
     if (!config.stripeSecretKey) {
       return res.status(503).json({ error: 'Stripe not configured' });
     }
-    const parsed = checkoutSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     const stripe = new Stripe(config.stripeSecretKey);
-    const uid = req.auth!.userId;
     const session = await stripe.checkout.sessions.create({
       mode: parsed.data.mode,
       client_reference_id: uid,

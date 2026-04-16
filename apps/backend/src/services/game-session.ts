@@ -8,6 +8,8 @@ import {
 import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { loadGameSnapshot, persistGameSnapshot } from './session-persistence.js';
 
+const BOT_PREFIX = 'duopoker-bot';
+
 const sessions = new Map<string, SessionState>();
 const actionCounters = new Map<string, { second: number; count: number }>();
 const queue: import('@duopoker/shared-types/index').MatchmakingTicket[] = [];
@@ -95,15 +97,54 @@ export const requestNextHand = (sessionId: string) => {
   return { ok: true as const, state: next };
 };
 
-export const enqueueMatchmaking = (ticket: import('@duopoker/shared-types/index').MatchmakingTicket) => {
+export const enqueueMatchmaking = (
+  ticket: import('@duopoker/shared-types/index').MatchmakingTicket,
+  opts?: { allowSoloQueue?: boolean }
+) => {
+  type Ticket = import('@duopoker/shared-types/index').MatchmakingTicket;
+  const allowSolo = opts?.allowSoloQueue === true;
   queue.push(ticket);
   const compatible = queue.filter((q) => q.mode === ticket.mode && q.buyIn === ticket.buyIn).slice(0, 6);
-  if (compatible.length < 2) return null;
-  compatible.forEach((item) => {
-    const idx = queue.findIndex((q) => q.userId === item.userId && q.createdAt === item.createdAt);
+  if (compatible.length >= 2) {
+    compatible.forEach((item) => {
+      const idx = queue.findIndex((q) => q.userId === item.userId && q.createdAt === item.createdAt);
+      if (idx >= 0) queue.splice(idx, 1);
+    });
+    return compatible;
+  }
+  if (allowSolo && compatible.length === 1) {
+    const human = compatible[0]!;
+    const idx = queue.findIndex((q) => q.userId === human.userId && q.createdAt === human.createdAt);
     if (idx >= 0) queue.splice(idx, 1);
-  });
-  return compatible;
+    const bot: Ticket = {
+      userId: `${BOT_PREFIX}-${Date.now()}`,
+      mode: human.mode,
+      buyIn: human.buyIn,
+      createdAt: Date.now()
+    };
+    return [human, bot];
+  }
+  return null;
+};
+
+/** Advances through consecutive bot turns (check → call → fold). Returns last state if any bot action ran. */
+export const advanceBotTurns = async (sessionId: string): Promise<SessionState | null> => {
+  let last: SessionState | null = null;
+  for (let i = 0; i < 48; i += 1) {
+    const state = sessions.get(sessionId);
+    if (!state) break;
+    const activeId = state.players[state.activePlayerIndex];
+    if (!activeId || !activeId.startsWith(BOT_PREFIX)) break;
+    if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') break;
+
+    const at = Date.now();
+    let r = await processPlayerAction({ sessionId, userId: activeId, type: 'check', at });
+    if (r.rejected) r = await processPlayerAction({ sessionId, userId: activeId, type: 'call', at });
+    if (r.rejected) r = await processPlayerAction({ sessionId, userId: activeId, type: 'fold', at });
+    if (r.rejected) break;
+    last = r.state;
+  }
+  return last;
 };
 
 export const getSessionSnapshot = async (sessionId: string): Promise<SessionState | null> => {

@@ -11,7 +11,7 @@ import { profileRouter } from './routes/profile.js';
 import { stripeWebhookHandler } from './routes/stripe-webhook.js';
 import { createRealtimeServer } from './socket/server.js';
 import { renderMetrics } from './services/metrics.js';
-import { mongoClient } from './services/mongo.js';
+import { isMongoReady, tryConnectMongo } from './services/mongo.js';
 
 const app = express();
 app.use(
@@ -25,7 +25,9 @@ app.use(express.json());
 app.use(requestContext);
 app.use(httpRateLimit);
 
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', mongo: isMongoReady() ? 'up' : 'down' });
+});
 app.get('/metrics', (_req, res) => {
   res.setHeader('content-type', 'text/plain; version=0.0.4');
   res.send(renderMetrics());
@@ -39,7 +41,7 @@ app.use(errorHandler);
 const { httpServer } = createRealtimeServer(app);
 
 const start = async () => {
-  await mongoClient.connect();
+  await tryConnectMongo();
   httpServer.listen(config.port, () => {
     console.log(`Backend listening on ${config.port}`);
   });

@@ -4,8 +4,9 @@ import { Server } from 'socket.io';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
-import { getMongoDb } from '../services/mongo.js';
+import { getMongoDb, isMongoReady } from '../services/mongo.js';
 import {
+  advanceBotTurns,
   enqueueMatchmaking,
   getSessionSnapshot,
   joinTable,
@@ -127,13 +128,25 @@ export const createRealtimeServer = (app: Express) => {
         return;
       }
 
-      await replayCollection.insertOne({
-        sessionId: parsed.data.sessionId,
-        action: parsed.data,
-        createdAt: new Date(parsed.data.at)
-      });
+      let outState = result.state;
+      const botState = await advanceBotTurns(parsed.data.sessionId);
+      if (botState) {
+        outState = botState;
+      }
+
+      if (isMongoReady()) {
+        try {
+          await replayCollection.insertOne({
+            sessionId: parsed.data.sessionId,
+            action: parsed.data,
+            createdAt: new Date(parsed.data.at)
+          });
+        } catch (e) {
+          console.warn('[mongo] replay insert skipped:', e);
+        }
+      }
       await redis.publish(`game:${parsed.data.sessionId}`, JSON.stringify(parsed.data));
-      io.to(parsed.data.sessionId).emit('stateUpdate', result.state);
+      io.to(parsed.data.sessionId).emit('stateUpdate', outState);
       io.to(parsed.data.sessionId).emit('reconciliation', { replay: result.replay });
     });
 
@@ -147,14 +160,17 @@ export const createRealtimeServer = (app: Express) => {
       }
     });
 
-    socket.on('readyNextHand', ({ sessionId }: { sessionId?: string }) => {
+    socket.on('readyNextHand', async ({ sessionId }: { sessionId?: string }) => {
       if (!sessionId || typeof sessionId !== 'string') return;
       const result = requestNextHand(sessionId);
       if (!result.ok) {
         socket.emit('sessionError', { code: result.reason });
         return;
       }
-      io.to(sessionId).emit('stateUpdate', result.state);
+      let out = result.state;
+      const botState = await advanceBotTurns(sessionId);
+      if (botState) out = botState;
+      io.to(sessionId).emit('stateUpdate', out);
     });
 
     socket.on('voiceSignal', (payload: Record<string, unknown>) => {
@@ -171,18 +187,38 @@ export const createRealtimeServer = (app: Express) => {
       }
       const userId = socket.data.userId ?? parsed.data.userId;
       registerUserSocket(userId, socket.id);
-      const ready = enqueueMatchmaking({
-        ...parsed.data,
-        userId,
-        createdAt: Date.now()
-      });
-      if (!ready) return;
+      const ready = enqueueMatchmaking(
+        {
+          ...parsed.data,
+          userId,
+          createdAt: Date.now()
+        },
+        { allowSoloQueue: config.allowSoloQueue }
+      );
+      if (!ready) {
+        socket.emit('matchmakingWaiting', {
+          mode: parsed.data.mode,
+          buyIn: parsed.data.buyIn
+        });
+        return;
+      }
       const match = {
         sessionId: `sess-${Date.now()}`,
         players: ready.map((r) => r.userId),
         mode: parsed.data.mode,
         buyIn: parsed.data.buyIn
       };
+      const hasBot = match.players.some((id) => id.startsWith('duopoker-bot'));
+      if (hasBot) {
+        const humanId = match.players.find((id) => !id.startsWith('duopoker-bot'))!;
+        const botId = match.players.find((id) => id.startsWith('duopoker-bot'))!;
+        joinTable(match.sessionId, humanId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
+        joinTable(match.sessionId, botId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
+        const botState = await advanceBotTurns(match.sessionId);
+        if (botState) {
+          io.to(match.sessionId).emit('stateUpdate', botState);
+        }
+      }
       emitMatchFoundToPlayers(io, match);
     });
   });

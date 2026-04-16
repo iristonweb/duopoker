@@ -150,9 +150,12 @@ function AuthPanel() {
 
 export const Lobby = () => {
   const { mode, setMode, connect, queue, session, readyNextHand, fetchProfile } = useAppStore();
+  const socket = useAppStore((s) => s.socket);
   const [cosmetics, setCosmetics] = useState<CosmeticItem[]>([]);
   const [catalogSubs, setCatalogSubs] = useState<CatalogSub[]>([]);
+  const [catalogMockCheckout, setCatalogMockCheckout] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
+  const [queueBanner, setQueueBanner] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
   const showDevPanel = import.meta.env.DEV;
 
@@ -165,12 +168,29 @@ export const Lobby = () => {
   }, [fetchProfile]);
 
   useEffect(() => {
+    if (!socket) return;
+    const onWait = () => setQueueBanner('Waiting for another player in the queue…');
+    const onFound = () => setQueueBanner(null);
+    socket.on('matchmakingWaiting', onWait);
+    socket.on('matchFound', onFound);
+    return () => {
+      socket.off('matchmakingWaiting', onWait);
+      socket.off('matchFound', onFound);
+    };
+  }, [socket]);
+
+  useEffect(() => {
     fetch(`${API}/monetization/catalog`)
       .then((r) => r.json())
       .then(
-        (d: { cosmetics?: CosmeticItem[]; subscriptions?: CatalogSub[] }) => {
+        (d: {
+          cosmetics?: CosmeticItem[];
+          subscriptions?: CatalogSub[];
+          mockCheckout?: boolean;
+        }) => {
           setCosmetics(d.cosmetics ?? []);
           setCatalogSubs(d.subscriptions ?? []);
+          setCatalogMockCheckout(Boolean(d.mockCheckout));
         }
       )
       .catch(() => undefined);
@@ -178,7 +198,7 @@ export const Lobby = () => {
 
   const startSubscription = async (tier: string) => {
     const sub = catalogSubs.find((s) => s.tier === tier);
-    const priceId = sub?.stripePriceId;
+    const priceId = sub?.stripePriceId ?? (catalogMockCheckout ? tier : undefined);
     const token = useAppStore.getState().accessToken;
     if (!token) {
       setCheckoutMsg('Sign in to subscribe.');
@@ -276,6 +296,7 @@ export const Lobby = () => {
             <Button variant="primary" size="lg" className="w-full sm:w-auto" onClick={queue}>
               Queue {mode === 'HOLDEM' ? "Hold'em" : 'Raspisnoy'}
             </Button>
+            {queueBanner ? <p className="text-xs text-amber-400/90">{queueBanner}</p> : null}
             {tableHref ? (
               <Link to={tableHref}>
                 <Button variant="secondary" size="md" className="mt-2 w-full sm:w-auto">

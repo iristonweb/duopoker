@@ -8,6 +8,15 @@ const splitOrigins = (raw?: string): string[] | true => {
 };
 
 export const config = {
+  /**
+   * When true, a single player in matchmaking is paired with a server bot (duopoker-bot-*) for local practice.
+   * Set to false in production if you only want human-vs-human queues.
+   */
+  allowSoloQueue: process.env.ALLOW_SOLO_QUEUE === 'true',
+  /**
+   * When true, POST /monetization/checkout-session returns a redirect URL without Stripe (local dev).
+   */
+  mockCheckout: process.env.MOCK_CHECKOUT === 'true',
   port: Number(process.env.PORT ?? 4000),
   jwtSecret: process.env.JWT_SECRET ?? 'dev-jwt-secret',
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET ?? 'dev-jwt-refresh-secret',

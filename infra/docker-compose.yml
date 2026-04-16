@@ -40,6 +40,7 @@ services:
       JWT_REFRESH_SECRET: dev-docker-jwt-refresh-change-me
       PUBLIC_WEB_URL: http://localhost:5173
       CORS_ORIGIN: http://localhost:5173,http://127.0.0.1:5173
+      ALLOW_SOLO_QUEUE: "true"
     depends_on:
       - postgres
       - redis
