@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+import { getApiBase } from '../config/api';
 const LS_ACCESS = 'duopoker_access';
 const LS_REFRESH = 'duopoker_refresh';
 const LS_GUEST = 'duopoker_guest_id';
@@ -94,9 +93,10 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     refreshAccessToken: async () => {
       const rt = get().refreshToken;
-      if (!rt) return false;
+      const base = getApiBase();
+      if (!rt || !base) return false;
       try {
-        const res = await fetch(`${API}/auth/refresh`, {
+        const res = await fetch(`${base}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken: rt })
@@ -110,10 +110,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       }
     },
     connect: () => {
+      const base = getApiBase();
+      if (!base) return;
       if (get().socket?.connected) return;
       get().socket?.disconnect();
       const token = get().accessToken;
-      const socket = io(API, {
+      const socket = io(base, {
         auth: token ? { token } : undefined,
         reconnection: true
       });
@@ -145,19 +147,34 @@ export const useAppStore = create<AppStore>((set, get) => {
       get().socket?.emit('readyNextHand', { sessionId: sid });
     },
     register: async (email, password, displayName) => {
+      const base = getApiBase();
       set({ authError: undefined });
-      const res = await fetch(`${API}/auth/register`, {
+      if (!base) {
+        set({
+          authError:
+            'Backend URL is not configured. In Vercel, set VITE_API_URL to your API (https://…), save, and redeploy the site.'
+        });
+        throw new Error('no api base');
+      }
+      const res = await fetch(`${base}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, displayName })
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const msg =
-          typeof (err as { error?: unknown }).error === 'string'
-            ? (err as { error: string }).error
-            : JSON.stringify((err as { error?: unknown }).error ?? err);
-        set({ authError: msg });
+        if (res.status === 404) {
+          set({
+            authError:
+              'Auth API not found (404). Point VITE_API_URL at your running backend (not the Vercel static URL) and redeploy.'
+          });
+        } else {
+          const err = await res.json().catch(() => ({}));
+          const msg =
+            typeof (err as { error?: unknown }).error === 'string'
+              ? (err as { error: string }).error
+              : JSON.stringify((err as { error?: unknown }).error ?? err);
+          set({ authError: msg });
+        }
         throw new Error('register failed');
       }
       const data = (await res.json()) as {
@@ -182,14 +199,29 @@ export const useAppStore = create<AppStore>((set, get) => {
       await get().fetchProfile();
     },
     login: async (email, password) => {
+      const base = getApiBase();
       set({ authError: undefined });
-      const res = await fetch(`${API}/auth/login`, {
+      if (!base) {
+        set({
+          authError:
+            'Backend URL is not configured. In Vercel, set VITE_API_URL to your API (https://…), save, and redeploy the site.'
+        });
+        throw new Error('no api base');
+      }
+      const res = await fetch(`${base}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
       if (!res.ok) {
-        set({ authError: 'invalid_credentials' });
+        if (res.status === 404) {
+          set({
+            authError:
+              'Auth API not found (404). Check VITE_API_URL (must be your backend HTTPS origin) and redeploy.'
+          });
+        } else {
+          set({ authError: 'invalid_credentials' });
+        }
         throw new Error('login failed');
       }
       const data = (await res.json()) as {
@@ -206,9 +238,10 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     fetchProfile: async () => {
       const token = get().accessToken;
-      if (!token) return;
+      const base = getApiBase();
+      if (!token || !base) return;
       try {
-        const res = await fetch(`${API}/auth/me`, {
+        const res = await fetch(`${base}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.status === 401) {

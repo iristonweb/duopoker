@@ -15,10 +15,9 @@ import {
 import { PokerTable3D } from '../components/PokerTable3D';
 import { VoiceRoom } from '../components/VoiceRoom';
 import { useAppStore } from '../store/useAppStore';
+import { getApiBase, isBackendConfigured } from '../config/api';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 const section = {
   hidden: { opacity: 0, y: 12 },
@@ -180,7 +179,9 @@ export const Lobby = () => {
   }, [socket]);
 
   useEffect(() => {
-    fetch(`${API}/monetization/catalog`)
+    const base = getApiBase();
+    if (!base) return;
+    fetch(`${base}/monetization/catalog`)
       .then((r) => r.json())
       .then(
         (d: {
@@ -197,11 +198,16 @@ export const Lobby = () => {
   }, []);
 
   const startSubscription = async (tier: string) => {
+    const base = getApiBase();
     const sub = catalogSubs.find((s) => s.tier === tier);
     const priceId = sub?.stripePriceId ?? (catalogMockCheckout ? tier : undefined);
     const token = useAppStore.getState().accessToken;
     if (!token) {
       setCheckoutMsg('Sign in to subscribe.');
+      return;
+    }
+    if (!base) {
+      setCheckoutMsg('Set VITE_API_URL to your backend URL and redeploy.');
       return;
     }
     if (!priceId) {
@@ -210,7 +216,7 @@ export const Lobby = () => {
     }
     setCheckoutMsg(null);
     try {
-      const res = await fetch(`${API}/monetization/checkout-session`, {
+      const res = await fetch(`${base}/monetization/checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -246,6 +252,22 @@ export const Lobby = () => {
         animate="show"
         variants={reduceMotion ? undefined : container}
       >
+        {!isBackendConfigured() ? (
+          <div
+            role="status"
+            className="mb-6 rounded-xl border border-amber-500/35 bg-amber-950/50 px-4 py-3 text-sm text-amber-100"
+          >
+            <p className="font-medium text-amber-50">API not configured for this deployment</p>
+            <p className="mt-2 text-xs leading-relaxed text-amber-100/90">
+              Vercel only hosts the static frontend. Add{' '}
+              <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-[0.8rem]">VITE_API_URL</code>{' '}
+              in Project → Settings → Environment Variables (value = your backend origin, e.g.{' '}
+              <span className="font-mono text-zinc-200">https://your-api.onrender.com</span>), then redeploy.
+              Leaving <code className="font-mono text-[0.75rem]">VITE_API_URL</code> empty causes requests to hit this
+              site and return 404 — do not leave it blank.
+            </p>
+          </div>
+        ) : null}
         <motion.header
           className="mb-10 flex flex-col gap-4 border-b border-white/10 pb-8 sm:flex-row sm:items-start sm:justify-between"
           variants={reduceMotion ? undefined : section}

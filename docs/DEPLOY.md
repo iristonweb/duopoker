@@ -39,9 +39,13 @@ Set in `apps/web/.env` (or export):
 
 In the Vercel project, add a **build** environment variable (used at compile time):
 
-- `VITE_API_URL` — full HTTPS origin of your deployed API, for example `https://api.example.com`
+- **`VITE_API_URL`** — full HTTPS origin of your deployed API (for example `https://duopoker-api.onrender.com`). **Never leave this empty:** an empty string makes the browser call `/auth/register` on `*.vercel.app`, which has no API and returns **404** for registration, Socket.IO, and `/monetization/*`.
 
-Redeploy after changing this value. The file [vercel.json](../vercel.json) builds `@duopoker/web` only.
+After adding or changing it, trigger a **new deployment** (Vite inlines env at build time).
+
+On the backend, add your Vercel site origin to **`CORS_ORIGIN`** (for example `https://duopoker.vercel.app`) so browsers are allowed to call the API.
+
+The file [vercel.json](../vercel.json) builds `@duopoker/web` only; the Express server must run elsewhere (Render, Fly.io, Railway, a VPS, etc.).
 
 ## Backend (production checklist)
 
