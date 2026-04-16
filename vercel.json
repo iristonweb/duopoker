@@ -1,4 +1,5 @@
 {
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm build"
+  "buildCommand": "pnpm --filter @duopoker/web build",
+  "outputDirectory": "apps/web/dist"
 }
