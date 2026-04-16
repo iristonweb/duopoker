@@ -8,5 +8,17 @@
     "build": "tsc -p tsconfig.json",
     "lint": "eslint src --ext .ts,.tsx",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.21",
+    "@types/react-dom": "^18.3.7",
+    "typescript": "^5.8.3"
   }
 }

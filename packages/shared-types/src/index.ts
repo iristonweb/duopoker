@@ -1,3 +1,12 @@
+export {
+  breakpoints,
+  colors,
+  motion,
+  radii,
+  shadows,
+  type BrandColors
+} from './theme';
+
 export type GameMode = 'HOLDEM' | 'RASPISNOY';
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type Suit = 'S' | 'H' | 'D' | 'C';

@@ -1,29 +1,150 @@
-import { useEffect } from 'react';
-import { GlassCard, SkinSelector, VoiceChatPanel } from '@duopoker/ui-kit/src/index';
+import { lazy, Suspense, useEffect } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  AppBackground,
+  Button,
+  GlassPanel,
+  LegalDisclaimer,
+  ModeCard,
+  SkinSelector,
+  SubscriptionTierCard,
+  VoiceChatPanel
+} from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
+
+const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
+
+const section = {
+  hidden: { opacity: 0, y: 12 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.06 * i, duration: 0.35, ease: [0.22, 1, 0.36, 1] as const }
+  })
+};
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.05 }
+  }
+};
 
 export const Lobby = () => {
   const { mode, setMode, connect, queue, session } = useAppStore();
+  const reduceMotion = useReducedMotion();
+
   useEffect(() => {
     connect();
   }, [connect]);
 
   return (
-    <main style={{ padding: 24, color: '#ffd700', background: '#0a0a0a', minHeight: '100vh' }}>
-      <h1>DualModeLobby</h1>
-      <p>Virtual chips only. No real-money gambling.</p>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-        <button onClick={() => setMode('HOLDEM')}>Hold'em</button>
-        <button onClick={() => setMode('RASPISNOY')}>Raspisnoy</button>
-        <button onClick={queue}>Queue {mode}</button>
-      </div>
-      <GlassCard>
-        <pre>{JSON.stringify(session ?? { mode, phase: 'waiting' }, null, 2)}</pre>
-      </GlassCard>
-      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-        <SkinSelector />
-        <VoiceChatPanel />
-      </div>
-    </main>
+    <div className="relative min-h-screen">
+      <AppBackground />
+
+      <motion.div
+        className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8"
+        initial={reduceMotion ? false : 'hidden'}
+        animate="show"
+        variants={reduceMotion ? undefined : container}
+      >
+        <motion.header
+          className="mb-10 flex flex-col gap-2 border-b border-white/10 pb-8 sm:flex-row sm:items-end sm:justify-between"
+          variants={reduceMotion ? undefined : section}
+          custom={0}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold/80">
+              Poker Duality
+            </p>
+            <h1 className="mt-1 font-sans text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
+              Duo<span className="text-gold">Poker</span>
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-muted">
+              Premium tables for Texas Hold&apos;em and Raspisnoy — real-time multiplayer, virtual
+              chips only.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <Button variant="secondary" size="md" disabled title="Coming soon">
+              Profile
+            </Button>
+            <Button variant="ghost" size="md" disabled title="Coming soon">
+              Settings
+            </Button>
+          </div>
+        </motion.header>
+
+        <div className="grid flex-1 grid-cols-1 gap-8 lg:grid-cols-12">
+          <motion.div className="flex flex-col gap-4 lg:col-span-5" variants={reduceMotion ? undefined : section} custom={1}>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-subtle">Game mode</h2>
+            <div className="flex flex-col gap-4">
+              <ModeCard
+                title="Texas Hold'em"
+                description="No-limit cadence, community cards, and classic showdown tension."
+                icon={<span aria-hidden>♠</span>}
+                selected={mode === 'HOLDEM'}
+                onClick={() => setMode('HOLDEM')}
+              />
+              <ModeCard
+                title="Расписной покер"
+                description="Open hands and draw rounds — a distinct duel of reads and discards."
+                icon={<span aria-hidden>♦</span>}
+                selected={mode === 'RASPISNOY'}
+                onClick={() => setMode('RASPISNOY')}
+              />
+            </div>
+            <Button variant="primary" size="lg" className="w-full sm:w-auto" onClick={queue}>
+              Queue {mode === 'HOLDEM' ? "Hold'em" : 'Raspisnoy'}
+            </Button>
+          </motion.div>
+
+          <motion.div className="flex flex-col gap-4 lg:col-span-7" variants={reduceMotion ? undefined : section} custom={2}>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-subtle">Session</h2>
+            <GlassPanel className="flex flex-col gap-4 border-white/10 p-0 overflow-hidden">
+              {!reduceMotion && (
+                <div className="border-b border-white/10 px-4 pt-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
+                    Live preview
+                  </p>
+                  <Suspense fallback={<div className="h-36 w-full animate-pulse rounded-2xl bg-white/5" />}>
+                    <LobbyChipPreview />
+                  </Suspense>
+                </div>
+              )}
+              <div className="p-4 pt-3">
+                <p className="mb-2 text-xs text-subtle">Socket state</p>
+                <pre className="max-h-[220px] overflow-auto rounded-xl border border-white/10 bg-black/40 p-4 font-mono text-xs leading-relaxed text-emerald/90">
+                  {JSON.stringify(session ?? { mode, phase: 'waiting' }, null, 2)}
+                </pre>
+              </div>
+            </GlassPanel>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <SubscriptionTierCard tier="SILVER" price="$4.99/mo" />
+              <SubscriptionTierCard tier="GOLD" price="$9.99/mo" />
+            </div>
+          </motion.div>
+        </div>
+
+        <motion.div
+          className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-2"
+          variants={reduceMotion ? undefined : section}
+          custom={3}
+        >
+          <SkinSelector />
+          <VoiceChatPanel />
+        </motion.div>
+
+        <motion.footer
+          className="mt-8"
+          variants={reduceMotion ? undefined : section}
+          custom={4}
+        >
+          <LegalDisclaimer />
+        </motion.footer>
+      </motion.div>
+    </div>
   );
 };

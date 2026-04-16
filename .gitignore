@@ -1,3 +1,6 @@
+# Accidental nested clone (do not commit)
+/duopoker/
+
 node_modules
 .env
 .env.*

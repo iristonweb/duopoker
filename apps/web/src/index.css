@@ -1,0 +1,63 @@
+/* Mirror of packages/shared-types/src/theme.ts — keep hex values in sync. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-background: #0a0a0a;
+    --color-surface: #12121a;
+    --color-surface-elevated: #1a1a2e;
+    --color-gold: #ffd700;
+    --color-emerald: #50c878;
+    --color-text: #f4f4f5;
+    --color-text-muted: #a1a1aa;
+    --color-border: rgba(255, 255, 255, 0.12);
+    --focus-ring: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-gold);
+  }
+
+  html {
+    @apply antialiased;
+    font-feature-settings: 'cv02', 'cv11', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-zinc-100;
+    background-color: var(--color-background);
+  }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    box-shadow: var(--focus-ring);
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .motion-reduce * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .framer-motion-static {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+}
