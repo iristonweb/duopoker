@@ -1,0 +1,19 @@
+{
+  "name": "@duopoker/db-schema",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "prisma generate",
+    "lint": "echo \"No lint for prisma schema\"",
+    "test": "echo \"No tests for schema\"",
+    "migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.6.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.6.0",
+    "tsx": "^4.19.3"
+  }
+}

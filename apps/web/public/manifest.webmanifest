@@ -1,0 +1,10 @@
+{
+  "name": "DuoPoker",
+  "short_name": "DuoPoker",
+  "start_url": "/lobby",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "description": "Premium dual-mode poker platform with virtual chips only.",
+  "icons": []
+}

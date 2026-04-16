@@ -1,0 +1,15 @@
+{
+  "name": "@duopoker/game-engine",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@duopoker/shared-types": "workspace:*"
+  }
+}

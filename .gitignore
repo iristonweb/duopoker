@@ -1,0 +1,9 @@
+node_modules
+.env
+.env.*
+dist
+coverage
+.expo
+.idea
+.vscode
+pnpm-lock.yaml
