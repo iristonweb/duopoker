@@ -20,6 +20,8 @@ packages/db-schema/src/index.js
 .idea
 .vscode
 .vercel
+api/_app.js
+api/_app.js.map
 api/_app.mjs
 api/_app.mjs.map
 .env*.local

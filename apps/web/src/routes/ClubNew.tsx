@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AppBackground, Button, GlassPanel } from '@duopoker/ui-kit';
+import { useTranslation } from 'react-i18next';
+import { Button, GlassPanel, Input, PageShell, Textarea } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
 export const ClubNew = () => {
+  const { t } = useTranslation();
   const createClub = useAppStore((s) => s.createClub);
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -18,40 +20,50 @@ export const ClubNew = () => {
       const { club } = await createClub(name, description || undefined);
       navigate(`/clubs/${club.id}`);
     } catch {
-      setError('Не удалось создать клуб');
+      setError(t('clubs.createError'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen">
-      <AppBackground />
-      <div className="relative z-10 mx-auto max-w-lg px-4 py-10">
-        <Link to="/clubs" className="text-sm text-gold hover:underline">
-          ← Клубы
+    <PageShell
+      maxWidth="lg"
+      back={
+        <Link to="/clubs" className="premium-link text-sm">
+          {t('clubs.back')}
         </Link>
-        <GlassPanel className="mt-4 border-white/10 p-6">
-          <h1 className="text-xl font-bold text-zinc-100">Новый клуб</h1>
-          <label className="mt-4 block text-sm text-subtle">Название</label>
-          <input
-            className="mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-zinc-100"
+      }
+      eyebrow={t('clubs.newEyrow')}
+      title={t('clubs.newTitle')}
+      description={t('clubs.newDesc')}
+    >
+      <GlassPanel glow="gold" className="border-gold/15 p-6">
+        <div className="flex flex-col gap-4">
+          <Input
+            label={t('clubs.name')}
+            placeholder={t('clubs.namePlaceholder')}
+            minLength={3}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <label className="mt-4 block text-sm text-subtle">Описание</label>
-          <textarea
-            className="mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-zinc-100"
+          <Textarea
+            label={t('clubs.description')}
+            placeholder={t('clubs.descPlaceholder')}
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          {error ? <p className="mt-2 text-sm text-amber-400">{error}</p> : null}
-          <Button variant="primary" className="mt-6 w-full" disabled={busy || name.length < 3} onClick={() => void submit()}>
-            Создать
+          {error ? (
+            <p className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+              {error}
+            </p>
+          ) : null}
+          <Button variant="primary" className="mt-2 w-full" disabled={busy || name.length < 3} onClick={() => void submit()}>
+            {busy ? t('clubs.creating') : t('clubs.createBtn')}
           </Button>
-        </GlassPanel>
-      </div>
-    </div>
+        </div>
+      </GlassPanel>
+    </PageShell>
   );
 };

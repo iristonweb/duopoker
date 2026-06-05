@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
+  <defs>
+    <linearGradient id="rBg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#0a0608"/>
+      <stop offset="0.4" stop-color="#141008"/>
+      <stop offset="1" stop-color="#180810"/>
+    </linearGradient>
+    <linearGradient id="rGold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f5e6a8"/>
+      <stop offset="0.5" stop-color="#e8c547"/>
+      <stop offset="1" stop-color="#fda4af"/>
+    </linearGradient>
+    <linearGradient id="rRose" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fda4af" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#fda4af" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="140" height="200" rx="10" fill="url(#rBg)" stroke="url(#rGold)" stroke-width="2"/>
+  <rect x="8" y="8" width="124" height="184" rx="8" fill="url(#rRose)"/>
+  <path d="M70 28 L78 44 L96 44 L82 54 L88 72 L70 62 L52 72 L58 54 L44 44 L62 44 Z" fill="url(#rGold)" fill-opacity="0.85"/>
+  <path d="M12 12 L128 12 M12 188 L128 188" stroke="url(#rGold)" stroke-opacity="0.35" stroke-width="1"/>
+  <path d="M12 12 Q70 32 128 12 M12 188 Q70 168 128 188" stroke="#fda4af" stroke-opacity="0.25" stroke-width="0.8" fill="none"/>
+  <text x="70" y="118" text-anchor="middle" fill="url(#rGold)" font-family="Georgia,serif" font-size="40">`</text>
+  <text x="70" y="168" text-anchor="middle" fill="#f5e6a8" fill-opacity="0.6" font-family="Georgia,serif" font-size="9" letter-spacing="4">ROYAL</text>
+</svg>

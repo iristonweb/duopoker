@@ -1,3 +1,8 @@
+import {
+  resolveEquipped,
+  type EquippedCosmetics,
+  type SubscriptionTier
+} from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
 
 export const getPrivateTableBySessionId = async (sessionId: string) =>
@@ -43,20 +48,54 @@ export const canJoinPrivateSession = async (
   return { ok: true };
 };
 
-export const getSessionPlayerProfiles = async (userIds: string[]) => {
+export type SessionPlayerProfile = {
+  userId: string;
+  nickname: string | null;
+  displayName: string;
+  avatar: string | null;
+  subscriptionTier: SubscriptionTier;
+  equipped: EquippedCosmetics;
+};
+
+export const getSessionPlayerProfiles = async (userIds: string[]): Promise<SessionPlayerProfile[]> => {
   if (!userIds.length) return [];
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, nickname: true, displayName: true, avatar: true }
+    select: {
+      id: true,
+      nickname: true,
+      displayName: true,
+      avatar: true,
+      subscriptions: {
+        where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
+        orderBy: { expiresAt: 'desc' },
+        take: 1,
+        select: { tier: true }
+      },
+      inventory: {
+        where: { equipped: true },
+        select: { itemId: true }
+      }
+    }
   });
   const byId = new Map(users.map((u) => [u.id, u]));
   return userIds.map((id) => {
     const u = byId.get(id);
+    const tier: SubscriptionTier = (u?.subscriptions[0]?.tier as SubscriptionTier | undefined) ?? 'FREE';
+    const inventoryIds = u?.inventory.map((i) => i.itemId) ?? [];
+    const equippedFromDb: Partial<EquippedCosmetics> = {};
+    for (const itemId of inventoryIds) {
+      if (itemId.startsWith('deck_')) equippedFromDb.deck = itemId;
+      if (itemId.startsWith('chip_') || itemId === 'table_void') equippedFromDb.chip = itemId;
+      if (itemId.startsWith('frame_')) equippedFromDb.frame = itemId;
+    }
     return {
       userId: id,
       nickname: u?.nickname ?? null,
       displayName: u?.displayName ?? id.slice(0, 8),
-      avatar: u?.avatar ?? null
+      avatar: u?.avatar ?? null,
+      subscriptionTier: tier,
+      equipped: resolveEquipped(equippedFromDb, tier, inventoryIds)
     };
   });
 };

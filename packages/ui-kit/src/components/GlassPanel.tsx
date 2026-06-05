@@ -2,22 +2,27 @@ import type { HTMLAttributes, PropsWithChildren } from 'react';
 import { cn } from '../cn';
 
 export type GlassPanelProps = PropsWithChildren<
-  { interactive?: boolean } & HTMLAttributes<HTMLDivElement>
+  { interactive?: boolean; glow?: 'gold' | 'emerald' | 'none' } & HTMLAttributes<HTMLDivElement>
 >;
 
-export function GlassPanel({ className, interactive, children, ...props }: GlassPanelProps) {
+export function GlassPanel({ className, interactive, glow = 'none', children, ...props }: GlassPanelProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-white/[0.12] bg-white/[0.06] p-4 shadow-panel backdrop-blur-glass',
-        'bg-gradient-to-br from-white/[0.09] to-transparent',
+        'glass-shine relative overflow-hidden rounded-2xl border border-white/[0.1]',
+        'bg-white/[0.04] p-4 shadow-panel backdrop-blur-glass',
+        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-px',
+        'before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent',
+        'after:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:shadow-inner',
+        glow === 'gold' && 'border-gold/20 shadow-glow-gold',
+        glow === 'emerald' && 'border-emerald/20 shadow-glow-emerald',
         interactive &&
-          'transition-[box-shadow,transform,border-color] duration-200 hover:border-gold/25 hover:shadow-glow-gold focus-within:border-gold/30',
+          'transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-0.5 hover:border-gold/25 hover:shadow-glow-gold focus-within:border-gold/30',
         className
       )}
       {...props}
     >
-      {children}
+      <div className="relative z-[1]">{children}</div>
     </div>
   );
 }

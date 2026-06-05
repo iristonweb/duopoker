@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AppBackground, GlassPanel } from '@duopoker/ui-kit';
+import { Badge, GlassPanel, PageShell } from '@duopoker/ui-kit';
 import { resolveApiUrl } from '../config/api';
 
 export function VerifyEmail() {
@@ -33,23 +33,36 @@ export function VerifyEmail() {
   }, [token]);
 
   return (
-    <div className="relative min-h-screen">
-      <AppBackground />
-      <div className="relative z-10 mx-auto max-w-lg px-4 py-12">
-        <Link to="/lobby" className="text-sm text-gold hover:underline">
+    <PageShell
+      maxWidth="lg"
+      back={
+        <Link to="/lobby" className="premium-link text-sm">
           ← Back to lobby
         </Link>
-        <GlassPanel className="mt-6 border-white/10 p-6">
-          <h1 className="text-2xl font-semibold text-zinc-50">Email verification</h1>
-          <p
-            className={`mt-4 text-sm leading-relaxed ${
-              status === 'ok' ? 'text-emerald-400' : status === 'error' ? 'text-rose-400' : 'text-muted'
-            }`}
-          >
-            {message}
-          </p>
-        </GlassPanel>
-      </div>
-    </div>
+      }
+      eyebrow="Account"
+      title="Email verification"
+    >
+      <GlassPanel glow={status === 'ok' ? 'emerald' : status === 'error' ? 'none' : 'gold'} className="border-white/10 p-6">
+        <Badge
+          variant={status === 'ok' ? 'emerald' : status === 'error' ? 'rose' : 'gold'}
+          className="mb-4"
+        >
+          {status === 'pending' ? 'Processing' : status === 'ok' ? 'Verified' : 'Failed'}
+        </Badge>
+        <p
+          className={`text-sm leading-relaxed ${
+            status === 'ok' ? 'text-emerald' : status === 'error' ? 'text-rose-300' : 'text-muted'
+          }`}
+        >
+          {message}
+        </p>
+        {status === 'ok' ? (
+          <Link to="/lobby" className="premium-link mt-5 inline-block text-sm">
+            Continue to lobby →
+          </Link>
+        ) : null}
+      </GlassPanel>
+    </PageShell>
   );
 }

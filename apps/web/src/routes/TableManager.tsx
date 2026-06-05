@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AppBackground, Button, GlassPanel } from '@duopoker/ui-kit';
+import { Badge, Button, GlassPanel, Input, LoadingSkeleton, PageShell, SectionHeader } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
 type TableData = {
@@ -22,14 +22,17 @@ export const TableManager = () => {
   const joinPrivateTable = useAppStore((s) => s.joinPrivateTable);
   const navigate = useNavigate();
   const [table, setTable] = useState<TableData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [inviteQuery, setInviteQuery] = useState('');
   const [msg, setMsg] = useState<string>();
 
   const reload = () => {
     if (!clubId || !tableId) return;
+    setLoading(true);
     void apiFetch(`/clubs/${clubId}/private-tables/${tableId}`)
       .then((r) => r.json())
-      .then((d: { table: TableData }) => setTable(d.table));
+      .then((d: { table: TableData }) => setTable(d.table))
+      .finally(() => setLoading(false));
   };
 
   useEffect(reload, [clubId, tableId, apiFetch]);
@@ -37,76 +40,92 @@ export const TableManager = () => {
   if (!clubId || !tableId) return null;
 
   return (
-    <div className="relative min-h-screen">
-      <AppBackground />
-      <div className="relative z-10 mx-auto max-w-2xl px-4 py-10">
-        <Link to={`/clubs/${clubId}`} className="text-sm text-gold hover:underline">
+    <PageShell
+      maxWidth="2xl"
+      back={
+        <Link to={`/clubs/${clubId}`} className="premium-link text-sm">
           ← Клуб
         </Link>
-        {table ? (
-          <GlassPanel className="mt-4 border-white/10 p-6">
-            <h1 className="text-xl font-bold text-zinc-100">{table.name}</h1>
-            <p className="text-sm text-muted">
-              {table.mode} · {table.status} · buy-in {table.virtualBuyIn}
-            </p>
-            <p className="mt-2 text-xs text-subtle">
-              Invite link: {window.location.origin}/invite/{table.inviteCode}
-            </p>
-            <ul className="mt-4 space-y-1 text-sm text-muted">
-              {table.seats.map((s, i) => (
-                <li key={i}>
-                  @{s.user.nickname} — {s.status}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 flex gap-2">
-              <input
-                placeholder="@nickname или id"
-                className="flex-1 rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm"
-                value={inviteQuery}
-                onChange={(e) => setInviteQuery(e.target.value)}
-              />
+      }
+    >
+      {loading && !table ? (
+        <GlassPanel className="border-white/10 p-8">
+          <LoadingSkeleton lines={4} />
+        </GlassPanel>
+      ) : table ? (
+        <GlassPanel glow="emerald" className="border-emerald/15 p-6">
+          <SectionHeader eyebrow="Private table" title={table.name} className="mb-4" />
+          <div className="flex flex-wrap gap-2">
+            <Badge>{table.mode}</Badge>
+            <Badge variant={table.status === 'LIVE' ? 'emerald' : 'default'}>{table.status}</Badge>
+            <Badge variant="gold">Buy-in {table.virtualBuyIn}</Badge>
+          </div>
+          <p className="mt-4 rounded-xl border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-subtle">
+            {window.location.origin}/invite/{table.inviteCode}
+          </p>
+          <ul className="mt-5 space-y-2">
+            {table.seats.map((s, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-sm"
+              >
+                <span className="text-zinc-200">@{s.user.nickname}</span>
+                <span className="text-subtle">{s.status}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+            <Input
+              className="flex-1"
+              placeholder="@nickname или id"
+              value={inviteQuery}
+              onChange={(e) => setInviteQuery(e.target.value)}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                void inviteToTable(clubId, tableId, inviteQuery).then(() => {
+                  setInviteQuery('');
+                  reload();
+                  setMsg('Приглашение отправлено');
+                });
+              }}
+            >
+              Пригласить
+            </Button>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {table.status !== 'LIVE' ? (
               <Button
-                variant="secondary"
-                size="sm"
+                variant="primary"
                 onClick={() => {
-                  void inviteToTable(clubId, tableId, inviteQuery).then(() => {
-                    setInviteQuery('');
-                    reload();
-                    setMsg('Приглашение отправлено');
-                  });
+                  void startPrivateTable(clubId, tableId).then((sid) => navigate(`/table/${sid}`));
                 }}
               >
-                Пригласить
+                Запустить стол
               </Button>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {table.status !== 'LIVE' ? (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    void startPrivateTable(clubId, tableId).then((sid) => navigate(`/table/${sid}`));
-                  }}
-                >
-                  Запустить стол
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    void joinPrivateTable(clubId, tableId).then((sid) => navigate(`/table/${sid}`));
-                  }}
-                >
-                  Войти за стол
-                </Button>
-              )}
-            </div>
-            {msg ? <p className="mt-4 text-sm text-emerald/90">{msg}</p> : null}
-          </GlassPanel>
-        ) : (
-          <p className="mt-8 text-muted">Загрузка…</p>
-        )}
-      </div>
-    </div>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  void joinPrivateTable(clubId, tableId).then((sid) => navigate(`/table/${sid}`));
+                }}
+              >
+                Войти за стол
+              </Button>
+            )}
+          </div>
+          {msg ? (
+            <p className="mt-4 rounded-lg border border-emerald/20 bg-emerald/10 px-3 py-2 text-sm text-emerald">
+              {msg}
+            </p>
+          ) : null}
+        </GlassPanel>
+      ) : (
+        <GlassPanel className="border-white/10 p-6 text-muted">Стол не найден.</GlassPanel>
+      )}
+    </PageShell>
   );
 };

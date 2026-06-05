@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Room, RoomEvent } from 'livekit-client';
+import { Button } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
 type VoiceStatus = 'idle' | 'checking' | 'connecting' | 'live' | 'error' | 'unavailable';
@@ -118,11 +119,11 @@ export function VoiceRoom() {
 
   if (status === 'unavailable') {
     return (
-      <p className="mt-2 text-[11px] text-subtle">
+      <p className="text-[11px] leading-relaxed text-subtle">
         LiveKit is not configured on the server. Add{' '}
         <code className="font-mono">LIVEKIT_API_KEY</code>, <code className="font-mono">LIVEKIT_API_SECRET</code>,{' '}
         <code className="font-mono">LIVEKIT_URL</code> (from{' '}
-        <a href="https://cloud.livekit.io" className="text-gold/80 hover:underline" target="_blank" rel="noreferrer">
+        <a href="https://cloud.livekit.io" className="premium-link" target="_blank" rel="noreferrer">
           cloud.livekit.io
         </a>
         ) on Render or Vercel.
@@ -131,42 +132,25 @@ export function VoiceRoom() {
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
       {status === 'live' ? (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void toggleMic()}
-              className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
-                micOn
-                  ? 'border-emerald/40 bg-emerald/10 text-emerald'
-                  : 'border-white/15 bg-white/5 text-muted'
-              }`}
-            >
+            <Button variant={micOn ? 'secondary' : 'ghost'} size="sm" onClick={() => void toggleMic()}>
               {micOn ? 'Mic on' : 'Mic muted'}
-            </button>
-            <button
-              type="button"
-              onClick={() => void leaveVoice()}
-              className="rounded-lg border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-xs font-semibold text-rose-300"
-            >
+            </Button>
+            <Button variant="ghost" size="sm" className="text-rose-300 hover:text-rose-200" onClick={() => void leaveVoice()}>
               Leave voice
-            </button>
+            </Button>
           </div>
           <p className="text-[11px] text-subtle">
             LiveKit · {participants} in room · TURN/NAT handled by LiveKit Cloud
           </p>
         </>
       ) : (
-        <button
-          type="button"
-          disabled={status === 'connecting'}
-          onClick={() => void joinVoice()}
-          className="rounded-lg border border-emerald/40 bg-emerald/10 px-3 py-2 text-xs font-semibold text-emerald hover:bg-emerald/20 disabled:opacity-50"
-        >
+        <Button variant="secondary" size="sm" disabled={status === 'connecting'} onClick={() => void joinVoice()}>
           {status === 'connecting' ? 'Connecting…' : 'Join voice (LiveKit)'}
-        </button>
+        </Button>
       )}
       {errorMsg ? <p className="text-[11px] text-rose-400">{errorMsg}</p> : null}
     </div>

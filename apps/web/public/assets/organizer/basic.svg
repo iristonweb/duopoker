@@ -1,2 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" fill="none"><rect width="400" height="120" fill="#18181B"/><text x="24" y="52" fill="#A1A1AA" font-family="system-ui,sans-serif" font-size="24" font-weight="700">Club Basic</text><text x="24" y="82" fill="#71717A" font-family="system-ui,sans-serif" font-size="14">Free trial · 30 members</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none">
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="400" y2="80">
+      <stop stop-color="#71717a"/>
+      <stop offset="1" stop-color="#27272a"/>
+    </linearGradient>
+    <linearGradient id="bBg" x1="0" y1="0" x2="400" y2="80">
+      <stop stop-color="#050508"/>
+      <stop offset="1" stop-color="#14141f"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="80" fill="url(#bBg)"/>
+  <rect width="400" height="80" fill="url(#b)" opacity="0.25"/>
+  <text x="24" y="48" fill="#d4d4d8" font-family="Georgia,serif" font-size="28" font-weight="600">BASIC</text>
+</svg>

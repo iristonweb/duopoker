@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#0c0c12"/>
+      <stop offset="1" stop-color="#050508"/>
+    </linearGradient>
+    <pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse">
+      <path d="M12 0H0V12" stroke="#ffffff" stroke-opacity="0.04" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="140" height="200" rx="10" fill="url(#bg)" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.2"/>
+  <rect x="8" y="8" width="124" height="184" rx="7" fill="url(#grid)"/>
+  <rect x="14" y="14" width="112" height="172" rx="6" stroke="#e8c547" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="70" y="108" text-anchor="middle" fill="#e8c547" fill-opacity="0.35" font-family="Georgia,serif" font-size="48">`</text>
+  <text x="70" y="168" text-anchor="middle" fill="#71717a" font-family="system-ui,sans-serif" font-size="8" letter-spacing="3">DUOPOKER</text>
+</svg>

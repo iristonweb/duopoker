@@ -34,8 +34,7 @@ const checkoutSchema = z.object({
 
 const cosmeticCosts: Record<string, number> = {
   deck_neon: 1800,
-  table_void: 4500,
-  frame_gold: 9000
+  table_void: 4500
 };
 
 const tierFromPrice = (priceId: string): 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL' | null => {

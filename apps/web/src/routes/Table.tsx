@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AppBackground, Button, GlassPanel } from '@duopoker/ui-kit';
-import type { SessionState } from '@duopoker/shared-types/index';
-import { PokerTable3D } from '../components/PokerTable3D';
+import { useTranslation } from 'react-i18next';
+import {
+  Badge,
+  Button,
+  GlassPanel,
+  Input,
+  LoadingSkeleton,
+  PageShell,
+  SectionHeader
+} from '@duopoker/ui-kit';
+import type { EquippedCosmetics, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
+import { defaultEquipped } from '@duopoker/shared-types';
+import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
+import { PlayingCard } from '../components/cosmetics/PlayingCard';
+import { VoiceRoom } from '../components/VoiceRoom';
 import { useAppStore } from '../store/useAppStore';
 import { usesRealtimeSocket } from '../config/api';
 
@@ -13,6 +25,7 @@ const amountToCall = (s: SessionState, uid: string) =>
   Math.max(0, maxRoundBet(s) - (s.playerRoundBet[uid] ?? 0));
 
 export const Table = () => {
+  const { t } = useTranslation();
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
   const session = useAppStore((s) => s.session);
   const userId = useAppStore((s) => s.userId);
@@ -25,27 +38,88 @@ export const Table = () => {
   const stopPolling = useAppStore((s) => s.stopPolling);
   const mode = useAppStore((s) => s.mode);
 
-  const [playerNames, setPlayerNames] = useState<Record<string, string>>({});
+  const equipped = useAppStore((s) => s.equipped);
+  const subscriptionTier = useAppStore((s) => s.subscriptionTier);
+
+  const [playerProfiles, setPlayerProfiles] = useState<
+    Record<
+      string,
+      {
+        name: string;
+        avatar?: string | null;
+        subscriptionTier: SubscriptionTier;
+        equipped: EquippedCosmetics;
+      }
+    >
+  >({});
 
   useEffect(() => {
     if (!routeSessionId || !session?.players?.length) return;
     const apiFetch = useAppStore.getState().apiFetch;
     void apiFetch(`/game/session/${encodeURIComponent(routeSessionId)}/players`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { players?: Array<{ userId: string; nickname?: string; displayName: string }> } | null) => {
-        if (!data?.players) return;
-        const map: Record<string, string> = {};
-        for (const p of data.players) {
-          map[p.userId] = p.nickname ? `@${p.nickname}` : p.displayName;
+      .then(
+        (
+          data: {
+            players?: Array<{
+              userId: string;
+              nickname?: string | null;
+              displayName: string;
+              avatar?: string | null;
+              subscriptionTier?: SubscriptionTier;
+              equipped?: EquippedCosmetics;
+            }>;
+          } | null
+        ) => {
+          if (!data?.players) return;
+          const map: typeof playerProfiles = {};
+          for (const p of data.players) {
+            map[p.userId] = {
+              name: p.nickname ? `@${p.nickname}` : p.displayName,
+              avatar: p.avatar,
+              subscriptionTier: p.subscriptionTier ?? 'FREE',
+              equipped: p.equipped ?? defaultEquipped()
+            };
+          }
+          setPlayerProfiles(map);
         }
-        setPlayerNames(map);
-      })
+      )
       .catch(() => undefined);
   }, [routeSessionId, session?.players?.length, session?.handNumber]);
 
   const [raiseAmount, setRaiseAmount] = useState(0);
 
-  const label = (uid: string) => playerNames[uid] ?? uid.slice(0, 8);
+  const activeId = useMemo(() => {
+    if (!session || session.players.length === 0) return undefined;
+    return session.players[session.activePlayerIndex];
+  }, [session]);
+
+  const label = (uid: string) => playerProfiles[uid]?.name ?? uid.slice(0, 8);
+
+  const tablePlayers = useMemo((): TablePlayerVisual[] => {
+    if (!session) return [];
+    const visuals = session.players.map((uid) => {
+      const profile = playerProfiles[uid];
+      const hero = uid === userId;
+      return {
+        userId: uid,
+        name: profile?.name ?? uid.slice(0, 8),
+        stack: session.stacks[uid] ?? 0,
+        avatar: profile?.avatar,
+        tier: hero ? subscriptionTier : (profile?.subscriptionTier ?? 'FREE'),
+        equipped: hero ? equipped : profile?.equipped,
+        holeCards: session.playerCards[uid] ?? [],
+        revealCards: hero,
+        isActive: uid === activeId,
+        isFolded: session.foldedPlayerIds.includes(uid)
+      };
+    });
+    return [...visuals].sort((a, b) => {
+      if (a.userId === userId) return 1;
+      if (b.userId === userId) return -1;
+      return 0;
+    });
+  }, [session, playerProfiles, userId, subscriptionTier, equipped, activeId]);
 
   useEffect(() => {
     connect();
@@ -66,40 +140,38 @@ export const Table = () => {
   const sid = session?.sessionId;
   const matchRoute = sid && routeSessionId && sid === routeSessionId;
 
-  const activeId = useMemo(() => {
-    if (!session || session.players.length === 0) return undefined;
-    return session.players[session.activePlayerIndex];
-  }, [session]);
-
   useEffect(() => {
     if (session?.bigBlind) setRaiseAmount(session.bigBlind);
   }, [session?.bigBlind, session?.handNumber]);
 
   if (!routeSessionId) {
     return (
-      <div className="relative min-h-screen">
-        <AppBackground />
-        <p className="p-8 text-muted">Invalid table.</p>
-      </div>
+      <PageShell maxWidth="lg">
+        <GlassPanel className="border-white/10 p-6 text-muted">{t('table.invalid')}</GlassPanel>
+      </PageShell>
     );
   }
 
   if (!matchRoute || !session) {
     return (
-      <div className="relative min-h-screen">
-        <AppBackground />
-        <div className="relative z-10 mx-auto max-w-lg px-4 py-16">
-          <GlassPanel className="border-white/10 p-6">
-            <p className="text-sm text-muted">
-              Connecting to table <span className="font-mono text-zinc-200">{routeSessionId}</span>…
-            </p>
-            <p className="mt-2 text-xs text-subtle">Open this link after matchmaking found you a seat.</p>
-            <Link to="/lobby" className="mt-4 inline-block text-sm text-gold hover:underline">
-              Back to lobby
-            </Link>
-          </GlassPanel>
-        </div>
-      </div>
+      <PageShell
+        maxWidth="lg"
+        back={
+          <Link to="/lobby" className="premium-link text-sm">
+            {t('nav.backLobby')}
+          </Link>
+        }
+        eyebrow={t('table.connecting')}
+        title={t('table.joiningTitle')}
+      >
+        <GlassPanel glow="gold" className="border-gold/15 p-6">
+          <LoadingSkeleton lines={2} className="mb-4" />
+          <p className="text-sm text-muted">
+            {t('table.connectingTo', { id: routeSessionId })}
+          </p>
+          <p className="mt-2 text-xs text-subtle">{t('table.connectingHint')}</p>
+        </GlassPanel>
+      </PageShell>
     );
   }
 
@@ -110,117 +182,145 @@ export const Table = () => {
     Object.values(session.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
 
   return (
-    <div className="relative min-h-screen">
-      <AppBackground />
-      <div className="relative z-10 mx-auto max-w-5xl px-4 pb-12 pt-8">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-subtle">Table</p>
-            <h1 className="font-sans text-xl font-semibold text-zinc-100">
-              {session.mode === 'HOLDEM' ? "Hold'em" : 'Raspisnoy'}
-              <span className="ml-2 font-mono text-sm text-muted">{session.sessionId}</span>
-            </h1>
-          </div>
-          <Link to="/lobby">
-            <Button variant="ghost" size="sm">
-              Lobby
-            </Button>
-          </Link>
-        </div>
+    <PageShell
+      maxWidth="5xl"
+      contentClassName="pb-12 pt-8"
+      back={
+        <Link to="/lobby" className="premium-link text-sm">
+          {t('nav.backLobby')}
+        </Link>
+      }
+      headerAction={
+        <Badge variant="gold">
+          {t('table.pot')} {kettle.toLocaleString()}
+        </Badge>
+      }
+    >
+      <div className="mb-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{t('table.liveTable')}</p>
+        <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-ivory sm:text-3xl">
+          {session.mode === 'HOLDEM' ? t('table.holdem') : t('table.raspisnoy')}
+        </h1>
+        <p className="mt-1 font-mono text-xs text-subtle">{session.sessionId}</p>
+      </div>
 
-        {session.street && session.street !== 'LOBBY' ? (
-          <div className="mb-6">
-            {session.mode === 'HOLDEM' ? (
-              <PokerTable3D
-                communityCards={session.communityCards ?? []}
-                pot={kettle}
-                street={session.street}
-              />
-            ) : (
-              <PokerTable3D communityCards={[]} pot={kettle} street={session.street} />
-            )}
+      {session.street && session.street !== 'LOBBY' ? (
+        <div className="mb-6 overflow-hidden rounded-3xl border border-white/10 shadow-panel ring-1 ring-white/5">
+          <PokerTable3D
+            communityCards={session.mode === 'HOLDEM' ? (session.communityCards ?? []) : []}
+            pot={kettle}
+            street={session.street}
+            players={tablePlayers}
+            heroDeckId={equipped.deck}
+            heroChipId={equipped.chip}
+          />
+        </div>
+      ) : null}
+
+      <GlassPanel glow={myTurn ? 'gold' : 'none'} className="border-white/10 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="emerald">{session.street}</Badge>
+          {activeId ? (
+            <span className="text-sm text-muted">
+              {t('table.toAct')}{' '}
+              <span className="font-medium text-zinc-200">
+                {label(activeId)}
+                {activeId === userId ? ` ${t('table.you')}` : ''}
+              </span>
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-3 rounded-xl border border-white/5 bg-black/25 px-3 py-2 font-mono text-sm text-zinc-200">
+          {t('table.yourHole')} {(session.playerCards[userId] ?? []).join(' ') || '—'}
+        </p>
+        {(session.playerCards[userId] ?? []).length ? (
+          <div className="mt-3 flex gap-2">
+            {(session.playerCards[userId] ?? []).map((c, i) => (
+              <PlayingCard key={`${c}-${i}`} card={c} faceUp deckId={equipped.deck} size="sm" />
+            ))}
           </div>
         ) : null}
 
-        <GlassPanel className="border-white/10 p-5">
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="rounded-full bg-white/10 px-3 py-1 font-mono text-xs text-emerald/90">
-              {session.street}
-            </span>
-            {activeId ? (
-              <span className="text-muted">
-                To act: <span className="text-zinc-200">{label(activeId)}</span>
-                {activeId === userId ? ' (you)' : ''}
-              </span>
-            ) : null}
-            <span className="text-muted">Your hole: {(session.playerCards[userId] ?? []).join(' ') || '—'}</span>
+        {session.street === 'COMPLETE' ? (
+          <div className="mt-5 border-t border-white/10 pt-5">
+            <SectionHeader
+              eyebrow="Hand result"
+              title={t('table.handComplete')}
+              description={t('table.winners', {
+                names: (session.winners ?? []).map(label).join(', ') || '—'
+              })}
+              className="mb-4"
+            />
+            <p className="text-xs text-subtle">
+              {t('table.ready', {
+                ready: (session.readyForNextHand ?? []).length,
+                total: session.players.length
+              })}
+            </p>
+            <Button
+              variant="primary"
+              size="sm"
+              className="mt-4"
+              disabled={(session.readyForNextHand ?? []).includes(userId)}
+              onClick={() => readyNextHand()}
+            >
+              {(session.readyForNextHand ?? []).includes(userId) ? t('table.waitingOthers') : t('table.nextHand')}
+            </Button>
           </div>
+        ) : null}
 
-          {session.street === 'COMPLETE' ? (
-            <div className="mt-4">
-              <p className="text-sm text-muted">
-                Hand complete. Winners: {(session.winners ?? []).map(label).join(', ') || '—'}
-              </p>
-              <p className="mt-1 text-xs text-subtle">
-                Ready: {(session.readyForNextHand ?? []).length}/{session.players.length}
-              </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-3"
-                disabled={(session.readyForNextHand ?? []).includes(userId)}
-                onClick={() => readyNextHand()}
-              >
-                {(session.readyForNextHand ?? []).includes(userId) ? 'Waiting for others…' : 'Next hand'}
+        {myTurn ? (
+          <div className="mt-5 border-t border-white/10 pt-5">
+            <p className="mb-4 text-xs font-medium uppercase tracking-wider text-gold/80">
+              {t('table.yourAction', { amount: need })}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" size="sm" onClick={() => playerAction({ sessionId: sid, type: 'fold' })}>
+                {t('table.fold')}
               </Button>
-            </div>
-          ) : null}
-
-          {myTurn ? (
-            <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-5">
-              <p className="text-xs text-subtle">Your action — to call: {need}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" onClick={() => playerAction({ sessionId: sid, type: 'fold' })}>
-                  Fold
+              {need === 0 ? (
+                <Button variant="secondary" size="sm" onClick={() => playerAction({ sessionId: sid, type: 'check' })}>
+                  {t('table.check')}
                 </Button>
-                {need === 0 ? (
-                  <Button variant="secondary" size="sm" onClick={() => playerAction({ sessionId: sid, type: 'check' })}>
-                    Check
-                  </Button>
-                ) : (
-                  <Button variant="primary" size="sm" onClick={() => playerAction({ sessionId: sid, type: 'call' })}>
-                    Call {need}
-                  </Button>
-                )}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={session.bigBlind}
-                    className="w-24 rounded-lg border border-white/15 bg-black/30 px-2 py-1 font-mono text-sm text-zinc-100"
-                    value={raiseAmount || session.bigBlind}
-                    onChange={(e) => setRaiseAmount(Number(e.target.value) || session.bigBlind)}
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() =>
-                      playerAction({
-                        sessionId: sid,
-                        type: session.currentBet > 0 ? 'raise' : 'bet',
-                        amount: raiseAmount || session.bigBlind
-                      })
-                    }
-                  >
-                    {session.currentBet > 0 ? 'Raise' : 'Bet'}
-                  </Button>
-                </div>
+              ) : (
+                <Button variant="secondary" size="sm" onClick={() => playerAction({ sessionId: sid, type: 'call' })}>
+                  {t('table.call', { amount: need })}
+                </Button>
+              )}
+              <div className="flex flex-1 flex-wrap items-end gap-2 sm:flex-none">
+                <Input
+                  type="number"
+                  min={session.bigBlind}
+                  label={t('table.raise')}
+                  className="w-28"
+                  value={raiseAmount || session.bigBlind}
+                  onChange={(e) => setRaiseAmount(Number(e.target.value) || session.bigBlind)}
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                    playerAction({
+                      sessionId: sid,
+                      type: session.currentBet > 0 ? 'raise' : 'bet',
+                      amount: raiseAmount || session.bigBlind
+                    })
+                  }
+                >
+                  {session.currentBet > 0 ? t('table.raise') : t('table.bet')}
+                </Button>
               </div>
             </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted">Waiting for opponent…</p>
-          )}
-        </GlassPanel>
-      </div>
-    </div>
+          </div>
+        ) : session.street !== 'COMPLETE' ? (
+          <p className="mt-4 text-sm text-muted">{t('table.waitingOpponent')}</p>
+        ) : null}
+      </GlassPanel>
+
+      <GlassPanel className="mt-6 border-white/10 p-5">
+        <SectionHeader eyebrow={t('table.voiceEyebrow')} title={t('table.voiceTitle')} className="mb-2" />
+        <VoiceRoom />
+      </GlassPanel>
+    </PageShell>
   );
 };

@@ -18,6 +18,17 @@ test('metrics endpoint is available', async ({ request }, testInfo) => {
   expect(response.ok()).toBeTruthy();
 });
 
+test('lobby defaults to Russian queue button', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5180/lobby');
+  await expect(page.getByRole('button', { name: /Играть Hold'em/i })).toBeVisible();
+});
+
+test('lobby language switch toggles queue button to English', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5180/lobby');
+  await page.getByRole('button', { name: 'EN' }).click();
+  await expect(page.getByRole('button', { name: /Queue Hold'em/i })).toBeVisible();
+});
+
 test('lobby page renders title', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
   await expect(page.getByRole('heading', { name: /DuoPoker/i })).toBeVisible();

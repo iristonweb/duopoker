@@ -10,14 +10,14 @@
     }
   },
   "rewrites": [
-    { "source": "/auth/:path*", "destination": "/api" },
-    { "source": "/profile/:path*", "destination": "/api" },
-    { "source": "/game/:path*", "destination": "/api" },
-    { "source": "/monetization/:path*", "destination": "/api" },
-    { "source": "/clubs/:path*", "destination": "/api" },
-    { "source": "/voice/:path*", "destination": "/api" },
+    { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
+    { "source": "/profile/:path*", "destination": "/api/profile/:path*" },
+    { "source": "/game/:path*", "destination": "/api/game/:path*" },
+    { "source": "/monetization/:path*", "destination": "/api/monetization/:path*" },
+    { "source": "/clubs/:path*", "destination": "/api/clubs/:path*" },
+    { "source": "/voice/:path*", "destination": "/api/voice/:path*" },
     { "source": "/health", "destination": "/api/health" },
     { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|assets/|icons/).*)", "destination": "/index.html" }
   ]
 }

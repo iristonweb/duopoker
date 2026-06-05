@@ -1,0 +1,12 @@
+import i18n from '../i18n';
+
+/** Map store error codes (or API codes) to localized strings. */
+export function translateAuthError(code: string | undefined): string {
+  if (!code) return '';
+  return i18n.t(`auth.errors.${code}`, { defaultValue: code });
+}
+
+export function translateQueueError(code: string | undefined): string {
+  if (!code) return '';
+  return i18n.t(`queue.errors.${code}`, { defaultValue: code });
+}

@@ -4,6 +4,10 @@ import type { SessionState } from '@duopoker/shared-types/index';
 import { getApiBase, resolveApiUrl, usesRealtimeSocket } from '../config/api';
 import { readApiError } from '../lib/api-error';
 
+import type { EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types';
+import { canEquipCosmetic, cosmeticById } from '@duopoker/shared-types';
+import { loadResolvedEquipped, writeEquipped } from '../lib/cosmetics-client';
+
 const LS_ACCESS = 'duopoker_access';
 const LS_REFRESH = 'duopoker_refresh';
 const LS_GUEST = 'duopoker_guest_id';
@@ -28,6 +32,10 @@ type AppStore = {
   nickname?: string;
   displayName?: string;
   chips?: number;
+  userRole: 'USER' | 'SUPERADMIN';
+  subscriptionTier: SubscriptionTier;
+  equipped: EquippedCosmetics;
+  inventory: string[];
   accessToken?: string;
   refreshToken?: string;
   mode: 'HOLDEM' | 'RASPISNOY';
@@ -43,8 +51,12 @@ type AppStore = {
   refreshAccessToken: () => Promise<boolean>;
   connect: () => void;
   apiFetch: (path: string, init?: RequestInit) => Promise<Response>;
-  queue: () => Promise<{ status: 'waiting' | 'matched'; sessionId?: string }>;
-  pollQueueStatus: () => Promise<{ status: 'idle' | 'waiting' | 'matched'; sessionId?: string }>;
+  queue: () => Promise<{ status: 'waiting' | 'matched' | 'error'; sessionId?: string; message?: string }>;
+  pollQueueStatus: () => Promise<{
+    status: 'idle' | 'waiting' | 'matched' | 'error';
+    sessionId?: string;
+    message?: string;
+  }>;
   leaveQueue: () => Promise<void>;
   joinSession: (sessionId: string, mode?: 'HOLDEM' | 'RASPISNOY', buyIn?: number) => Promise<void>;
   pollSession: (sessionId: string) => void;
@@ -72,6 +84,7 @@ type AppStore = {
   joinPrivateTable: (clubId: string, tableId: string) => Promise<string>;
   acceptInviteByCode: (code: string) => Promise<{ clubId: string; tableId: string }>;
   buyCosmetic: (itemId: string) => Promise<void>;
+  equipCosmetic: (itemId: string) => void;
 };
 
 export type ClubSummary = {
@@ -108,6 +121,10 @@ export const useAppStore = create<AppStore>((set, get) => {
   const initial = readStored();
   return {
     userId: initial.storedUserId ?? guestId(),
+    userRole: 'USER',
+    subscriptionTier: 'FREE',
+    equipped: loadResolvedEquipped(initial.storedUserId ?? guestId(), 'FREE'),
+    inventory: [],
     accessToken: initial.access,
     refreshToken: initial.refresh,
     mode: 'HOLDEM',
@@ -133,7 +150,8 @@ export const useAppStore = create<AppStore>((set, get) => {
         session: undefined,
         email: undefined,
         displayName: undefined,
-        chips: undefined
+        chips: undefined,
+        userRole: 'USER'
       });
       if (usesRealtimeSocket()) queueMicrotask(() => get().connect());
     },
@@ -198,8 +216,8 @@ export const useAppStore = create<AppStore>((set, get) => {
     queue: async () => {
       set({ sessionError: undefined });
       if (!get().accessToken) {
-        set({ sessionError: 'Sign in to join the queue.' });
-        return { status: 'waiting' as const };
+        set({ sessionError: 'sign_in' });
+        return { status: 'error' as const, message: 'sign_in' };
       }
       if (usesRealtimeSocket()) {
         get().connect();
@@ -219,8 +237,9 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        set({ sessionError: readApiError(err, 'queue_failed') });
-        return { status: 'waiting' as const };
+        const message = readApiError(err, 'queue_failed');
+        set({ sessionError: message });
+        return { status: 'error' as const, message };
       }
       const data = (await res.json()) as {
         status: 'waiting' | 'matched' | 'idle';
@@ -240,7 +259,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       }
       const res = await get().apiFetch('/game/queue/status');
       if (!res.ok) {
-        return { status: 'idle' as const };
+        const err = await res.json().catch(() => ({}));
+        const message = readApiError(err, 'queue_failed');
+        set({ sessionError: message });
+        return { status: 'error' as const, message };
       }
       const data = (await res.json()) as {
         status: 'idle' | 'waiting' | 'matched';
@@ -357,10 +379,6 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     register: async (email, password, displayName) => {
       set({ authError: undefined, authNotice: undefined });
-      if (!getApiBase() && !import.meta.env.PROD) {
-        set({ authError: 'Set VITE_API_URL=http://localhost:4000 in apps/web/.env for local auth.' });
-        throw new Error('no api base');
-      }
       let res: Response;
       try {
         res = await fetch(resolveApiUrl('/auth/register'), {
@@ -369,18 +387,24 @@ export const useAppStore = create<AppStore>((set, get) => {
           body: JSON.stringify({ email, password, displayName })
         });
       } catch {
-        set({ authError: 'Could not reach the server. Check your connection or try again later.' });
+        set({ authError: 'network' });
         throw new Error('register failed');
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        set({ authError: readApiError(err, 'Registration failed') });
+        set({ authError: readApiError(err, 'registrationFailed') });
         throw new Error('register failed');
       }
       const data = (await res.json()) as {
         accessToken: string;
         refreshToken: string;
-        user: { id: string; email: string; displayName: string; emailVerified?: boolean };
+        user: {
+          id: string;
+          email: string;
+          displayName: string;
+          emailVerified?: boolean;
+          role?: 'USER' | 'SUPERADMIN';
+        };
         verificationRequired?: boolean;
       };
       localStorage.setItem(LS_ACCESS, data.accessToken);
@@ -392,10 +416,9 @@ export const useAppStore = create<AppStore>((set, get) => {
         userId: data.user.id,
         email: data.user.email,
         displayName: data.user.displayName,
+        userRole: data.user.role ?? 'USER',
         authError: undefined,
-        authNotice: data.verificationRequired
-          ? 'Account created. Check your email for a verification link.'
-          : undefined
+        authNotice: data.verificationRequired ? 'verificationRequired' : undefined
       });
       get().socket?.disconnect();
       set({ socket: undefined });
@@ -404,10 +427,6 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     login: async (email, password) => {
       set({ authError: undefined, authNotice: undefined });
-      if (!getApiBase() && !import.meta.env.PROD) {
-        set({ authError: 'Set VITE_API_URL=http://localhost:4000 in apps/web/.env for local auth.' });
-        throw new Error('no api base');
-      }
       let res: Response;
       try {
         res = await fetch(resolveApiUrl('/auth/login'), {
@@ -416,21 +435,26 @@ export const useAppStore = create<AppStore>((set, get) => {
           body: JSON.stringify({ email, password })
         });
       } catch {
-        set({ authError: 'Could not reach the server. Check your connection or try again later.' });
+        set({ authError: 'network' });
         throw new Error('login failed');
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        set({ authError: readApiError(err, 'Invalid credentials') });
+        set({ authError: readApiError(err, 'invalidCredentials') });
         throw new Error('login failed');
       }
       const data = (await res.json()) as {
         accessToken: string;
         refreshToken: string;
-        user: { id: string; email: string; displayName: string };
+        user: { id: string; email: string; displayName: string; role?: 'USER' | 'SUPERADMIN' };
       };
       get().setTokens(data.accessToken, data.refreshToken, data.user.id);
-      set({ email: data.user.email, displayName: data.user.displayName, authError: undefined });
+      set({
+        email: data.user.email,
+        displayName: data.user.displayName,
+        userRole: data.user.role ?? 'USER',
+        authError: undefined
+      });
       get().socket?.disconnect();
       set({ socket: undefined });
       get().connect();
@@ -443,14 +467,30 @@ export const useAppStore = create<AppStore>((set, get) => {
         const res = await get().apiFetch('/auth/me');
         if (!res.ok) return;
         const data = (await res.json()) as {
-          user: { chips: number; displayName: string; email: string; nickname?: string } | null;
+          user: {
+            chips: number;
+            displayName: string;
+            email: string;
+            nickname?: string;
+            role?: 'USER' | 'SUPERADMIN';
+          } | null;
+          subscription?: { tier: SubscriptionTier } | null;
+          inventory?: Array<{ itemId: string; equipped?: boolean }>;
         };
         if (data.user) {
+          const uid = get().userId;
+          const tier = data.subscription?.tier ?? 'FREE';
+          const inventory = (data.inventory ?? []).map((i) => i.itemId);
+          const equipped = loadResolvedEquipped(uid, tier, inventory);
           set({
             chips: data.user.chips,
             displayName: data.user.displayName,
             email: data.user.email,
-            nickname: data.user.nickname
+            nickname: data.user.nickname,
+            userRole: data.user.role ?? 'USER',
+            subscriptionTier: tier,
+            inventory,
+            equipped
           });
         }
       } catch {
@@ -542,6 +582,18 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       if (!res.ok) throw new Error('Purchase failed');
       await get().fetchProfile();
+    },
+    equipCosmetic: (itemId) => {
+      const def = cosmeticById(itemId);
+      if (!def) return;
+      const { subscriptionTier, inventory, userId, equipped } = get();
+      if (!canEquipCosmetic(itemId, subscriptionTier, inventory)) return;
+      const next = { ...equipped };
+      if (def.slot === 'deck') next.deck = itemId;
+      if (def.slot === 'chip') next.chip = itemId;
+      if (def.slot === 'frame') next.frame = itemId;
+      writeEquipped(userId, next);
+      set({ equipped: next });
     }
   };
 });

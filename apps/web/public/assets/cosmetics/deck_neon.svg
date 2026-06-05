@@ -1,2 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none"><rect width="200" height="200" fill="#0A0A0A"/><rect x="40" y="50" width="50" height="70" rx="6" fill="#111" stroke="#00F5D4" stroke-width="2"/><rect x="110" y="50" width="50" height="70" rx="6" fill="#111" stroke="#7C3AED" stroke-width="2"/><circle cx="100" cy="155" r="18" fill="#00F5D4" opacity="0.3"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
+  <defs>
+    <linearGradient id="nBg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#041810"/>
+      <stop offset="1" stop-color="#050508"/>
+    </linearGradient>
+    <linearGradient id="nGlow" x1="70" y1="20" x2="70" y2="180">
+      <stop stop-color="#4ade80" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="140" height="200" rx="10" fill="url(#nBg)" stroke="#4ade80" stroke-opacity="0.45" stroke-width="1.5"/>
+  <rect x="10" y="10" width="120" height="180" rx="7" fill="url(#nGlow)"/>
+  <path d="M30 60 H110 M30 100 H110 M30 140 H110" stroke="#4ade80" stroke-opacity="0.2" stroke-width="1"/>
+  <path d="M50 40 L70 70 L90 40 M50 160 L70 130 L90 160" stroke="#4ade80" stroke-opacity="0.35" stroke-width="1.2" fill="none"/>
+  <circle cx="70" cy="100" r="18" fill="none" stroke="#4ade80" stroke-width="1.5" opacity="0.6"/>
+  <text x="70" y="106" text-anchor="middle" fill="#4ade80" font-family="monospace" font-size="16">DP</text>
+</svg>

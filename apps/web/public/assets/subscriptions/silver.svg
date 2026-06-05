@@ -1,2 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none"><defs><linearGradient id="s" x1="0" y1="0" x2="400" y2="80"><stop stop-color="#52525B"/><stop offset="1" stop-color="#18181B"/></linearGradient></defs><rect width="400" height="80" fill="url(#s)"/><text x="24" y="48" fill="#E4E4E7" font-family="system-ui,sans-serif" font-size="28" font-weight="800">SILVER</text><circle cx="340" cy="40" r="22" fill="#71717A" opacity="0.4"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="400" y2="80">
+      <stop stop-color="#d4d4d8"/>
+      <stop offset="1" stop-color="#52525b"/>
+    </linearGradient>
+    <linearGradient id="sBg" x1="0" y1="0" x2="400" y2="80">
+      <stop stop-color="#050508"/>
+      <stop offset="1" stop-color="#14141f"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="80" fill="url(#sBg)"/>
+  <rect width="400" height="80" fill="url(#s)" opacity="0.2"/>
+  <text x="24" y="48" fill="#d4d4d8" font-family="Georgia,serif" font-size="28" font-weight="600">SILVER</text>
+</svg>

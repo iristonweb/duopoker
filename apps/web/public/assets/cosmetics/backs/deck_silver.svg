@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
+  <defs>
+    <linearGradient id="sBg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#1a1a22"/>
+      <stop offset="0.5" stop-color="#2a2a32"/>
+      <stop offset="1" stop-color="#14141f"/>
+    </linearGradient>
+    <linearGradient id="sShine" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f4f4f5"/>
+      <stop offset="0.5" stop-color="#a1a1aa"/>
+      <stop offset="1" stop-color="#52525b"/>
+    </linearGradient>
+    <pattern id="diamonds" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="#d4d4d8" fill-opacity="0.08"/>
+    </pattern>
+  </defs>
+  <rect width="140" height="200" rx="10" fill="url(#sBg)" stroke="url(#sShine)" stroke-width="1.5"/>
+  <rect x="10" y="10" width="120" height="180" rx="7" fill="url(#diamonds)"/>
+  <rect x="16" y="16" width="108" height="168" rx="5" stroke="#d4d4d8" stroke-opacity="0.35" stroke-width="1"/>
+  <path d="M70 52 L88 70 L70 88 L52 70 Z" fill="none" stroke="url(#sShine)" stroke-width="1.2" opacity="0.7"/>
+  <path d="M70 112 L88 130 L70 148 L52 130 Z" fill="none" stroke="url(#sShine)" stroke-width="1.2" opacity="0.5"/>
+  <text x="70" y="102" text-anchor="middle" fill="#e4e4e7" font-family="Georgia,serif" font-size="22" opacity="0.9">`</text>
+</svg>

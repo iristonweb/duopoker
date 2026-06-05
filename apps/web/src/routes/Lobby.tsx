@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   catalogGameModes,
@@ -11,16 +12,25 @@ import {
   AppBackground,
   Button,
   GlassPanel,
+  Input,
   LegalDisclaimer,
   ModeCard,
+  SectionHeader,
   SkinSelector,
   SubscriptionTierCard,
+  TabGroup,
   VoiceChatPanel,
   type CosmeticItem
 } from '@duopoker/ui-kit';
+import { AppLogo } from '../components/AppLogo';
+import { LanguageSwitch } from '../components/LanguageSwitch';
+import { PlayingCard } from '../components/cosmetics/PlayingCard';
+import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
+import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { PokerTable3D } from '../components/PokerTable3D';
 import { VoiceRoom } from '../components/VoiceRoom';
 import { useAppStore } from '../store/useAppStore';
+import { translateAuthError, translateQueueError } from '../lib/translate-store-error';
 import { resolveApiUrl, usesRealtimeSocket } from '../config/api';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
@@ -46,11 +56,15 @@ type CatalogSub = { tier: string; stripePriceId?: string; priceUsd?: number; ima
 type CatalogGameMode = { id: 'HOLDEM' | 'RASPISNOY'; title: string; description: string; imageUrl: string };
 
 function AuthPanel() {
+  const { t } = useTranslation();
   const accessToken = useAppStore((s) => s.accessToken);
   const userId = useAppStore((s) => s.userId);
+  const userRole = useAppStore((s) => s.userRole);
   const email = useAppStore((s) => s.email);
   const displayName = useAppStore((s) => s.displayName);
   const chips = useAppStore((s) => s.chips);
+  const equipped = useAppStore((s) => s.equipped);
+  const subscriptionTier = useAppStore((s) => s.subscriptionTier);
   const authError = useAppStore((s) => s.authError);
   const authNotice = useAppStore((s) => s.authNotice);
   const register = useAppStore((s) => s.register);
@@ -64,45 +78,82 @@ function AuthPanel() {
 
   if (accessToken) {
     return (
-      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-        <p className="max-w-xs truncate text-right text-xs text-muted" title={email}>
-          {displayName ?? 'Player'} · {chips != null ? `${chips.toLocaleString()} chips` : ''}
-        </p>
-        <Button variant="secondary" size="md" onClick={() => logout()}>
-          Sign out
-        </Button>
-      </div>
+      <GlassPanel glow="gold" className="w-full max-w-sm border-gold/20 p-4 sm:max-w-md">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3">
+            <PlayerAvatar
+              name={displayName ?? 'Player'}
+              frameId={equipped.frame}
+              tier={subscriptionTier}
+              size="sm"
+              showTier
+            />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/70">
+                  {t('auth.welcomeBack')}
+                </p>
+                {userRole === 'SUPERADMIN' ? (
+                  <Link
+                    to="/admin"
+                    className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-light"
+                  >
+                    {t('auth.adminBadge')}
+                  </Link>
+                ) : null}
+              </div>
+              <p className="truncate font-display text-lg font-semibold text-ivory" title={email ?? undefined}>
+                {displayName ?? 'Player'}
+              </p>
+              {chips != null ? (
+                <div className="mt-1 flex items-center gap-2">
+                  <PokerChipVisual chipId={equipped.chip} size="sm" />
+                  <p className="text-sm text-emerald">
+                    <span className="font-mono font-medium">{chips.toLocaleString()}</span>
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => logout()}>
+            {t('auth.signOut')}
+          </Button>
+        </div>
+        <div className="mt-4 flex items-center justify-center gap-2 border-t border-white/10 pt-4">
+          <PlayingCard faceUp={false} deckId={equipped.deck} size="sm" />
+          <PlayingCard faceUp={false} deckId={equipped.deck} size="sm" />
+        </div>
+      </GlassPanel>
     );
   }
 
   return (
-    <GlassPanel className="w-full max-w-sm border-white/10 p-4 sm:max-w-md">
-      <div className="mb-3 flex gap-2">
-        <button
-          type="button"
-          className={`rounded-lg px-3 py-1 text-xs font-medium ${tab === 'login' ? 'bg-gold/20 text-gold' : 'text-muted'}`}
-          onClick={() => {
-            setTab('login');
-            useAppStore.setState({ authError: undefined, authNotice: undefined });
-          }}
-        >
-          Sign in
-        </button>
-        <button
-          type="button"
-          className={`rounded-lg px-3 py-1 text-xs font-medium ${tab === 'register' ? 'bg-gold/20 text-gold' : 'text-muted'}`}
-          onClick={() => {
-            setTab('register');
-            useAppStore.setState({ authError: undefined, authNotice: undefined });
-          }}
-        >
-          Register
-        </button>
-      </div>
-      {authError ? <p className="mb-2 text-xs text-rose-400">{authError}</p> : null}
-      {authNotice ? <p className="mb-2 text-xs text-emerald-400">{authNotice}</p> : null}
+    <GlassPanel glow="gold" className="w-full max-w-sm border-gold/15 p-5 sm:max-w-md">
+      <p className="mb-3 font-display text-lg font-semibold text-ivory">{t('auth.joinTable')}</p>
+      <TabGroup
+        tabs={[
+          { id: 'login' as const, label: t('auth.signIn') },
+          { id: 'register' as const, label: t('auth.register') }
+        ]}
+        value={tab}
+        onChange={(next) => {
+          setTab(next);
+          useAppStore.setState({ authError: undefined, authNotice: undefined });
+        }}
+        className="mb-4"
+      />
+      {authError ? (
+        <p className="mb-3 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          {translateAuthError(authError)}
+        </p>
+      ) : null}
+      {authNotice ? (
+        <p className="mb-3 rounded-lg border border-emerald/20 bg-emerald/10 px-3 py-2 text-xs text-emerald">
+          {translateAuthError(authNotice)}
+        </p>
+      ) : null}
       <form
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-3"
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
@@ -121,54 +172,55 @@ function AuthPanel() {
         }}
       >
         {tab === 'register' ? (
-          <input
-            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-muted"
-            placeholder="Display name (2+ chars)"
+          <Input
+            label={t('auth.displayName')}
+            placeholder={t('auth.displayNamePlaceholder')}
             minLength={2}
             value={nameIn}
             onChange={(e) => setNameIn(e.target.value)}
           />
         ) : null}
-        <input
+        <Input
           required
+          label={t('auth.email')}
           type="email"
           autoComplete="email"
-          className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-muted"
-          placeholder="Email"
+          placeholder={t('auth.emailPlaceholder')}
           value={emailIn}
           onChange={(e) => setEmailIn(e.target.value)}
         />
-        <input
+        <Input
           required
+          label={t('auth.password')}
           type="password"
           autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
           minLength={8}
-          className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-muted"
-          placeholder="Password (8+ chars)"
+          placeholder={t('auth.passwordPlaceholder')}
           value={passwordIn}
           onChange={(e) => setPasswordIn(e.target.value)}
         />
-        <Button variant="primary" size="md" type="submit" disabled={busy}>
-          {tab === 'register' ? 'Create account' : 'Sign in'}
+        <Button variant="primary" size="md" type="submit" disabled={busy} className="mt-1 w-full">
+          {tab === 'register' ? t('auth.createAccount') : t('auth.signIn')}
         </Button>
       </form>
-      <p className="mt-2 text-xs text-subtle">
-        {!accessToken ? (
-          <>
-            Playing as <span className="font-mono text-zinc-400">{userId.slice(0, 18)}…</span> — sign in to save
-            progress.
-          </>
-        ) : null}
+      <p className="mt-3 text-center text-[11px] leading-relaxed text-subtle">
+        {t('auth.guestHint', { id: `${userId.slice(0, 14)}…` })}
       </p>
     </GlassPanel>
   );
 }
 
 export const Lobby = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { mode, setMode, connect, queue, pollQueueStatus, session, readyNextHand, fetchProfile } =
     useAppStore();
   const accessToken = useAppStore((s) => s.accessToken);
+  const sessionError = useAppStore((s) => s.sessionError);
+  const subscriptionTier = useAppStore((s) => s.subscriptionTier);
+  const equipped = useAppStore((s) => s.equipped);
+  const inventory = useAppStore((s) => s.inventory);
+  const equipCosmetic = useAppStore((s) => s.equipCosmetic);
   const socket = useAppStore((s) => s.socket);
   const [cosmetics, setCosmetics] = useState<CosmeticItem[]>([]);
   const [catalogSubs, setCatalogSubs] = useState<CatalogSub[]>([]);
@@ -193,7 +245,7 @@ export const Lobby = () => {
 
   useEffect(() => {
     if (!usesRealtimeSocket() || !socket) return;
-    const onWait = () => setQueueBanner('Waiting for another player in the queue…');
+    const onWait = () => setQueueBanner(t('queue.waitingSocket'));
     const onFound = () => setQueueBanner(null);
     socket.on('matchmakingWaiting', onWait);
     socket.on('matchFound', onFound);
@@ -201,7 +253,7 @@ export const Lobby = () => {
       socket.off('matchmakingWaiting', onWait);
       socket.off('matchFound', onFound);
     };
-  }, [socket]);
+  }, [socket, t]);
 
   useEffect(() => {
     return () => {
@@ -212,32 +264,48 @@ export const Lobby = () => {
   const startQueue = async () => {
     if (queueBusy) return;
     if (!accessToken) {
-      setQueueBanner('Sign in to play online against other players.');
+      setQueueBanner(t('queue.signInToPlay'));
       return;
     }
     setQueueBusy(true);
-    setQueueBanner('Searching for opponents…');
+    setQueueBanner(t('queue.searching'));
+    useAppStore.setState({ sessionError: undefined });
     try {
-      if (usesRealtimeSocket()) {
-        await queue();
+      const result = await queue();
+      if (result.status === 'error') {
+        setQueueBanner(null);
         return;
       }
-      await queue();
+      if (usesRealtimeSocket()) {
+        return;
+      }
+      if (result.status === 'matched' && result.sessionId) {
+        setQueueBanner(null);
+        navigate(`/table/${result.sessionId}`);
+        return;
+      }
       const poll = async () => {
-        const result = await pollQueueStatus();
-        if (result.status === 'matched' && result.sessionId) {
+        const pollResult = await pollQueueStatus();
+        if (pollResult.status === 'matched' && pollResult.sessionId) {
           if (queuePollRef.current) clearInterval(queuePollRef.current);
           queuePollRef.current = null;
           setQueueBanner(null);
-          navigate(`/table/${result.sessionId}`);
-        } else if (result.status === 'waiting') {
-          setQueueBanner('Waiting for another player in the queue…');
+          navigate(`/table/${pollResult.sessionId}`);
+        } else if (pollResult.status === 'waiting') {
+          setQueueBanner(t('queue.waiting'));
+        } else if (pollResult.status === 'error') {
+          if (queuePollRef.current) clearInterval(queuePollRef.current);
+          queuePollRef.current = null;
+          setQueueBanner(null);
         }
       };
       await poll();
       if (!queuePollRef.current) {
         queuePollRef.current = setInterval(poll, 2000);
       }
+    } catch {
+      setQueueBanner(null);
+      useAppStore.setState({ sessionError: 'queue_failed' });
     } finally {
       setQueueBusy(false);
     }
@@ -271,11 +339,11 @@ export const Lobby = () => {
     const priceId = sub?.stripePriceId ?? (catalogMockCheckout ? tier : undefined);
     const token = useAppStore.getState().accessToken;
     if (!token) {
-      setCheckoutMsg('Sign in to subscribe.');
+      setCheckoutMsg(t('lobby.signInToSubscribe'));
       return;
     }
     if (!priceId) {
-      setCheckoutMsg('Stripe price is not configured on the server (STRIPE_PRICE_* env).');
+      setCheckoutMsg(t('lobby.stripeNotConfigured'));
       return;
     }
     setCheckoutMsg(null);
@@ -290,12 +358,12 @@ export const Lobby = () => {
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok) {
-        setCheckoutMsg(data.error ?? 'Checkout failed');
+        setCheckoutMsg(data.error ?? t('queue.failed'));
         return;
       }
       if (data.url) window.location.href = data.url;
     } catch {
-      setCheckoutMsg('Network error');
+      setCheckoutMsg(t('lobby.networkError'));
     }
   };
 
@@ -322,53 +390,70 @@ export const Lobby = () => {
         variants={reduceMotion ? undefined : container}
       >
         <motion.header
-          className="mb-10 flex flex-col gap-4 border-b border-white/10 pb-8 sm:flex-row sm:items-start sm:justify-between"
+          className="mb-10 flex flex-col gap-6 border-b border-white/10 pb-8 sm:flex-row sm:items-start sm:justify-between"
           variants={reduceMotion ? undefined : section}
           custom={0}
         >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold/80">
-              Poker Duality
-            </p>
-            <h1 className="mt-1 font-sans text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
-              Duo<span className="text-gold">Poker</span>
-            </h1>
-            <p className="mt-2 max-w-xl text-sm text-muted">
-              Premium tables for Texas Hold&apos;em and Raspisnoy — real-time multiplayer, virtual
-              chips only.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-4 text-xs">
-              <Link to="/legal/terms" className="text-gold/80 hover:underline">
-                Terms
-              </Link>
-              <Link to="/legal/privacy" className="text-gold/80 hover:underline">
-                Privacy
-              </Link>
-              <Link to="/legal/community" className="text-gold/80 hover:underline">
-                Community
-              </Link>
+          <div className="flex min-w-0 flex-1 flex-col gap-5">
+            <AppLogo size="lg" className="self-start" />
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
+                {t('brand.eyebrow')}
+              </p>
+              <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ivory sm:text-4xl">
+                {t('brand.title')}
+                <span className="text-gradient-gold">{t('brand.titleGold')}</span>
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">{t('brand.tagline')}</p>
+              <div className="mt-4 flex flex-wrap gap-5 text-xs">
+                <Link to="/legal/terms" className="premium-link">
+                  {t('nav.terms')}
+                </Link>
+                <Link to="/legal/privacy" className="premium-link">
+                  {t('nav.privacy')}
+                </Link>
+                <Link to="/legal/community" className="premium-link">
+                  {t('nav.community')}
+                </Link>
+              </div>
             </div>
           </div>
-          <AuthPanel />
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <LanguageSwitch className="self-end" />
+            <AuthPanel />
+          </div>
         </motion.header>
 
         <motion.div
-          className="mb-8 overflow-hidden rounded-2xl border border-white/10"
+          className="glass-shine relative mb-10 overflow-hidden rounded-3xl border border-white/10 shadow-panel ring-1 ring-white/5"
           variants={reduceMotion ? undefined : section}
           custom={0.5}
         >
           <img
             src={lobbyBannerUrl}
             alt="DuoPoker premium play-money tables"
-            className="h-36 w-full object-cover sm:h-44"
+            className="h-40 w-full object-cover sm:h-52"
             loading="eager"
             decoding="async"
           />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-transparent to-gold/5" />
+          <div className="absolute bottom-0 left-0 p-6 sm:p-8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-gold/80">
+              {t('lobby.heroPremium')}
+            </p>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-ivory sm:text-3xl">{t('lobby.heroTitle')}</h2>
+            <p className="mt-2 max-w-md text-sm text-muted">{t('lobby.heroDesc')}</p>
+          </div>
         </motion.div>
 
         <div className="grid flex-1 grid-cols-1 gap-8 lg:grid-cols-12">
           <motion.div className="flex flex-col gap-4 lg:col-span-5" variants={reduceMotion ? undefined : section} custom={1}>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-subtle">Game mode</h2>
+            <SectionHeader
+              eyebrow={t('lobby.modesEyebrow')}
+              title={t('lobby.modesTitle')}
+              description={t('lobby.modesDesc')}
+            />
             <div className="flex flex-col gap-4">
               <ModeCard
                 title={holdemMode.title}
@@ -394,40 +479,64 @@ export const Lobby = () => {
               disabled={queueBusy}
               onClick={() => void startQueue()}
             >
-              Queue {mode === 'HOLDEM' ? "Hold'em" : 'Raspisnoy'}
+              {mode === 'HOLDEM' ? t('queue.buttonHoldem') : t('queue.buttonRaspisnoy')}
             </Button>
-            {queueBanner ? <p className="text-xs text-amber-400/90">{queueBanner}</p> : null}
+            {queueBanner ? (
+              <p className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200/90">
+                {queueBanner}
+              </p>
+            ) : null}
+            {sessionError ? (
+              <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+                {translateQueueError(sessionError)}
+              </p>
+            ) : null}
             {tableHref ? (
               <Link to={tableHref}>
                 <Button variant="secondary" size="md" className="mt-2 w-full sm:w-auto">
-                  Open table view
+                  {t('queue.openTable')}
                 </Button>
               </Link>
             ) : null}
           </motion.div>
 
           <motion.div className="flex flex-col gap-4 lg:col-span-7" variants={reduceMotion ? undefined : section} custom={2}>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-subtle">Session</h2>
-            <GlassPanel className="flex flex-col gap-4 border-white/10 p-0 overflow-hidden">
-              {!reduceMotion && session && session.street && session.street !== 'LOBBY' ? (
+            <SectionHeader
+              eyebrow="Live"
+              title={t('lobby.liveSession')}
+              description={t('lobby.liveSessionDesc')}
+            />
+            <GlassPanel glow="emerald" className="flex flex-col gap-4 overflow-hidden border-white/10 p-0">
+              {session && session.street && session.street !== 'LOBBY' ? (
                 <div className="border-b border-white/10 px-4 pt-4">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
-                    Table (3D)
-                  </p>
-                  <PokerTable3D
-                    communityCards={session.communityCards ?? []}
-                    pot={kettle}
-                    street={session.street}
-                  />
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{t('lobby.table3d')}</p>
+                  {reduceMotion ? (
+                    <div className="flex h-36 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/30">
+                      {(session.communityCards ?? []).slice(0, 5).map((c, i) => (
+                        <PlayingCard key={`${c}-${i}`} card={c} faceUp deckId={equipped.deck} size="sm" />
+                      ))}
+                      {(session.communityCards ?? []).length === 0 ? (
+                        <PlayingCard faceUp={false} deckId={equipped.deck} size="sm" />
+                      ) : null}
+                    </div>
+                  ) : (
+                    <PokerTable3D
+                      communityCards={session.communityCards ?? []}
+                      pot={kettle}
+                      street={session.street}
+                      heroDeckId={equipped.deck}
+                      heroChipId={equipped.chip}
+                    />
+                  )}
                 </div>
               ) : null}
-              {!reduceMotion && (!session || session.street === 'LOBBY' || !session.street) && (
+              {(!session || session.street === 'LOBBY' || !session.street) && (
                 <div className="border-b border-white/10 px-4 pt-4">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
-                    Lobby preview
+                    {t('lobby.lobbyPreview')}
                   </p>
                   <Suspense fallback={<div className="h-36 w-full animate-pulse rounded-2xl bg-white/5" />}>
-                    <LobbyChipPreview />
+                    <LobbyChipPreview staticOnly={Boolean(reduceMotion)} />
                   </Suspense>
                 </div>
               )}
@@ -442,13 +551,13 @@ export const Lobby = () => {
                 ) : (
                   <p className="text-sm text-muted">
                     {session
-                      ? `Table ${session.sessionId} — ${session.street}`
-                      : 'Queue for a match to start a session.'}
+                      ? t('lobby.sessionStatus', { id: session.sessionId, street: session.street })
+                      : t('lobby.queueHint')}
                   </p>
                 )}
                 {session?.street === 'COMPLETE' ? (
                   <Button variant="secondary" size="sm" className="mt-3" onClick={readyNextHand}>
-                    Next hand
+                    {t('lobby.nextHand')}
                   </Button>
                 ) : null}
               </div>
@@ -462,7 +571,7 @@ export const Lobby = () => {
                   className="w-full"
                   onClick={() => void startSubscription('SILVER')}
                 >
-                  Subscribe
+                  {t('lobby.subscribe')}
                 </Button>
               </SubscriptionTierCard>
               <SubscriptionTierCard tier="GOLD" price="$9.99/mo" bannerUrl={subBanner('GOLD')}>
@@ -472,7 +581,7 @@ export const Lobby = () => {
                   className="w-full"
                   onClick={() => void startSubscription('GOLD')}
                 >
-                  Subscribe
+                  {t('lobby.subscribe')}
                 </Button>
               </SubscriptionTierCard>
               <SubscriptionTierCard tier="PLATINUM" price="$19.99/mo" bannerUrl={subBanner('PLATINUM')}>
@@ -482,7 +591,7 @@ export const Lobby = () => {
                   className="w-full"
                   onClick={() => void startSubscription('PLATINUM')}
                 >
-                  Subscribe
+                  {t('lobby.subscribe')}
                 </Button>
               </SubscriptionTierCard>
               <SubscriptionTierCard tier="ROYAL" price="$49.99/mo" bannerUrl={subBanner('ROYAL')}>
@@ -492,7 +601,7 @@ export const Lobby = () => {
                   className="w-full"
                   onClick={() => void startSubscription('ROYAL')}
                 >
-                  Subscribe
+                  {t('lobby.subscribe')}
                 </Button>
               </SubscriptionTierCard>
             </div>
@@ -501,23 +610,29 @@ export const Lobby = () => {
         </div>
 
         <motion.div
-          className="mt-10 overflow-hidden rounded-2xl border border-white/10"
+          className="glass-shine relative mt-12 overflow-hidden rounded-3xl border border-white/10 shadow-panel"
           variants={reduceMotion ? undefined : section}
           custom={2.5}
         >
           <img
             src={clubsBannerUrl}
             alt="Private clubs for your company"
-            className="h-32 w-full object-cover sm:h-40"
+            className="h-36 w-full object-cover sm:h-44"
             loading="lazy"
           />
-          <div className="flex flex-col gap-3 border-t border-white/10 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+          <div className="relative flex flex-col gap-4 border-t border-white/10 bg-black/40 p-5 backdrop-blur-glass sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-100">Приватные клубы</h2>
-              <p className="text-sm text-muted">Столы для команды · оплата через ЮMoney · приглашения @nickname</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/70">
+                {t('lobby.clubsEyebrow')}
+              </p>
+              <h2 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">{t('lobby.clubsTitle')}</h2>
+              <p className="mt-2 max-w-lg text-sm text-muted">{t('lobby.clubsDesc')}</p>
             </div>
-            <Link to="/clubs">
-              <Button variant="primary">Мои клубы</Button>
+            <Link to="/clubs" className="shrink-0">
+              <Button variant="primary" size="lg">
+                {t('lobby.myClubs')}
+              </Button>
             </Link>
           </div>
         </motion.div>
@@ -529,11 +644,15 @@ export const Lobby = () => {
         >
           <SkinSelector
             catalog={cosmetics}
+            subscriptionTier={subscriptionTier}
+            inventory={inventory}
+            equipped={equipped}
+            onEquip={(itemId) => equipCosmetic(itemId)}
             onBuy={(itemId) => {
               void useAppStore
                 .getState()
                 .buyCosmetic(itemId)
-                .catch(() => setCheckoutMsg('Purchase failed — sign in and check chip balance.'));
+                .catch(() => setCheckoutMsg(t('lobby.checkoutFailed')));
             }}
           />
           <VoiceChatPanel>

@@ -104,14 +104,44 @@ https://duopoker.vercel.app/api/voice/status
 
 ## Local development
 
+### Vercel-style (polling, no Socket.IO)
+
 ```powershell
 docker compose -f infra/docker-compose.yml up postgres -d
 pnpm db:push
-pnpm --filter @duopoker/backend dev    # :4000 — полный realtime локально
+pnpm --filter @duopoker/api dev          # :3001
+pnpm --filter @duopoker/web dev          # :5180 — leave VITE_API_URL unset
+```
+
+Optional: `VITE_API_PROXY=http://localhost:3001` in `apps/web/.env` (this is the default proxy target).
+
+### Full realtime (Socket.IO + LiveKit)
+
+```powershell
+pnpm --filter @duopoker/backend dev    # :4000
 pnpm --filter @duopoker/web dev        # :5180
 ```
 
 `apps/web/.env`: `VITE_API_URL=http://localhost:4000`
+
+### Seed superadmin
+
+```powershell
+$env:ADMIN_EMAIL="you@example.com"
+$env:ADMIN_PASSWORD="your-secure-password"
+pnpm --filter @duopoker/db-schema seed
+```
+
+Login → `GET /api/auth/me` should return `"role":"SUPERADMIN"`. Admin UI: `/admin`.
+
+### Post-deploy checklist
+
+1. `GET /api/health` → `{"status":"ok",...}`
+2. `ALLOW_SOLO_QUEUE=true` on Vercel (solo matchmaking works)
+3. Do **not** set `VITE_API_URL` on Vercel
+4. Register / login → Queue → match → `/table/:id`
+5. Queue API errors show a red banner in lobby (not silent failure)
+6. RU default UI; EN switch in header changes labels
 
 ---
 

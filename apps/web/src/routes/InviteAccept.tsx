@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AppBackground, Button, GlassPanel } from '@duopoker/ui-kit';
+import { Badge, Button, EmptyState, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 import { resolveApiUrl } from '../config/api';
 
@@ -12,33 +12,55 @@ export const InviteAccept = () => {
   const [preview, setPreview] = useState<{ table: { name: string; clubName: string }; seats: unknown[] } | null>(
     null
   );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!code) return;
     fetch(resolveApiUrl(`/clubs/invite/${code}`))
       .then((r) => r.json())
       .then(setPreview)
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
   }, [code]);
 
   return (
-    <div className="relative min-h-screen">
-      <AppBackground />
-      <div className="relative z-10 mx-auto max-w-lg px-4 py-16">
-        <GlassPanel className="border-white/10 p-6">
-          <h1 className="text-xl font-bold text-zinc-100">Приглашение за стол</h1>
-          {preview?.table ? (
-            <p className="mt-2 text-muted">
-              {preview.table.name} · клуб {preview.table.clubName}
-            </p>
-          ) : (
-            <p className="mt-2 text-muted">Загрузка…</p>
-          )}
+    <PageShell
+      maxWidth="lg"
+      back={
+        <Link to="/lobby" className="premium-link text-sm">
+          ← Лобби
+        </Link>
+      }
+      eyebrow="Table invite"
+      title="Приглашение за стол"
+    >
+      {loading ? (
+        <GlassPanel className="border-white/10 p-8">
+          <LoadingSkeleton lines={3} />
+        </GlassPanel>
+      ) : preview?.table ? (
+        <GlassPanel glow="gold" className="border-gold/15 p-6">
+          <p className="font-display text-xl font-semibold text-ivory">{preview.table.name}</p>
+          <p className="mt-2 text-sm text-muted">Клуб: {preview.table.clubName}</p>
+          <Badge className="mt-4" variant="emerald">
+            {preview.seats?.length ?? 0} seats
+          </Badge>
           {!accessToken ? (
-            <p className="mt-4 text-sm text-amber-400">Войдите в аккаунт, чтобы принять приглашение.</p>
+            <EmptyState
+              className="mt-6 border-0 bg-transparent p-0"
+              title="Требуется вход"
+              description="Войдите в аккаунт в лобби, чтобы принять приглашение."
+              action={
+                <Link to="/lobby">
+                  <Button variant="secondary" size="sm">
+                    Перейти в лобби
+                  </Button>
+                </Link>
+              }
+            />
           ) : (
             <Button
-              className="mt-6"
+              className="mt-6 w-full"
               variant="primary"
               onClick={() => {
                 if (!code) return;
@@ -47,14 +69,13 @@ export const InviteAccept = () => {
                 });
               }}
             >
-              Принять
+              Принять приглашение
             </Button>
           )}
-          <Link to="/lobby" className="mt-4 block text-sm text-gold hover:underline">
-            Лобби
-          </Link>
         </GlassPanel>
-      </div>
-    </div>
+      ) : (
+        <EmptyState title="Приглашение недействительно" description="Ссылка устарела или уже использована." />
+      )}
+    </PageShell>
   );
 };

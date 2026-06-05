@@ -4,6 +4,9 @@ export type CatalogCosmetic = {
   rarity: string;
   chipCost: number;
   imageUrl: string;
+  slot?: 'deck' | 'chip' | 'frame';
+  requiredTier?: 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
+  description?: string;
 };
 
 export type CatalogGameMode = {
@@ -24,29 +27,20 @@ export const lobbyHeroBanner = '/assets/banners/lobby-hero.svg';
 export const clubsHeroBanner = '/assets/banners/clubs-hero.svg';
 export const appBackgroundUrl = '/assets/banners/app-background.svg';
 
-export const catalogCosmetics: CatalogCosmetic[] = [
-  {
-    id: 'deck_neon',
-    name: 'Neon deck backs',
-    rarity: 'RARE',
-    chipCost: 1800,
-    imageUrl: '/assets/cosmetics/deck_neon.svg'
-  },
-  {
-    id: 'table_void',
-    name: 'Void table',
-    rarity: 'EPIC',
-    chipCost: 4500,
-    imageUrl: '/assets/cosmetics/table_void.svg'
-  },
-  {
-    id: 'frame_gold',
-    name: 'Gold avatar frame',
-    rarity: 'LEGENDARY',
-    chipCost: 9000,
-    imageUrl: '/assets/cosmetics/frame_gold.svg'
-  }
-];
+import { allCosmetics, bonusCosmetics } from './cosmetics';
+
+export const catalogCosmetics: CatalogCosmetic[] = allCosmetics.map((c) => ({
+  id: c.id,
+  name: c.name,
+  rarity: c.rarity,
+  chipCost: c.chipCost ?? 0,
+  imageUrl: c.imageUrl,
+  slot: c.slot,
+  requiredTier: c.requiredTier,
+  description: c.description
+}));
+
+export { bonusCosmetics };
 
 export const catalogGameModes: CatalogGameMode[] = [
   {

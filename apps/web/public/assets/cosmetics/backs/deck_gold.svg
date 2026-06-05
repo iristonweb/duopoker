@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
+  <defs>
+    <linearGradient id="gBg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#1a1408"/>
+      <stop offset="0.5" stop-color="#0c0c12"/>
+      <stop offset="1" stop-color="#141008"/>
+    </linearGradient>
+    <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f5e6a8"/>
+      <stop offset="0.45" stop-color="#e8c547"/>
+      <stop offset="1" stop-color="#b8942e"/>
+    </linearGradient>
+    <pattern id="damask" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="4" fill="#e8c547" fill-opacity="0.06"/>
+      <circle cx="0" cy="0" r="3" fill="#e8c547" fill-opacity="0.04"/>
+    </pattern>
+  </defs>
+  <rect width="140" height="200" rx="10" fill="url(#gBg)" stroke="url(#gGold)" stroke-width="2"/>
+  <rect x="8" y="8" width="124" height="184" rx="8" fill="url(#damask)"/>
+  <rect x="12" y="12" width="116" height="176" rx="6" stroke="url(#gGold)" stroke-opacity="0.5" stroke-width="1"/>
+  <path d="M12 12 Q70 28 128 12" stroke="url(#gGold)" stroke-opacity="0.4" stroke-width="1" fill="none"/>
+  <path d="M12 188 Q70 172 128 188" stroke="url(#gGold)" stroke-opacity="0.4" stroke-width="1" fill="none"/>
+  <text x="70" y="108" text-anchor="middle" fill="url(#gGold)" font-family="Georgia,serif" font-size="44">`</text>
+  <circle cx="24" cy="24" r="3" fill="#e8c547" fill-opacity="0.5"/>
+  <circle cx="116" cy="24" r="3" fill="#e8c547" fill-opacity="0.5"/>
+  <circle cx="24" cy="176" r="3" fill="#e8c547" fill-opacity="0.5"/>
+  <circle cx="116" cy="176" r="3" fill="#e8c547" fill-opacity="0.5"/>
+</svg>

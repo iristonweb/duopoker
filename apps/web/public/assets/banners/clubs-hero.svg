@@ -2,15 +2,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 200" fill="none">
   <defs>
     <linearGradient id="clubBg" x1="0" y1="0" x2="1200" y2="200">
-      <stop stop-color="#0A0A0A"/>
-      <stop offset="0.5" stop-color="#1A1A2E"/>
-      <stop offset="1" stop-color="#0A0A0A"/>
+      <stop stop-color="#050508"/>
+      <stop offset="0.5" stop-color="#0c1218"/>
+      <stop offset="1" stop-color="#050508"/>
     </linearGradient>
+    <radialGradient id="clubGlow" cx="75%" cy="60%" r="45%">
+      <stop stop-color="#4ade80" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
+    </radialGradient>
   </defs>
   <rect width="1200" height="200" fill="url(#clubBg)"/>
-  <ellipse cx="900" cy="120" rx="220" ry="55" fill="#064E3B" stroke="#D4AF37" stroke-width="1.5" opacity="0.5"/>
-  <text x="64" y="78" fill="#FFD700" font-family="system-ui,sans-serif" font-size="36" font-weight="800">Private Clubs</text>
-  <text x="64" y="118" fill="#A7F3D0" font-family="system-ui,sans-serif" font-size="18">Host company tables · invite @nickname · pay with YooMoney</text>
-  <circle cx="1040" cy="90" r="36" fill="#D4AF37" opacity="0.2" stroke="#FFD700" stroke-width="2"/>
-  <text x="1040" y="98" text-anchor="middle" fill="#FFD700" font-family="system-ui,sans-serif" font-size="22">`</text>
+  <rect width="1200" height="200" fill="url(#clubGlow)"/>
+  <ellipse cx="900" cy="120" rx="220" ry="55" fill="#0a2e1f" stroke="#e8c547" stroke-width="1.5" opacity="0.75"/>
+  <text x="64" y="78" fill="#e8c547" font-family="Georgia,serif" font-size="36" font-weight="600">Private Clubs</text>
+  <text x="64" y="118" fill="#a1a1aa" font-family="system-ui,sans-serif" font-size="18">Host company tables · invite @nickname · play-money only</text>
+  <circle cx="1040" cy="90" r="36" fill="#e8c547" opacity="0.12" stroke="#e8c547" stroke-width="1.5"/>
+  <text x="1040" y="98" text-anchor="middle" fill="#f5e6a8" font-family="Georgia,serif" font-size="24">?</text>
 </svg>

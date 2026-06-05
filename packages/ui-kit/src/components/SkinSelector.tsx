@@ -1,4 +1,16 @@
+import type { CosmeticDefinition, CosmeticSlot, SubscriptionTier } from '@duopoker/shared-types';
+import {
+  canEquipCosmetic,
+  subscriptionCosmeticsBySlot,
+  tierLabel,
+  tierMeetsRequirement
+} from '@duopoker/shared-types';
+import { useState } from 'react';
+import { Badge } from './Badge';
 import { GlassPanel } from './GlassPanel';
+import { SectionHeader } from './SectionHeader';
+import { TabGroup } from './TabGroup';
+import { cn } from '../cn';
 
 export type CosmeticItem = {
   id: string;
@@ -6,58 +18,120 @@ export type CosmeticItem = {
   rarity: string;
   chipCost: number;
   imageUrl?: string;
+  slot?: CosmeticSlot;
+  requiredTier?: SubscriptionTier;
+  description?: string;
 };
+
+const slotTabs: { id: CosmeticSlot; label: string }[] = [
+  { id: 'deck', label: 'Card backs' },
+  { id: 'chip', label: 'Chips' },
+  { id: 'frame', label: 'Avatars' }
+];
 
 export function SkinSelector({
   catalog,
-  onBuy
+  subscriptionTier = 'FREE',
+  inventory = [],
+  equipped,
+  onBuy,
+  onEquip
 }: {
   catalog?: CosmeticItem[];
+  subscriptionTier?: SubscriptionTier;
+  inventory?: string[];
+  equipped?: { deck?: string; chip?: string; frame?: string };
   onBuy?: (itemId: string) => void;
+  onEquip?: (itemId: string) => void;
 }) {
-  const items =
-    catalog && catalog.length
-      ? catalog
-      : [
-          { id: 'deck', name: 'Deck', rarity: '—', chipCost: 0, imageUrl: '/assets/cosmetics/deck_neon.svg' },
-          { id: 'table', name: 'Table', rarity: '—', chipCost: 0, imageUrl: '/assets/cosmetics/table_void.svg' },
-          { id: 'frame', name: 'Frame', rarity: '—', chipCost: 0, imageUrl: '/assets/cosmetics/frame_gold.svg' }
-        ];
+  const [slot, setSlot] = useState<CosmeticSlot>('deck');
+  const tierItems = subscriptionCosmeticsBySlot(slot);
+  const bonusItems = (catalog ?? []).filter((c) => c.slot === slot && (c.chipCost ?? 0) > 0);
+  const items: CosmeticDefinition[] = [...tierItems, ...bonusItems.map((b) => ({
+    id: b.id,
+    name: b.name,
+    slot: b.slot ?? slot,
+    requiredTier: (b.requiredTier ?? 'FREE') as SubscriptionTier,
+    imageUrl: b.imageUrl ?? '',
+    rarity: b.rarity as CosmeticDefinition['rarity'],
+    chipCost: b.chipCost,
+    description: b.description ?? ''
+  }))];
+
   return (
-    <GlassPanel interactive>
-      <strong className="font-semibold text-zinc-100">Cosmetic shop</strong>
-      <p className="mt-1 text-sm text-muted">Buy with virtual chips (API catalog when backend is up).</p>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex aspect-square flex-col items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] px-1 text-center text-xs text-subtle"
-          >
-            {item.imageUrl ? (
+    <GlassPanel interactive glow="gold" className="p-5 sm:p-6">
+      <SectionHeader
+        eyebrow="Cosmetics"
+        title="Table identity"
+        description="Card backs, chips, and avatar frames — unlock higher tiers with subscriptions."
+      />
+      <TabGroup tabs={slotTabs} value={slot} onChange={setSlot} className="mb-4" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {items.map((item) => {
+          const unlocked = canEquipCosmetic(item.id, subscriptionTier, inventory);
+          const isEquipped =
+            (slot === 'deck' && equipped?.deck === item.id) ||
+            (slot === 'chip' && equipped?.chip === item.id) ||
+            (slot === 'frame' && equipped?.frame === item.id);
+          const needsTier = !tierMeetsRequirement(subscriptionTier, item.requiredTier);
+          return (
+            <div
+              key={item.id}
+              className={cn(
+                'group relative flex flex-col items-center overflow-hidden rounded-2xl border px-2 py-3 text-center transition-all duration-300',
+                isEquipped
+                  ? 'border-gold/40 bg-gold/10 shadow-glow-gold'
+                  : unlocked
+                    ? 'border-white/10 bg-black/30 hover:border-gold/25 hover:shadow-glow-gold'
+                    : 'border-white/5 bg-black/20 opacity-70'
+              )}
+            >
+              {!unlocked ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/55 backdrop-blur-[1px]">
+                  <Badge variant={needsTier ? 'gold' : 'default'} className="text-[9px]">
+                    {needsTier ? tierLabel[item.requiredTier] : `${item.chipCost?.toLocaleString()} chips`}
+                  </Badge>
+                </div>
+              ) : null}
               <img
                 src={item.imageUrl}
                 alt=""
-                className="mb-2 h-16 w-16 object-contain"
+                className={cn(
+                  'mb-2 object-contain transition-transform duration-300 group-hover:scale-105',
+                  slot === 'deck' ? 'h-20 w-14' : 'h-16 w-16'
+                )}
                 loading="lazy"
-                decoding="async"
               />
-            ) : (
-              <div className="mb-2 h-16 w-16 rounded-lg border border-dashed border-white/15 bg-black/20" />
-            )}
-            <span className="font-medium text-zinc-200">{item.name}</span>
-            <span className="mt-1 text-[10px] uppercase tracking-wide text-gold/70">{item.rarity}</span>
-            {item.chipCost > 0 ? <span className="mt-1 text-emerald/90">{item.chipCost} chips</span> : null}
-            {onBuy && item.chipCost > 0 ? (
-              <button
-                type="button"
-                className="mt-2 rounded-lg border border-gold/30 px-2 py-1 text-[10px] text-gold hover:bg-gold/10"
-                onClick={() => onBuy(item.id)}
-              >
-                Buy
-              </button>
-            ) : null}
-          </div>
-        ))}
+              <span className="text-xs font-semibold text-zinc-100">{item.name}</span>
+              <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.12em] text-gold/75">
+                {item.rarity}
+              </span>
+              {unlocked && onEquip ? (
+                <button
+                  type="button"
+                  className={cn(
+                    'mt-2 rounded-lg border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors',
+                    isEquipped
+                      ? 'border-gold/40 bg-gold/20 text-gold-light'
+                      : 'border-white/15 bg-white/5 text-muted hover:border-gold/30 hover:text-gold'
+                  )}
+                  onClick={() => onEquip(item.id)}
+                >
+                  {isEquipped ? 'Equipped' : 'Equip'}
+                </button>
+              ) : null}
+              {!unlocked && item.chipCost && onBuy ? (
+                <button
+                  type="button"
+                  className="mt-2 rounded-lg border border-emerald/30 bg-emerald/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald hover:bg-emerald/20"
+                  onClick={() => onBuy(item.id)}
+                >
+                  Buy
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </GlassPanel>
   );

@@ -9,7 +9,7 @@
     "./app": "./src/app.ts"
   },
   "scripts": {
-    "dev": "tsx watch src/dev-server.ts",
+    "dev": "tsx watch --env-file=.env src/dev-server.ts",
     "lint": "eslint src --ext .ts",
     "test": "vitest run --passWithNoTests"
   },

@@ -1,8 +1,7 @@
 generator client {
-  provider   = "prisma-client-js"
-  output     = "../src/generated/prisma-client"
-  /** WASM avoids Windows EPERM locks on query_engine-windows.dll.node */
-  engineType = "wasm"
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma-client"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -82,6 +81,11 @@ enum OrganizerPlanTier {
   NETWORK
 }
 
+enum UserRole {
+  USER
+  SUPERADMIN
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
@@ -89,6 +93,7 @@ model User {
   displayName   String
   nickname      String         @unique
   avatar        String?
+  role          UserRole       @default(USER)
   emailVerified Boolean        @default(true)
   verificationToken String?
   verificationTokenExpiresAt DateTime?

@@ -1,2 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none"><rect width="200" height="200" fill="#0A0A0A"/><circle cx="100" cy="100" r="62" fill="none" stroke="#FFD700" stroke-width="4"/><circle cx="100" cy="100" r="48" fill="none" stroke="#D4AF37" stroke-width="2" stroke-dasharray="8 6"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" fill="#050508"/>
+  <circle cx="100" cy="100" r="62" fill="none" stroke="#e8c547" stroke-width="4"/>
+  <circle cx="100" cy="100" r="48" fill="none" stroke="#f5e6a8" stroke-width="2" stroke-dasharray="8 6"/>
+</svg>

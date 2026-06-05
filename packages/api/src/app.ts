@@ -10,6 +10,7 @@ import { monetizationRoutes } from './routes/monetization.js';
 import { profileRoutes } from './routes/profile.js';
 import { usersRoutes } from './routes/users.js';
 import { voiceRoutes } from './routes/voice.js';
+import { adminRoutes } from './routes/admin.js';
 
 export const app = new Hono().basePath('/api');
 
@@ -47,6 +48,7 @@ app.route('/game', gameRoutes);
 app.route('/monetization', monetizationRoutes);
 app.route('/clubs', clubsRoutes);
 app.route('/voice', voiceRoutes);
+app.route('/admin', adminRoutes);
 
 app.onError((err, c) => {
   console.error(err);

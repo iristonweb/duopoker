@@ -1,8 +1,9 @@
-import { handle } from 'hono/vercel';
-// Bundled at build time by scripts/bundle-vercel-api.mjs
-import app from './_app.mjs';
+// Force Vercel file tracer to ship Prisma query engine binaries.
+import '../packages/db-schema/src/generated/prisma-client/index.js';
+// Bundled at build time by scripts/bundle-vercel-api.mjs (CommonJS)
+import app from './_app.js';
 
-export default handle(app);
+export default app;
 
 export const config = {
   runtime: 'nodejs',

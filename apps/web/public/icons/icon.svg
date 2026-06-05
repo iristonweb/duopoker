@@ -1,13 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="96" fill="#0A0A0A"/>
-  <ellipse cx="256" cy="280" rx="180" ry="100" fill="#064E3B" stroke="#10B981" stroke-width="4"/>
-  <circle cx="256" cy="180" r="72" fill="url(#iconChip)" stroke="#D4AF37" stroke-width="6"/>
-  <text x="256" y="200" text-anchor="middle" fill="#0A0A0A" font-family="system-ui,sans-serif" font-size="52" font-weight="800">DP</text>
-  <text x="256" y="420" text-anchor="middle" fill="#D4AF37" font-family="system-ui,sans-serif" font-size="36" font-weight="700">DuoPoker</text>
   <defs>
     <radialGradient id="iconChip" cx="50%" cy="50%" r="50%">
-      <stop stop-color="#FBBF24"/>
-      <stop offset="1" stop-color="#92400E"/>
+      <stop stop-color="#f5e6a8"/>
+      <stop offset="1" stop-color="#b8942e"/>
     </radialGradient>
+    <linearGradient id="iconBg" x1="0" y1="0" x2="512" y2="512">
+      <stop stop-color="#050508"/>
+      <stop offset="1" stop-color="#0c1218"/>
+    </linearGradient>
   </defs>
+  <rect width="512" height="512" rx="96" fill="url(#iconBg)"/>
+  <ellipse cx="256" cy="280" rx="180" ry="100" fill="#0a2e1f" stroke="#4ade80" stroke-width="3" opacity="0.85"/>
+  <circle cx="256" cy="180" r="72" fill="url(#iconChip)" stroke="#e8c547" stroke-width="5"/>
+  <text x="256" y="200" text-anchor="middle" fill="#14141f" font-family="Georgia,serif" font-size="48" font-weight="700">♠</text>
+  <text x="256" y="420" text-anchor="middle" fill="#e8c547" font-family="Georgia,serif" font-size="34" font-weight="600">DuoPoker</text>
 </svg>

@@ -1,59 +1,116 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AppBackground, Button, GlassPanel } from '@duopoker/ui-kit';
+import { useTranslation } from 'react-i18next';
+import { clubsHeroBanner } from '@duopoker/shared-types';
+import {
+  Button,
+  EmptyState,
+  GlassPanel,
+  LoadingSkeleton,
+  PageShell
+} from '@duopoker/ui-kit';
 import { useAppStore, type ClubSummary } from '../store/useAppStore';
 
 export const Clubs = () => {
+  const { t } = useTranslation();
   const fetchClubs = useAppStore((s) => s.fetchClubs);
   const accessToken = useAppStore((s) => s.accessToken);
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
   const [error, setError] = useState<string>();
+  const [loading, setLoading] = useState(Boolean(accessToken));
 
   useEffect(() => {
     if (!accessToken) return;
+    setLoading(true);
     void fetchClubs()
       .then((d) => setClubs(d.clubs))
-      .catch(() => setError('Не удалось загрузить клубы'));
-  }, [accessToken, fetchClubs]);
+      .catch(() => setError(t('clubs.loadError')))
+      .finally(() => setLoading(false));
+  }, [accessToken, fetchClubs, t]);
 
   return (
-    <div className="relative min-h-screen">
-      <AppBackground />
-      <div className="relative z-10 mx-auto max-w-3xl px-4 py-10">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-100">Приватные клубы</h1>
-          <Link to="/lobby" className="text-sm text-gold hover:underline">
-            Лобби
+    <PageShell
+      maxWidth="3xl"
+      back={
+        <Link to="/lobby" className="premium-link text-sm">
+          {t('nav.backLobby')}
+        </Link>
+      }
+      headerAction={
+        accessToken ? (
+          <Link to="/clubs/new">
+            <Button variant="primary" size="sm">
+              {t('clubs.create')}
+            </Button>
           </Link>
-        </div>
-        {!accessToken ? (
-          <GlassPanel className="p-6 text-muted">Войдите, чтобы управлять клубами.</GlassPanel>
-        ) : (
-          <>
-            <Link to="/clubs/new">
-              <Button variant="primary" className="mb-6">
-                Создать клуб
+        ) : null
+      }
+      eyebrow={t('clubs.eyebrow')}
+      title={t('clubs.title')}
+      description={t('clubs.desc')}
+    >
+      <div className="glass-shine relative mb-8 overflow-hidden rounded-2xl border border-white/10">
+        <img
+          src={clubsHeroBanner}
+          alt=""
+          className="h-32 w-full object-cover sm:h-40"
+          loading="lazy"
+          decoding="async"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+      </div>
+
+      {!accessToken ? (
+        <EmptyState
+          title={t('clubs.signInTitle')}
+          description={t('clubs.signInDesc')}
+          action={
+            <Link to="/lobby">
+              <Button variant="secondary" size="sm">
+                {t('clubs.goLobby')}
               </Button>
             </Link>
-            {error ? <p className="text-amber-400">{error}</p> : null}
-            <div className="flex flex-col gap-3">
-              {clubs.map((c) => (
-                <Link key={c.id} to={`/clubs/${c.id}`}>
-                  <GlassPanel className="border-white/10 p-4 hover:border-gold/30">
-                    <p className="font-semibold text-zinc-100">{c.name}</p>
-                    <p className="text-sm text-muted">
-                      {c.organizerPlan?.tier ?? 'BASIC'} · {c._count?.members ?? 0} участников · роль: {c.myRole}
+          }
+        />
+      ) : loading ? (
+        <GlassPanel className="border-white/10 p-6">
+          <LoadingSkeleton lines={4} />
+        </GlassPanel>
+      ) : error ? (
+        <EmptyState title={t('clubs.loadError')} description={error} />
+      ) : !clubs.length ? (
+        <EmptyState
+          title={t('clubs.emptyTitle')}
+          description={t('clubs.emptyDesc')}
+          action={
+            <Link to="/clubs/new">
+              <Button variant="primary" size="sm">
+                {t('clubs.create')}
+              </Button>
+            </Link>
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {clubs.map((c) => (
+            <Link key={c.id} to={`/clubs/${c.id}`} className="group block">
+              <GlassPanel className="border-white/10 p-5 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-gold/25 group-hover:shadow-glow-gold">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-display text-lg font-semibold text-ivory">{c.name}</p>
+                    <p className="mt-1 text-sm text-muted">
+                      {c.organizerPlan?.tier ?? 'BASIC'} · {c._count?.members ?? 0} {t('clubs.members')}
                     </p>
-                  </GlassPanel>
-                </Link>
-              ))}
-              {!clubs.length && !error ? (
-                <p className="text-muted">У вас пока нет клубов. Создайте первый!</p>
-              ) : null}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-subtle">
+                    {c.myRole}
+                  </span>
+                </div>
+              </GlassPanel>
+            </Link>
+          ))}
+        </div>
+      )}
+    </PageShell>
   );
 };

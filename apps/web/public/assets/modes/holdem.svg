@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" fill="none">
   <defs>
-    <linearGradient id="h" x1="0" y1="0" x2="400" y2="120"><stop stop-color="#052E16"/><stop offset="1" stop-color="#0A0A0A"/></linearGradient>
+    <linearGradient id="h" x1="0" y1="0" x2="400" y2="120">
+      <stop stop-color="#0a1810"/>
+      <stop offset="0.6" stop-color="#050508"/>
+      <stop offset="1" stop-color="#14141f"/>
+    </linearGradient>
+    <radialGradient id="g" cx="80%" cy="60%" r="50%">
+      <stop stop-color="#4ade80" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
+    </radialGradient>
   </defs>
   <rect width="400" height="120" fill="url(#h)"/>
-  <ellipse cx="280" cy="75" rx="100" ry="35" fill="#064E3B" stroke="#10B981" stroke-width="1.5"/>
-  <text x="24" y="52" fill="#D4AF37" font-family="system-ui,sans-serif" font-size="22" font-weight="700">Texas Hold'em</text>
-  <text x="24" y="78" fill="#A7F3D0" font-family="system-ui,sans-serif" font-size="13">Community cards · classic showdown</text>
+  <rect width="400" height="120" fill="url(#g)"/>
+  <ellipse cx="300" cy="78" rx="95" ry="32" fill="#0a2e1f" stroke="#e8c547" stroke-width="1.2" opacity="0.85"/>
+  <text x="24" y="48" fill="#f5e6a8" font-family="Georgia,serif" font-size="24" font-weight="600">Texas Hold'em</text>
+  <text x="24" y="76" fill="#71717a" font-family="system-ui,sans-serif" font-size="12" letter-spacing="0.06em">COMMUNITY CARDS · CLASSIC SHOWDOWN</text>
 </svg>

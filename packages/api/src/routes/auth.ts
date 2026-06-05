@@ -73,7 +73,8 @@ authRoutes.post('/register', async (c) => {
         emailVerified: !verify,
         verificationToken,
         verificationTokenExpiresAt: verify ? verificationExpiresAt() : null
-      }
+      },
+      select: { id: true, email: true, displayName: true, nickname: true, emailVerified: true, role: true }
     });
     if (verify && verificationToken && config.resendApiKey) {
       try {
@@ -92,7 +93,8 @@ authRoutes.post('/register', async (c) => {
           email: user.email,
           displayName: user.displayName,
           nickname: user.nickname,
-          emailVerified: user.emailVerified
+          emailVerified: user.emailVerified,
+          role: user.role
         },
         verificationRequired: verify && !user.emailVerified
       },
@@ -110,7 +112,10 @@ authRoutes.post('/login', async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Invalid email or password' }, 400);
     }
-    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    const user = await prisma.user.findUnique({
+      where: { email: parsed.data.email },
+      select: { id: true, email: true, passwordHash: true, displayName: true, nickname: true, emailVerified: true, role: true }
+    });
     if (!user?.passwordHash) {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
@@ -129,7 +134,8 @@ authRoutes.post('/login', async (c) => {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
-        emailVerified: user.emailVerified
+        emailVerified: user.emailVerified,
+        role: user.role
       }
     });
   } catch (error) {
@@ -222,10 +228,26 @@ authRoutes.get('/me', async (c) => {
         chips: true,
         level: true,
         xp: true,
-        emailVerified: true
+        emailVerified: true,
+        role: true,
+        subscriptions: {
+          where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
+          orderBy: { expiresAt: 'desc' },
+          take: 1,
+          select: { tier: true, expiresAt: true, status: true }
+        },
+        inventory: {
+          select: { itemId: true, equipped: true, rarity: true }
+        }
       }
     });
-    return c.json({ user });
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const { subscriptions, inventory, ...profile } = user;
+    return c.json({
+      user: profile,
+      subscription: subscriptions[0] ?? null,
+      inventory
+    });
   } catch {
     return c.json({ error: 'Unauthorized' }, 401);
   }

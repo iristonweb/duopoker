@@ -13,16 +13,26 @@ export function getApiBase(): string {
   return '';
 }
 
+/** Vercel serverless API is mounted at `/api`; external Express/Render uses bare paths. */
+function usesVercelSameOriginApi(base: string): boolean {
+  if (!base) return true;
+  if (typeof window === 'undefined') return false;
+  return base.replace(/\/$/, '') === window.location.origin.replace(/\/$/, '');
+}
+
 /** Same-origin Vercel API lives under `/api`; Express/Render uses bare paths. */
 export function resolveApiUrl(path: string): string {
   const base = getApiBase();
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  return base ? `${base}${normalized}` : `/api${normalized}`;
+  if (!base || usesVercelSameOriginApi(base)) return `/api${normalized}`;
+  return `${base}${normalized}`;
 }
 
 /** External long-lived backend with Socket.IO (Render, local Express, Fly.io). */
 export function usesRealtimeSocket(): boolean {
-  return getApiBase().length > 0;
+  const base = getApiBase();
+  if (!base) return false;
+  return !usesVercelSameOriginApi(base);
 }
 
 export function isBackendConfigured(): boolean {
