@@ -6,7 +6,7 @@
     "paths": {
       "@duopoker/shared-types/*": ["packages/shared-types/dist/*"],
       "@duopoker/game-engine/*": ["packages/game-engine/dist/*"],
-      "@duopoker/db-schema": ["packages/db-schema/src/generated/client/index"]
+      "@duopoker/db-schema": ["packages/db-schema/src/generated/prisma-client/index"]
     }
   },
   "include": ["src"]

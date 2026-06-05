@@ -1,32 +1,45 @@
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const pkgRoot = path.resolve(root, '..');
-const maxAttempts = 3;
+const clientDir = path.join(pkgRoot, 'src', 'generated', 'prisma-client');
 
-for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-  const result = spawnSync('pnpm', ['exec', 'prisma', 'generate'], {
+const cleanStaleWindowsBinaries = () => {
+  if (process.platform !== 'win32' || !fs.existsSync(clientDir)) return;
+  for (const name of fs.readdirSync(clientDir)) {
+    if (!name.startsWith('query_engine-windows.dll.node')) continue;
+    const full = path.join(clientDir, name);
+    try {
+      fs.unlinkSync(full);
+    } catch {
+      /* locked — wasm generate no longer needs these */
+    }
+  }
+};
+
+const runGenerate = () =>
+  spawnSync('pnpm', ['exec', 'prisma', 'generate'], {
     cwd: pkgRoot,
     stdio: 'inherit',
     shell: true
   });
 
-  if (result.status === 0) {
-    process.exit(0);
-  }
+cleanStaleWindowsBinaries();
 
-  if (attempt < maxAttempts) {
-    console.warn(
-      `[db-schema] prisma generate failed (attempt ${attempt}/${maxAttempts}). ` +
-        'If EPERM on Windows, stop running backend/dev servers and retry…'
-    );
-  }
+const result = runGenerate();
+
+if (result.status === 0) {
+  process.exit(0);
 }
 
 console.error(
-  '[db-schema] prisma generate failed. On Windows, EPERM usually means a Node process ' +
-    '(e.g. `pnpm --filter @duopoker/backend dev`) is locking the query engine. Stop it and rerun build.'
+  '[db-schema] prisma generate failed.\n' +
+    '1) Stop all dev servers (backend :4000, web :5180)\n' +
+    '2) Close extra Cursor terminals\n' +
+    '3) Retry: pnpm --filter @duopoker/db-schema generate\n' +
+    'Schema uses engineType=wasm — no .dll.node should be required after a clean generate.'
 );
-process.exit(1);
+process.exit(result.status ?? 1);

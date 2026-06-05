@@ -3,12 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "./src/generated/client/index.js",
-  "types": "./src/generated/client/index.d.ts",
+  "main": "./src/generated/prisma-client/index.js",
+  "types": "./src/generated/prisma-client/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/generated/client/index.d.ts",
-      "default": "./src/generated/client/index.js"
+      "types": "./src/generated/prisma-client/index.d.ts",
+      "default": "./src/generated/prisma-client/index.js"
     }
   },
   "scripts": {
@@ -17,7 +17,8 @@
     "test": "echo \"No tests for schema\"",
     "migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
     "migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
-    "db:push": "prisma db push --schema prisma/schema.prisma",
+    "db:push": "prisma db push --schema prisma/schema.prisma --skip-generate && node ./scripts/generate-client.mjs",
+    "generate": "node ./scripts/generate-client.mjs",
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {

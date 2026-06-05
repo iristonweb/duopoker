@@ -8,7 +8,7 @@
       "@duopoker/shared-types/index": ["../shared-types/dist/index"],
       "@duopoker/game-engine/*": ["../game-engine/dist/*"],
       "@duopoker/game-engine/index": ["../game-engine/dist/index"],
-      "@duopoker/db-schema": ["../db-schema/src/generated/client/index"]
+      "@duopoker/db-schema": ["../db-schema/src/generated/prisma-client/index"]
     }
   },
   "include": ["src"]

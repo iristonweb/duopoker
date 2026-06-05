@@ -15,7 +15,7 @@ await esbuild.build({
   logLevel: 'info',
   external: ['@duopoker/db-schema', '@prisma/client'],
   alias: {
-    '@duopoker/db-schema': path.join(root, 'packages/db-schema/src/generated/client/index.js'),
+    '@duopoker/db-schema': path.join(root, 'packages/db-schema/src/generated/prisma-client/index.js'),
     '@duopoker/game-engine/index': path.join(root, 'packages/game-engine/dist/index.js'),
     '@duopoker/shared-types/index': path.join(root, 'packages/shared-types/dist/index.js')
   }
