@@ -2,7 +2,7 @@
 
 ## Режим A — всё на Vercel (фронт + API + голос)
 
-Один проект Vercel: React + serverless API (`api/[[...path]].ts` → `packages/api`).
+Один проект Vercel: React + serverless API (`api/[...path].ts` → `packages/api`).
 
 | Функция | Как работает |
 |---------|----------------|
@@ -60,6 +60,8 @@ Project → **Settings → Environment Variables** (Production + Preview):
 | `LIVEKIT_URL` | `wss://xxx.livekit.cloud` |
 
 **Не добавляй** `VITE_API_URL` — API на том же домене через rewrites.
+
+**Root Directory:** Settings → **Build and Deployment** → Root Directory должен быть **пустым** (корень репозитория, не `apps/web`). Конфиг только в корневом `vercel.json`, handler — `api/[...path].ts`.
 
 Сгенерировать JWT (PowerShell):
 

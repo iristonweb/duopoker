@@ -4,7 +4,7 @@
   "buildCommand": "pnpm --filter @duopoker/db-schema build && pnpm --filter @duopoker/game-engine build && pnpm --filter @duopoker/shared-types build && pnpm --filter @duopoker/web build",
   "outputDirectory": "apps/web/dist",
   "functions": {
-    "api/index.ts": {
+    "api/[...path].ts": {
       "maxDuration": 30,
       "includeFiles": "packages/db-schema/src/generated/**"
     }
@@ -17,7 +17,6 @@
     { "source": "/clubs/:path*", "destination": "/api/clubs/:path*" },
     { "source": "/voice/:path*", "destination": "/api/voice/:path*" },
     { "source": "/health", "destination": "/api/health" },
-    { "source": "/api/:path*", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
