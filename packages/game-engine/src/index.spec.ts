@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Card } from '@duopoker/shared-types/index';
 import { createInitialTableState, nextPhase, resolveWinner, startNewHand } from './index';
 
 describe('game engine', () => {
@@ -15,10 +16,10 @@ describe('game engine', () => {
       phase: 'RIVER' as const,
       foldedPlayerIds: [] as string[],
       playerRoundBet: { u1: 0, u2: 0 },
-      communityCards: ['KD', 'KS', '9C', '2H', '3H'],
+      communityCards: ['KD', 'KS', '9C', '2H', '3H'] as Card[],
       playerCards: {
-        u1: ['AS', 'AH'],
-        u2: ['2C', '3D']
+        u1: ['AS', 'AH'] as Card[],
+        u2: ['2C', '3D'] as Card[]
       },
       pot: 100,
       activePlayerIndex: 0,
@@ -32,7 +33,11 @@ describe('game engine', () => {
       smallBlind: 1,
       bigBlind: 2,
       sessionId: 's1',
-      mode: 'HOLDEM' as const
+      mode: 'HOLDEM' as const,
+      allInPlayerIds: [],
+      actedThisRound: { u1: true, u2: true },
+      handContributions: { u1: 50, u2: 50 },
+      readyForNextHand: []
     };
     expect(resolveWinner(state).winnerId).toBe('u1');
   });

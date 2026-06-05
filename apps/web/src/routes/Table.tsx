@@ -98,11 +98,15 @@ export const Table = () => {
 
         {session.street && session.street !== 'LOBBY' ? (
           <div className="mb-6">
-            <PokerTable3D
-              communityCards={session.communityCards ?? []}
-              pot={kettle}
-              street={session.street}
-            />
+            {session.mode === 'HOLDEM' ? (
+              <PokerTable3D
+                communityCards={session.communityCards ?? []}
+                pot={kettle}
+                street={session.street}
+              />
+            ) : (
+              <PokerTable3D communityCards={[]} pot={kettle} street={session.street} />
+            )}
           </div>
         ) : null}
 
@@ -125,8 +129,17 @@ export const Table = () => {
               <p className="text-sm text-muted">
                 Hand complete. Winners: {(session.winners ?? []).join(', ') || '—'}
               </p>
-              <Button variant="secondary" size="sm" className="mt-3" onClick={() => readyNextHand()}>
-                Next hand
+              <p className="mt-1 text-xs text-subtle">
+                Ready: {(session.readyForNextHand ?? []).length}/{session.players.length}
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-3"
+                disabled={(session.readyForNextHand ?? []).includes(userId)}
+                onClick={() => readyNextHand()}
+              >
+                {(session.readyForNextHand ?? []).includes(userId) ? 'Waiting for others…' : 'Next hand'}
               </Button>
             </div>
           ) : null}

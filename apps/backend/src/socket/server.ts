@@ -2,14 +2,18 @@ import { createServer } from 'node:http';
 import type { Express } from 'express';
 import { Server } from 'socket.io';
 import { z } from 'zod';
+import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
+import type { SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
 import {
   advanceBotTurns,
   enqueueMatchmaking,
+  foldActivePlayerOnTimeout,
   getSessionSnapshot,
   joinTable,
+  listSessionIdsForUser,
   processPlayerAction,
   requestNextHand
 } from '../services/game-session.js';
@@ -36,8 +40,12 @@ const matchmakingSchema = z.object({
   buyIn: z.number().int().positive()
 });
 
+const BOT_PREFIX = 'duopoker-bot';
+const ACTION_TIMEOUT_MS = 30_000;
+
 /** userId -> socket ids (tabs / reconnects) */
 const userToSockets = new Map<string, Set<string>>();
+const actionTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const registerUserSocket = (userId: string, socketId: string) => {
   let set = userToSockets.get(userId);
@@ -55,6 +63,45 @@ const unregisterSocketEverywhere = (socketId: string) => {
       userToSockets.delete(uid);
     }
   }
+};
+
+const clearActionTimer = (sessionId: string) => {
+  const t = actionTimers.get(sessionId);
+  if (t) clearTimeout(t);
+  actionTimers.delete(sessionId);
+};
+
+const emitStateToSession = async (io: Server, sessionId: string, state: SessionState) => {
+  const sockets = await io.in(sessionId).fetchSockets();
+  for (const s of sockets) {
+    const viewerId = typeof s.data.userId === 'string' ? s.data.userId : undefined;
+    s.emit('stateUpdate', sanitizeStateForViewer(state, viewerId));
+  }
+};
+
+const scheduleActionTimer = (io: Server, sessionId: string, state: SessionState) => {
+  clearActionTimer(sessionId);
+  if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') {
+    return;
+  }
+  const activeId = state.players[state.activePlayerIndex];
+  if (!activeId || activeId.startsWith(BOT_PREFIX)) return;
+
+  actionTimers.set(
+    sessionId,
+    setTimeout(async () => {
+      const next = await foldActivePlayerOnTimeout(sessionId, activeId);
+      if (next) {
+        await emitStateToSession(io, sessionId, next);
+        scheduleActionTimer(io, sessionId, next);
+      }
+    }, ACTION_TIMEOUT_MS)
+  );
+};
+
+const broadcastSessionState = async (io: Server, sessionId: string, state: SessionState) => {
+  await emitStateToSession(io, sessionId, state);
+  scheduleActionTimer(io, sessionId, state);
 };
 
 const emitMatchFoundToPlayers = (
@@ -91,7 +138,16 @@ export const createRealtimeServer = (app: Express) => {
       registerUserSocket(socket.data.userId, socket.id);
     }
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
+      const userId = typeof socket.data.userId === 'string' ? socket.data.userId : undefined;
+      if (userId) {
+        for (const sessionId of listSessionIdsForUser(userId)) {
+          const next = await foldActivePlayerOnTimeout(sessionId, userId);
+          if (next) {
+            await broadcastSessionState(io, sessionId, next);
+          }
+        }
+      }
       unregisterSocketEverywhere(socket.id);
     });
 
@@ -108,8 +164,12 @@ export const createRealtimeServer = (app: Express) => {
       await socket.join(sessionId);
       const state = joinTable(sessionId, userId, mode, buyIn);
       await redis.publish(`lobby:${sessionId}`, JSON.stringify({ type: 'join', userId }));
-      io.to(sessionId).emit('sessionEvent', { type: 'PLAYER_JOINED', userId, state });
-      io.to(sessionId).emit('stateUpdate', state);
+      socket.emit('sessionEvent', {
+        type: 'PLAYER_JOINED',
+        userId,
+        state: sanitizeStateForViewer(state, userId)
+      });
+      await broadcastSessionState(io, sessionId, state);
     });
 
     socket.on('playerAction', async (payload) => {
@@ -118,6 +178,8 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: 'INVALID_ACTION_PAYLOAD' });
         return;
       }
+
+      clearActionTimer(parsed.data.sessionId);
 
       const result = await processPlayerAction({
         ...parsed.data,
@@ -146,7 +208,7 @@ export const createRealtimeServer = (app: Express) => {
         }
       }
       await redis.publish(`game:${parsed.data.sessionId}`, JSON.stringify(parsed.data));
-      io.to(parsed.data.sessionId).emit('stateUpdate', outState);
+      await broadcastSessionState(io, parsed.data.sessionId, outState);
       io.to(parsed.data.sessionId).emit('reconciliation', { replay: result.replay });
     });
 
@@ -154,23 +216,40 @@ export const createRealtimeServer = (app: Express) => {
       if (!sessionId) return;
       socket.join(sessionId);
       const snapshot = await getSessionSnapshot(sessionId);
-      socket.emit('sessionReconnected', { sessionId, snapshot });
+      const viewerId = typeof socket.data.userId === 'string' ? socket.data.userId : undefined;
+      socket.emit('sessionReconnected', {
+        sessionId,
+        snapshot: snapshot ? sanitizeStateForViewer(snapshot, viewerId) : null
+      });
       if (snapshot) {
-        socket.emit('stateUpdate', snapshot);
+        socket.emit('stateUpdate', sanitizeStateForViewer(snapshot, viewerId));
+        scheduleActionTimer(io, sessionId, snapshot);
       }
     });
 
-    socket.on('readyNextHand', async ({ sessionId }: { sessionId?: string }) => {
+    socket.on('readyNextHand', async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
       if (!sessionId || typeof sessionId !== 'string') return;
-      const result = requestNextHand(sessionId);
+      const userId =
+        typeof socket.data.userId === 'string'
+          ? socket.data.userId
+          : typeof payloadUserId === 'string'
+            ? payloadUserId
+            : undefined;
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
+      const result = requestNextHand(sessionId, userId);
       if (!result.ok) {
         socket.emit('sessionError', { code: result.reason });
         return;
       }
       let out = result.state;
-      const botState = await advanceBotTurns(sessionId);
-      if (botState) out = botState;
-      io.to(sessionId).emit('stateUpdate', out);
+      if (result.started) {
+        const botState = await advanceBotTurns(sessionId);
+        if (botState) out = botState;
+      }
+      await broadcastSessionState(io, sessionId, out);
     });
 
     socket.on('voiceSignal', (payload: Record<string, unknown>) => {
@@ -208,15 +287,15 @@ export const createRealtimeServer = (app: Express) => {
         mode: parsed.data.mode,
         buyIn: parsed.data.buyIn
       };
-      const hasBot = match.players.some((id) => id.startsWith('duopoker-bot'));
+      const hasBot = match.players.some((id) => id.startsWith(BOT_PREFIX));
       if (hasBot) {
-        const humanId = match.players.find((id) => !id.startsWith('duopoker-bot'))!;
-        const botId = match.players.find((id) => id.startsWith('duopoker-bot'))!;
+        const humanId = match.players.find((id) => !id.startsWith(BOT_PREFIX))!;
+        const botId = match.players.find((id) => id.startsWith(BOT_PREFIX))!;
         joinTable(match.sessionId, humanId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
         joinTable(match.sessionId, botId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
         const botState = await advanceBotTurns(match.sessionId);
         if (botState) {
-          io.to(match.sessionId).emit('stateUpdate', botState);
+          await broadcastSessionState(io, match.sessionId, botState);
         }
       }
       emitMatchFoundToPlayers(io, match);

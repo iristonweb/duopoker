@@ -56,12 +56,33 @@ monetizationRouter.get('/catalog', (_req, res) => {
       { id: 'chips_2500', chips: 2500, priceUsd: 2.99 },
       { id: 'chips_10000', chips: 10000, priceUsd: 9.99 }
     ],
+    organizerPlans: [
+      {
+        tier: 'BASIC',
+        priceUsdMonthly: 15,
+        maxMembers: 30,
+        maxActiveTables: 2
+      },
+      {
+        tier: 'PRO',
+        priceUsdMonthly: 39,
+        maxMembers: 150,
+        maxActiveTables: 8
+      },
+      {
+        tier: 'NETWORK',
+        priceUsdMonthly: 99,
+        maxMembers: 600,
+        maxActiveTables: 20
+      }
+    ],
     cosmetics: [
       { id: 'deck_neon', name: 'Neon deck backs', rarity: 'RARE', chipCost: 1800 },
       { id: 'table_void', name: 'Void table', rarity: 'EPIC', chipCost: 4500 },
       { id: 'frame_gold', name: 'Gold avatar frame', rarity: 'LEGENDARY', chipCost: 9000 }
     ],
-    disclaimer: 'Virtual chips and cosmetics are non-refundable and non-withdrawable.'
+    disclaimer:
+      'Virtual chips and cosmetics are non-refundable and non-withdrawable. No real-money payouts, no rake, and no cashout.'
   });
 });
 

@@ -17,3 +17,4 @@ Local-first monorepo for cross-platform poker platform with dual modes (Hold'em 
 - No real-money gambling.
 - Virtual chips are non-withdrawable and non-convertible.
 - Purchases are final.
+- Private club payments unlock organizer SaaS features only (limits, moderation, scheduling), not game outcomes.

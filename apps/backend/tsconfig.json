@@ -2,7 +2,12 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "paths": {
+      "@duopoker/shared-types/*": ["packages/shared-types/dist/*"],
+      "@duopoker/game-engine/*": ["packages/game-engine/dist/*"],
+      "@duopoker/db-schema": ["packages/db-schema/src/generated/client/index"]
+    }
   },
   "include": ["src"]
 }

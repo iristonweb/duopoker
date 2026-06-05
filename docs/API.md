@@ -31,6 +31,17 @@ Base URL: `http://localhost:4000` (set `PUBLIC_WEB_URL`, `VITE_API_URL`, and `CO
 | POST | `/monetization/bonus` | Daily bonus (guarded) |
 | POST | `/monetization/purchase` | Trusted purchase log (prefer Stripe webhook in prod) |
 
+## Private clubs (`Authorization` required except plans)
+
+| Method | Path | Body | Notes |
+|--------|------|------|------|
+| GET | `/clubs/plans` | - | Organizer plans and non-gambling compliance disclaimer |
+| POST | `/clubs` | `{ name, description?, visibility }` | Creates club, owner membership, default BASIC organizer plan |
+| GET | `/clubs/mine` | - | My clubs with role and plan summary |
+| POST | `/clubs/:clubId/members` | `{ userId, role }` | Owner/admin only, plan member-limit enforced |
+| POST | `/clubs/:clubId/private-tables` | `{ name, mode, maxPlayers, virtualBuyIn }` | Owner/admin only, active-table limit enforced |
+| GET | `/clubs/:clubId/private-tables` | - | Club member only |
+
 ## Stripe webhook
 
 `POST /monetization/stripe/webhook` — **raw body**, `stripe-signature` header. Configure `STRIPE_WEBHOOK_SECRET`.
@@ -43,3 +54,9 @@ Base URL: `http://localhost:4000` (set `PUBLIC_WEB_URL`, `VITE_API_URL`, and `CO
 - `reconnectSession` `{ sessionId }` — restores snapshot from memory or Postgres
 - `readyNextHand` `{ sessionId }` after `street === COMPLETE`
 - `voiceSignal` — WebRTC SDP/ICE relay within table room
+
+## Compliance constraints (non-gambling baseline)
+
+- Virtual chips are non-withdrawable and non-convertible.
+- No rake, no payout endpoints, no cashout endpoints, no player-to-player money transfer endpoints.
+- Paid features map to organizer SaaS tooling (club/table operations), not to game outcomes.

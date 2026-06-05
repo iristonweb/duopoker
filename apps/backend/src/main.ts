@@ -5,6 +5,7 @@ import { errorHandler } from './middleware/error-handler.js';
 import { httpRateLimit } from './middleware/http-rate-limit.js';
 import { requestContext } from './middleware/request-context.js';
 import { authRouter } from './routes/auth.js';
+import { clubsRouter } from './routes/clubs.js';
 import { monetizationRouter } from './routes/monetization.js';
 import { oauthRouter } from './routes/oauth.js';
 import { profileRouter } from './routes/profile.js';
@@ -34,6 +35,7 @@ app.get('/metrics', (_req, res) => {
 });
 app.use('/auth', authRouter);
 app.use('/profile', profileRouter);
+app.use('/clubs', clubsRouter);
 app.use('/monetization', monetizationRouter);
 app.use('/oauth', oauthRouter);
 app.use(errorHandler);

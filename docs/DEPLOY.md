@@ -47,6 +47,22 @@ On the backend, add your Vercel site origin to **`CORS_ORIGIN`** (for example `h
 
 The file [vercel.json](../vercel.json) builds `@duopoker/web` only; the Express server must run elsewhere (Render, Fly.io, Railway, a VPS, etc.).
 
+## Render (backend from same repo)
+
+You can deploy the backend from the **same monorepo** using the included [render.yaml](../render.yaml):
+
+1. In Render, create a Blueprint from this repository.
+2. Render will create `duopoker-api` with:
+   - build: `pnpm install && pnpm --filter @duopoker/backend build`
+   - start: `pnpm --filter @duopoker/backend dev`
+3. In Render service environment variables, set:
+   - `DATABASE_URL`
+   - `REDIS_URL`
+   - `MONGO_URL` (optional for startup; replay/log features degrade if absent)
+4. Copy the service URL (for example `https://duopoker-api.onrender.com`) and set it in Vercel as:
+   - `VITE_API_URL=https://duopoker-api.onrender.com`
+5. Redeploy Vercel after changing `VITE_API_URL`.
+
 ## Backend (production checklist)
 
 Required environment variables (see also [apps/backend/.env.example](../apps/backend/.env.example)):
@@ -71,6 +87,13 @@ Optional:
 | `STRIPE_PRICE_SILVER` … `STRIPE_PRICE_ROYAL` | Price IDs for catalog + checkout |
 | `SENTRY_DSN_BACKEND` | Backend error tracking (integrate in your deployment) |
 | `VITE_SENTRY_DSN` | Frontend Sentry (set on Vercel for web build) |
+
+### Non-gambling guardrails (required)
+
+- Keep payout and transfer endpoints disabled (none are provided by default).
+- Keep purchase catalog scoped to virtual chips, cosmetics, and organizer SaaS plans.
+- Keep legal disclaimers visible in app and store listings: no cashout, no rake, no real-money prize handling.
+- Monitor `compliance_events` for suspicious private-club usage and enforce moderation policy.
 
 ## Observability
 

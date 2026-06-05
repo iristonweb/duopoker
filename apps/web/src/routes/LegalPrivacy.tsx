@@ -21,6 +21,13 @@ export function LegalPrivacy() {
             Analytics and error reporting (for example Sentry) may be enabled when configured by
             your deployment; see deployment documentation for details.
           </p>
+          <h2 className="mt-6 text-lg font-semibold text-zinc-100">Play-money and club policy</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            DuoPoker is a social play-money product. Private club fees purchase access to platform
+            tools (club administration, invites, table hosting limits) and do not purchase odds,
+            outcomes, or cash prizes. We do not support cashout, rake from pots, or peer-to-peer
+            money transfers in product.
+          </p>
         </GlassPanel>
       </div>
     </div>

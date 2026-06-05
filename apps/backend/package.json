@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
     "build": "tsc -p tsconfig.json",
     "lint": "eslint src --ext .ts",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@duopoker/db-schema": "workspace:*",
     "@duopoker/game-engine": "workspace:*",
     "@duopoker/shared-types": "workspace:*",
-    "@prisma/client": "^6.6.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",

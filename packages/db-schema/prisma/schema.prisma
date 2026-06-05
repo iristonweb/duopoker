@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 datasource db {
@@ -47,6 +48,30 @@ enum PaymentStatus {
   FAILED
 }
 
+enum ClubRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum ClubVisibility {
+  PRIVATE
+  INVITE_ONLY
+}
+
+enum PrivateTableStatus {
+  SCHEDULED
+  LIVE
+  CLOSED
+}
+
+enum OrganizerPlanTier {
+  BASIC
+  PRO
+  NETWORK
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
@@ -62,6 +87,8 @@ model User {
   inventory     UserItem[]
   devices       DeviceSession[]
   payments      PaymentEvent[]
+  clubsOwned    Club[]         @relation("club_owner")
+  clubMemberships ClubMembership[]
   @@map("users")
 }
 
@@ -147,4 +174,84 @@ model ReplayMeta {
   finishedAt  DateTime?
   session     GameSession @relation(fields: [sessionId], references: [id])
   @@map("replay_meta")
+}
+
+model Club {
+  id               String                 @id @default(cuid())
+  ownerId          String
+  name             String
+  description      String?
+  visibility       ClubVisibility         @default(PRIVATE)
+  isArchived       Boolean                @default(false)
+  maxMembers       Int                    @default(30)
+  maxActiveTables  Int                    @default(2)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  owner            User                   @relation("club_owner", fields: [ownerId], references: [id])
+  members          ClubMembership[]
+  privateTables    PrivateTable[]
+  organizerPlan    OrganizerSubscription?
+  complianceEvents ComplianceEvent[]
+  @@index([ownerId])
+  @@map("clubs")
+}
+
+model ClubMembership {
+  id        String   @id @default(cuid())
+  clubId     String
+  userId     String
+  role       ClubRole @default(MEMBER)
+  joinedAt   DateTime @default(now())
+  club       Club     @relation(fields: [clubId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  @@unique([clubId, userId])
+  @@index([userId])
+  @@map("club_memberships")
+}
+
+model PrivateTable {
+  id              String             @id @default(cuid())
+  clubId           String
+  hostUserId       String
+  name             String
+  mode             Mode
+  status           PrivateTableStatus @default(SCHEDULED)
+  maxPlayers       Int                @default(9)
+  virtualBuyIn     Int                @default(1000)
+  createdAt        DateTime           @default(now())
+  startsAt         DateTime?
+  closedAt         DateTime?
+  club             Club               @relation(fields: [clubId], references: [id])
+  @@index([clubId, status])
+  @@map("private_tables")
+}
+
+model OrganizerSubscription {
+  id                    String            @id @default(cuid())
+  clubId                 String            @unique
+  ownerId                String
+  tier                   OrganizerPlanTier
+  status                 Status
+  startsAt               DateTime          @default(now())
+  expiresAt              DateTime
+  billingProvider        PaymentProvider
+  providerSubscriptionId String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  club                   Club              @relation(fields: [clubId], references: [id])
+  @@index([ownerId])
+  @@map("organizer_subscriptions")
+}
+
+model ComplianceEvent {
+  id          String   @id @default(cuid())
+  clubId       String
+  actorUserId  String?
+  type         String
+  severity     String   @default("INFO")
+  details      Json?
+  createdAt    DateTime @default(now())
+  club         Club     @relation(fields: [clubId], references: [id])
+  @@index([clubId, createdAt])
+  @@map("compliance_events")
 }

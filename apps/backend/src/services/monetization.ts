@@ -69,7 +69,8 @@ export const recordPurchase = async (
         provider,
         amount,
         providerEventId,
-        disclaimer: 'Virtual chips and items are non-refundable and non-withdrawable.',
+        disclaimer:
+          'Virtual chips and items are non-refundable and non-withdrawable. DuoPoker does not facilitate cashout or player-to-player money transfers.',
         createdAt: new Date()
       });
     } catch {

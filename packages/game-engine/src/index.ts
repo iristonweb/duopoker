@@ -84,11 +84,16 @@ export const resolveWinner = (state: SessionState): { winnerId?: string; score: 
 export {
   addPlayerToTable,
   applyTableAction,
+  autoFoldActivePlayer,
   createInitialTableState,
+  markReadyForNextHand,
   startNewHand,
   totalInKettle,
   sbBbIndices
 } from './holdem-table';
+export { sanitizeStateForViewer } from './viewer-state';
+export { normalizeSessionState } from './normalize-state';
+export { computeSidePots, distributeSidePots } from './pot-calculator';
 export { bestStrengthFromSeven, strengthFiveCards, compareStrength, describeStrength } from './poker-eval';
 export { createDeck, shuffle } from './cards';
 export { SeededRng } from './rng';

@@ -1,15 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { verifyAccessToken } from '../auth/jwt.js';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    auth?: {
-      userId: string;
-      email: string;
-    };
-  }
-}
-
 export const authGuard = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization ?? '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';

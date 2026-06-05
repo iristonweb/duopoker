@@ -53,6 +53,14 @@ export interface SessionState {
   actionLog: PlayerAction[];
   deck: Card[];
   lastAggressor: string | null;
+  /** Players who have committed their entire stack this hand */
+  allInPlayerIds: string[];
+  /** Whether each player has acted since the last raise this street */
+  actedThisRound: Record<string, boolean>;
+  /** Total chips committed this hand (blinds, antes, bets) per player */
+  handContributions: Record<string, number>;
+  /** User ids ready to deal the next hand after COMPLETE */
+  readyForNextHand: string[];
   winners?: string[];
   winnersShare?: Record<string, number>;
   /** @deprecated still populated for older clients — use activePlayerIndex */

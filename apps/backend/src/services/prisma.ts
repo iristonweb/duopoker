@@ -1,3 +1,3 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@duopoker/db-schema';
 
 export const prisma = new PrismaClient();

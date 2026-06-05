@@ -8,6 +8,12 @@ node_modules
 !**/.env.example
 dist
 coverage
+packages/db-schema/src/generated
+packages/db-schema/dist
+test-results
+# accidental JS emit next to TS sources
+packages/shared-types/src/*.js
+packages/db-schema/src/index.js
 .expo
 .idea
 .vscode

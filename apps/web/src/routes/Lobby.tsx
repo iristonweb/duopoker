@@ -309,7 +309,7 @@ export const Lobby = () => {
               />
               <ModeCard
                 title="Расписной покер"
-                description="Open hands and draw rounds — a distinct duel of reads and discards."
+                description="Five-card duel: antes, one betting round, best hand wins — fast reads, no community board."
                 icon={<span aria-hidden>♦</span>}
                 selected={mode === 'RASPISNOY'}
                 onClick={() => setMode('RASPISNOY')}

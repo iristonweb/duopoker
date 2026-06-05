@@ -1,8 +1,11 @@
 import {
   addPlayerToTable,
   applyTableAction,
+  autoFoldActivePlayer,
   createInitialTableState,
   createReplayTimeline,
+  markReadyForNextHand,
+  normalizeSessionState,
   startNewHand
 } from '@duopoker/game-engine/index';
 import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
@@ -68,8 +71,8 @@ export const processPlayerAction = async (action: PlayerAction) => {
   if (!existing) {
     const fromDb = await loadGameSnapshot(action.sessionId);
     if (fromDb) {
-      sessions.set(action.sessionId, fromDb);
-      existing = fromDb;
+      existing = normalizeSessionState(fromDb);
+      sessions.set(action.sessionId, existing);
     }
   }
   if (!existing) {
@@ -86,15 +89,18 @@ export const processPlayerAction = async (action: PlayerAction) => {
   return { rejected: false as const, state: result.state, replay: createReplayTimeline(result.state) };
 };
 
-export const requestNextHand = (sessionId: string) => {
+export const requestNextHand = (sessionId: string, userId: string) => {
   const state = sessions.get(sessionId);
-  if (!state || state.street !== 'COMPLETE' || state.players.length < 2) {
-    return { ok: false as const, reason: 'CANNOT_START' };
+  if (!state) {
+    return { ok: false as const, reason: 'SESSION_NOT_FOUND' };
   }
-  const next = startNewHand(state);
-  sessions.set(sessionId, next);
-  save(next);
-  return { ok: true as const, state: next };
+  const result = markReadyForNextHand(state, userId);
+  if (!result.ok) {
+    return { ok: false as const, reason: result.reason };
+  }
+  sessions.set(sessionId, result.state);
+  save(result.state);
+  return { ok: true as const, state: result.state, started: result.started };
 };
 
 export const enqueueMatchmaking = (
@@ -152,8 +158,37 @@ export const getSessionSnapshot = async (sessionId: string): Promise<SessionStat
   if (mem) return mem;
   const db = await loadGameSnapshot(sessionId);
   if (db) {
-    sessions.set(sessionId, db);
-    return db;
+    const normalized = normalizeSessionState(db);
+    sessions.set(sessionId, normalized);
+    return normalized;
   }
   return null;
+};
+
+/** Fold the active player on disconnect or action timeout. */
+export const foldActivePlayerOnTimeout = async (
+  sessionId: string,
+  userId: string
+): Promise<SessionState | null> => {
+  const state = sessions.get(sessionId);
+  if (!state) return null;
+  const activeId = state.players[state.activePlayerIndex];
+  if (activeId !== userId) return null;
+  if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') {
+    return null;
+  }
+  const result = autoFoldActivePlayer(state, userId);
+  if (!result.ok) return null;
+  sessions.set(sessionId, result.state);
+  save(result.state);
+  const botState = await advanceBotTurns(sessionId);
+  return botState ?? result.state;
+};
+
+export const listSessionIdsForUser = (userId: string): string[] => {
+  const ids: string[] = [];
+  for (const [sessionId, state] of sessions) {
+    if (state.players.includes(userId)) ids.push(sessionId);
+  }
+  return ids;
 };

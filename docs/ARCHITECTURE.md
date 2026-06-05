@@ -5,7 +5,7 @@
 - `apps/web` — React + Vite + Tailwind + R3F lobby and table preview.
 - `apps/backend` — Express HTTP API, Socket.IO realtime, Prisma → PostgreSQL, Redis sessions, MongoDB analytics/replays.
 - `apps/mobile` — Expo shell + socket client.
-- `packages/game-engine` — Hold’em / Raspisnoy rules, hand evaluation, table state machine.
+- `packages/game-engine` — Hold'em / Raspisnoy rules, hand evaluation, table state machine, side pots, per-viewer state sanitization. See [RASPISNOY.md](./RASPISNOY.md).
 - `packages/shared-types` — Shared TS types (sessions, cards, theme tokens).
 - `packages/ui-kit` — Glass-morphism UI primitives.
 - `packages/db-schema` — Prisma schema and migrations.
@@ -18,8 +18,15 @@
 4. `joinSession` adds the player and may call `startNewHand` when two or more players are seated.
 5. `playerAction` drives `applyTableAction` in `game-engine`. Resulting `SessionState` is broadcast and persisted to PostgreSQL (`game_sessions.gameState`) for reconnect.
 6. Chip economy and cosmetics use `/monetization/*`. Stripe Checkout + webhook applies subscriptions (`subscriptions` table) or chip packs / inventory.
+7. Club organizers use `/clubs/*` to create private clubs/tables with plan-based limits (BASIC/PRO/NETWORK), while gameplay remains play-money only.
 
 ## Scaling notes
 
 - In-memory `sessions` map is authoritative during a running process; Redis Pub/Sub is used for matchmaking fan-out. For multi-node, persist snapshots (already JSON) and optionally load from Redis.
 - Rate limiting applies per HTTP route and per socket user for actions.
+
+## Compliance posture
+
+- DuoPoker is implemented as a social play-money platform with paid organizer SaaS features.
+- Backend does not expose payout/cashout/p2p transfer APIs.
+- Club actions create `compliance_events` entries for moderation and audit.

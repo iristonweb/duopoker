@@ -144,7 +144,7 @@ export const useAppStore = create<AppStore>((set, get) => {
     readyNextHand: () => {
       const sid = get().session?.sessionId;
       if (!sid) return;
-      get().socket?.emit('readyNextHand', { sessionId: sid });
+      get().socket?.emit('readyNextHand', { sessionId: sid, userId: get().userId });
     },
     register: async (email, password, displayName) => {
       const base = getApiBase();

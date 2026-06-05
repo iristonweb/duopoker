@@ -1,6 +1,10 @@
 import type { Card, GameStreet, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { createDeck, shuffle } from './cards';
-import { compareStrength, strengthFiveFromHand, winnerAmongPlayers } from './poker-eval';
+import {
+  computeSidePots,
+  distributeSidePots,
+  uncalledRoundBet
+} from './pot-calculator';
 import { SeededRng } from './rng';
 
 /** Committed from prior streets + current street bets (full kettle). */
@@ -39,11 +43,58 @@ const maxRoundBet = (state: SessionState): number =>
 const toCall = (state: SessionState, userId: string): number =>
   Math.max(0, maxRoundBet(state) - (state.playerRoundBet[userId] ?? 0));
 
+const emptyActed = (players: string[]): Record<string, boolean> =>
+  Object.fromEntries(players.map((p) => [p, false]));
+
+const canStillAct = (state: SessionState, pid: string): boolean =>
+  !state.foldedPlayerIds.includes(pid) && (state.stacks[pid] ?? 0) > 0;
+
+const markAllIn = (state: SessionState, userId: string): SessionState => {
+  if ((state.stacks[userId] ?? 0) > 0) return state;
+  if (state.allInPlayerIds.includes(userId)) return state;
+  return { ...state, allInPlayerIds: [...state.allInPlayerIds, userId] };
+};
+
+const addContribution = (state: SessionState, userId: string, amount: number): SessionState => ({
+  ...state,
+  handContributions: {
+    ...state.handContributions,
+    [userId]: (state.handContributions[userId] ?? 0) + amount
+  }
+});
+
+const resetActedExcept = (state: SessionState, except: string): SessionState => ({
+  ...state,
+  actedThisRound: Object.fromEntries(state.players.map((p) => [p, p === except]))
+});
+
+const markActed = (state: SessionState, userId: string): SessionState => ({
+  ...state,
+  actedThisRound: { ...state.actedThisRound, [userId]: true }
+});
+
 const bettingComplete = (state: SessionState): boolean => {
   const active = activeNonFolded(state);
   if (active.length <= 1) return true;
   const mx = maxRoundBet(state);
-  return active.every((p) => (state.playerRoundBet[p] ?? 0) === mx);
+
+  for (const p of active) {
+    const bet = state.playerRoundBet[p] ?? 0;
+    if (bet < mx && (state.stacks[p] ?? 0) > 0) return false;
+  }
+
+  for (const p of active) {
+    if (!canStillAct(state, p)) continue;
+    if (!state.actedThisRound[p]) return false;
+  }
+  return true;
+};
+
+const shouldRunOutBoard = (state: SessionState): boolean => {
+  const active = activeNonFolded(state);
+  if (active.length <= 1) return false;
+  const withChips = active.filter((p) => (state.stacks[p] ?? 0) > 0);
+  return withChips.length <= 1;
 };
 
 const advanceStreetDeck = (state: SessionState): SessionState => {
@@ -94,8 +145,17 @@ const advanceStreetDeck = (state: SessionState): SessionState => {
     currentBet: 0,
     playerRoundBet: resetBets,
     lastAggressor: null,
+    actedThisRound: emptyActed(state.players),
     activePlayerIndex: first
   };
+};
+
+const runOutToRiver = (state: SessionState): SessionState => {
+  let s = state;
+  while (s.street === 'PREFLOP' || s.street === 'FLOP' || s.street === 'TURN') {
+    s = advanceStreetDeck(s);
+  }
+  return s;
 };
 
 const firstPostFlopActor = (state: SessionState): number => {
@@ -103,10 +163,10 @@ const firstPostFlopActor = (state: SessionState): number => {
   let idx = sb;
   for (let i = 0; i < state.players.length; i += 1) {
     const p = state.players[idx];
-    if (p && !state.foldedPlayerIds.includes(p)) return idx;
+    if (p && !state.foldedPlayerIds.includes(p) && canStillAct(state, p)) return idx;
     idx = nextSeat(state.players.length, idx);
   }
-  return state.dealerIndex;
+  return nextActiveIndex(state, state.dealerIndex);
 };
 
 const mapStreetToPhase = (s: GameStreet): SessionState['phase'] => {
@@ -146,70 +206,101 @@ const commitRoundToPot = (state: SessionState): SessionState => {
   };
 };
 
-const resolveShowdownHoldem = (state: SessionState): SessionState => {
-  const folded = new Set(state.foldedPlayerIds);
-  const alive = state.players.filter((p) => !folded.has(p));
-  const kettle = totalInKettle(state);
-  if (alive.length === 1) {
-    const w = alive[0]!;
-    const stacks = { ...state.stacks };
-    stacks[w] = (stacks[w] ?? 0) + kettle;
-    return {
-      ...state,
-      street: 'COMPLETE',
-      phase: 'SHOWDOWN',
-      pot: 0,
-      playerRoundBet: Object.fromEntries(state.players.map((p) => [p, 0])),
-      stacks,
-      winners: [w],
-      winnersShare: { [w]: kettle },
-      activePlayerIndex: state.dealerIndex
-    };
-  }
-  const win = winnerAmongPlayers(state.players, state.playerCards, state.communityCards, folded);
+const applyUncalledReturn = (state: SessionState): SessionState => {
+  const uncalled = uncalledRoundBet(state);
+  if (!uncalled) return state;
   const stacks = { ...state.stacks };
-  if (win) stacks[win] = (stacks[win] ?? 0) + kettle;
+  stacks[uncalled.playerId] = (stacks[uncalled.playerId] ?? 0) + uncalled.amount;
+  const playerRoundBet = {
+    ...state.playerRoundBet,
+    [uncalled.playerId]: (state.playerRoundBet[uncalled.playerId] ?? 0) - uncalled.amount
+  };
+  const handContributions = {
+    ...state.handContributions,
+    [uncalled.playerId]: Math.max(
+      0,
+      (state.handContributions[uncalled.playerId] ?? 0) - uncalled.amount
+    )
+  };
+  return { ...state, stacks, playerRoundBet, handContributions };
+};
+
+const finalizeShowdown = (state: SessionState): SessionState => {
+  const folded = new Set(state.foldedPlayerIds);
+  const committed = commitRoundToPot(state);
+  const pots = computeSidePots(committed.players, committed.handContributions, folded);
+  const { winners, winnersShare } = distributeSidePots(
+    pots,
+    committed.playerCards,
+    committed.communityCards,
+    committed.mode
+  );
+  const stacks = { ...committed.stacks };
+  for (const [pid, share] of Object.entries(winnersShare)) {
+    stacks[pid] = (stacks[pid] ?? 0) + share;
+  }
   return {
-    ...state,
+    ...committed,
     street: 'COMPLETE',
     phase: 'SHOWDOWN',
     pot: 0,
-    playerRoundBet: Object.fromEntries(state.players.map((p) => [p, 0])),
+    playerRoundBet: Object.fromEntries(committed.players.map((p) => [p, 0])),
     stacks,
-    winners: win ? [win] : [],
-    winnersShare: win ? { [win]: kettle } : {},
-    activePlayerIndex: state.dealerIndex
+    winners,
+    winnersShare,
+    readyForNextHand: [],
+    activePlayerIndex: committed.dealerIndex
   };
+};
+
+const resolveShowdownHoldem = (state: SessionState): SessionState => {
+  const folded = new Set(state.foldedPlayerIds);
+  const alive = state.players.filter((p) => !folded.has(p));
+  if (alive.length === 1) {
+    const w = alive[0]!;
+    const ns = applyUncalledReturn(state);
+    const won = totalInKettle(ns);
+    const stacks = { ...ns.stacks };
+    stacks[w] = (stacks[w] ?? 0) + won;
+    return {
+      ...ns,
+      street: 'COMPLETE',
+      phase: 'SHOWDOWN',
+      pot: 0,
+      playerRoundBet: Object.fromEntries(ns.players.map((p) => [p, 0])),
+      stacks,
+      winners: [w],
+      winnersShare: { [w]: won },
+      readyForNextHand: [],
+      activePlayerIndex: ns.dealerIndex
+    };
+  }
+  return finalizeShowdown(state);
 };
 
 const resolveShowdownRaspisnoy = (state: SessionState): SessionState => {
   const folded = new Set(state.foldedPlayerIds);
-  let best: string | undefined;
-  let bestS: ReturnType<typeof strengthFiveFromHand> | undefined;
-  for (const pid of state.players) {
-    if (folded.has(pid)) continue;
-    const h = state.playerCards[pid];
-    if (!h || h.length < 5) continue;
-    const s = strengthFiveFromHand(h);
-    if (!bestS || compareStrength(s, bestS) > 0) {
-      best = pid;
-      bestS = s;
-    }
+  const alive = state.players.filter((p) => !folded.has(p));
+  if (alive.length === 1) {
+    const w = alive[0]!;
+    const ns = applyUncalledReturn(state);
+    const won = totalInKettle(ns);
+    const stacks = { ...ns.stacks };
+    stacks[w] = (stacks[w] ?? 0) + won;
+    return {
+      ...ns,
+      street: 'COMPLETE',
+      phase: 'SHOWDOWN',
+      pot: 0,
+      playerRoundBet: Object.fromEntries(ns.players.map((p) => [p, 0])),
+      stacks,
+      winners: [w],
+      winnersShare: { [w]: won },
+      readyForNextHand: [],
+      activePlayerIndex: ns.dealerIndex
+    };
   }
-  const kettle = totalInKettle(state);
-  const stacks = { ...state.stacks };
-  if (best) stacks[best] = (stacks[best] ?? 0) + kettle;
-  return {
-    ...state,
-    street: 'COMPLETE',
-    phase: 'SHOWDOWN',
-    pot: 0,
-    playerRoundBet: Object.fromEntries(state.players.map((p) => [p, 0])),
-    stacks,
-    winners: best ? [best] : [],
-    winnersShare: best ? { [best]: kettle } : {},
-    activePlayerIndex: state.dealerIndex
-  };
+  return finalizeShowdown(state);
 };
 
 export const createInitialTableState = (
@@ -242,7 +333,11 @@ export const createInitialTableState = (
     playerRoundBet: {},
     actionLog: [],
     deck: [],
-    lastAggressor: null
+    lastAggressor: null,
+    allInPlayerIds: [],
+    actedThisRound: {},
+    handContributions: {},
+    readyForNextHand: []
   };
 };
 
@@ -280,6 +375,10 @@ export const startNewHand = (state: SessionState): SessionState => {
   const rng = new SeededRng(state.seed + state.handNumber + 1);
   const shuffled = shuffle(createDeck(), rng);
   const dealerIndex = state.handNumber === 0 ? 0 : (state.dealerIndex + 1) % state.players.length;
+  const actedThisRound = emptyActed(state.players);
+  const handContributions: Record<string, number> = Object.fromEntries(
+    state.players.map((p) => [p, 0])
+  );
 
   if (state.mode === 'HOLDEM') {
     const { sb, bb } = sbBbIndices(state.players.length, dealerIndex);
@@ -289,6 +388,8 @@ export const startNewHand = (state: SessionState): SessionState => {
     const bbAmt = Math.min(state.bigBlind, stacks[state.players[bb]!] ?? 0);
     stacks[state.players[sb]!] = (stacks[state.players[sb]!] ?? 0) - sbAmt;
     stacks[state.players[bb]!] = (stacks[state.players[bb]!] ?? 0) - bbAmt;
+    handContributions[state.players[sb]!] = sbAmt;
+    handContributions[state.players[bb]!] = bbAmt;
     const playerRoundBet: Record<string, number> = {};
     state.players.forEach((p) => {
       playerRoundBet[p] = 0;
@@ -296,6 +397,9 @@ export const startNewHand = (state: SessionState): SessionState => {
     playerRoundBet[state.players[sb]!] = sbAmt;
     playerRoundBet[state.players[bb]!] = bbAmt;
     const first = firstPreflopActor(state.players.length, dealerIndex);
+    const allInPlayerIds: string[] = [];
+    if ((stacks[state.players[sb]!] ?? 0) === 0) allInPlayerIds.push(state.players[sb]!);
+    if ((stacks[state.players[bb]!] ?? 0) === 0) allInPlayerIds.push(state.players[bb]!);
     return {
       ...state,
       dealerIndex,
@@ -311,6 +415,10 @@ export const startNewHand = (state: SessionState): SessionState => {
       currentBet: bbAmt,
       playerRoundBet,
       lastAggressor: state.players[bb]!,
+      allInPlayerIds,
+      actedThisRound,
+      handContributions,
+      readyForNextHand: [],
       activePlayerIndex: first,
       actionLog: [],
       winners: undefined,
@@ -318,17 +426,19 @@ export const startNewHand = (state: SessionState): SessionState => {
     };
   }
 
-  // RASPISNOY — five cards, antes, single betting round then showdown
   const hole = dealHoleCards({ ...state, dealerIndex }, shuffled, 5);
   const stacks = { ...state.stacks };
   const ante = Math.max(1, Math.min(state.smallBlind, state.bigBlind));
   let pot = 0;
   const playerRoundBet: Record<string, number> = {};
+  const allInPlayerIds: string[] = [];
   state.players.forEach((p) => {
     const q = Math.min(ante, stacks[p] ?? 0);
     stacks[p] = (stacks[p] ?? 0) - q;
     pot += q;
+    handContributions[p] = q;
     playerRoundBet[p] = 0;
+    if ((stacks[p] ?? 0) === 0 && q > 0) allInPlayerIds.push(p);
   });
   const first = firstPreflopActor(state.players.length, dealerIndex);
   return {
@@ -346,6 +456,10 @@ export const startNewHand = (state: SessionState): SessionState => {
     currentBet: 0,
     playerRoundBet,
     lastAggressor: null,
+    allInPlayerIds,
+    actedThisRound,
+    handContributions,
+    readyForNextHand: [],
     activePlayerIndex: first,
     actionLog: [],
     winners: undefined,
@@ -357,7 +471,7 @@ const nextActiveIndex = (state: SessionState, from: number): number => {
   let i = from;
   for (let k = 0; k < state.players.length; k += 1) {
     const p = state.players[i];
-    if (p && !state.foldedPlayerIds.includes(p)) return i;
+    if (p && !state.foldedPlayerIds.includes(p) && canStillAct(state, p)) return i;
     i = nextSeat(state.players.length, i);
   }
   return from;
@@ -386,8 +500,12 @@ export const applyTableAction = (
     return { ok: false, reason: 'WRONG_TURN' };
   }
 
+  if (!canStillAct(state, action.userId) && action.type !== 'fold') {
+    return { ok: false, reason: 'ALL_IN' };
+  }
+
   const fold = (): SessionState => ({
-    ...state,
+    ...markActed(state, action.userId),
     foldedPlayerIds: [...state.foldedPlayerIds, action.userId],
     actionLog: [...state.actionLog, action]
   });
@@ -395,34 +513,53 @@ export const applyTableAction = (
   const call = (): SessionState | null => {
     const need = toCall(state, action.userId);
     if (need === 0) return null;
+    const stack = state.stacks[action.userId] ?? 0;
+    if (stack === 0) return null;
     const stacks = { ...state.stacks };
-    const pay = Math.min(need, stacks[action.userId] ?? 0);
-    stacks[action.userId] = (stacks[action.userId] ?? 0) - pay;
+    const pay = Math.min(need, stack);
+    stacks[action.userId] = stack - pay;
     const playerRoundBet = {
       ...state.playerRoundBet,
       [action.userId]: (state.playerRoundBet[action.userId] ?? 0) + pay
     };
     const mx = Math.max(maxRoundBet({ ...state, playerRoundBet }), playerRoundBet[action.userId] ?? 0);
-    return { ...state, stacks, playerRoundBet, currentBet: mx, actionLog: [...state.actionLog, action] };
+    let ns: SessionState = {
+      ...state,
+      stacks,
+      playerRoundBet,
+      currentBet: mx,
+      actionLog: [...state.actionLog, action]
+    };
+    ns = addContribution(ns, action.userId, pay);
+    ns = markActed(ns, action.userId);
+    ns = markAllIn(ns, action.userId);
+    return ns;
   };
 
   const check = (): SessionState | null => {
     if (toCall(state, action.userId) !== 0) return null;
-    return { ...state, actionLog: [...state.actionLog, action] };
+    return markActed({ ...state, actionLog: [...state.actionLog, action] }, action.userId);
   };
 
   const raiseOrBet = (raiseIncrement: number): SessionState | null => {
+    const stack = state.stacks[action.userId] ?? 0;
+    if (stack === 0) return null;
     const need = toCall(state, action.userId);
     const minRaise = state.bigBlind;
     const inc = Math.max(minRaise, raiseIncrement);
-    const newRound = (state.playerRoundBet[action.userId] ?? 0) + need + inc;
-    const stacks = { ...state.stacks };
+    const desiredRound = (state.playerRoundBet[action.userId] ?? 0) + need + inc;
+    const maxAffordable = (state.playerRoundBet[action.userId] ?? 0) + stack;
+    const newRound = Math.min(desiredRound, maxAffordable);
+    const prevMax = maxRoundBet(state);
     const pay = newRound - (state.playerRoundBet[action.userId] ?? 0);
-    if (pay > (stacks[action.userId] ?? 0)) return null;
+    if (pay <= 0) return null;
+    if (newRound <= prevMax && newRound < maxAffordable) return null;
+
+    const stacks = { ...state.stacks };
     stacks[action.userId] = (stacks[action.userId] ?? 0) - pay;
     const playerRoundBet = { ...state.playerRoundBet, [action.userId]: newRound };
-    const mx = Math.max(maxRoundBet({ ...state, playerRoundBet }), newRound);
-    return {
+    const mx = Math.max(prevMax, newRound);
+    let ns: SessionState = {
       ...state,
       stacks,
       playerRoundBet,
@@ -430,6 +567,14 @@ export const applyTableAction = (
       lastAggressor: action.userId,
       actionLog: [...state.actionLog, action]
     };
+    ns = addContribution(ns, action.userId, pay);
+    ns = markAllIn(ns, action.userId);
+    if (newRound > prevMax) {
+      ns = resetActedExcept(ns, action.userId);
+    } else {
+      ns = markActed(ns, action.userId);
+    }
+    return ns;
   };
 
   let ns: SessionState;
@@ -463,13 +608,14 @@ export const applyTableAction = (
   const alive = activeNonFolded(ns);
   if (alive.length === 1) {
     const w = alive[0]!;
-    const won = totalInKettle(ns);
-    const stacks = { ...ns.stacks };
+    const awarded = applyUncalledReturn(ns);
+    const won = totalInKettle(awarded);
+    const stacks = { ...awarded.stacks };
     stacks[w] = (stacks[w] ?? 0) + won;
     return {
       ok: true,
       state: {
-        ...ns,
+        ...awarded,
         street: 'COMPLETE',
         phase: 'SHOWDOWN',
         pot: 0,
@@ -478,6 +624,7 @@ export const applyTableAction = (
         stacks,
         winners: [w],
         winnersShare: { [w]: won },
+        readyForNextHand: [],
         activePlayerId: w
       }
     };
@@ -492,9 +639,49 @@ export const applyTableAction = (
     return { ok: true, state: resolveShowdownRaspisnoy(committed) };
   }
 
-  const hold = commitRoundToPot(ns);
+  let hold = commitRoundToPot(ns);
+  if (shouldRunOutBoard(hold)) {
+    hold = runOutToRiver(hold);
+    return { ok: true, state: resolveShowdownHoldem(hold) };
+  }
   if (hold.street === 'RIVER') {
     return { ok: true, state: resolveShowdownHoldem(hold) };
   }
   return { ok: true, state: advanceStreetDeck(hold) };
+};
+
+/** Mark a player ready; starts next hand when all seated players are ready. */
+export const markReadyForNextHand = (
+  state: SessionState,
+  userId: string
+): { ok: true; state: SessionState; started: boolean } | { ok: false; reason: string } => {
+  if (state.street !== 'COMPLETE') {
+    return { ok: false, reason: 'CANNOT_START' };
+  }
+  if (!state.players.includes(userId)) {
+    return { ok: false, reason: 'NOT_SEATED' };
+  }
+  const ready = state.readyForNextHand.includes(userId)
+    ? state.readyForNextHand
+    : [...state.readyForNextHand, userId];
+  const allReady = state.players.every((p) => ready.includes(p));
+  if (!allReady) {
+    return { ok: true, started: false, state: { ...state, readyForNextHand: ready } };
+  }
+  return { ok: true, started: true, state: startNewHand({ ...state, readyForNextHand: [] }) };
+};
+
+/** Auto-fold the active player (disconnect / action timeout). */
+export const autoFoldActivePlayer = (
+  state: SessionState,
+  userId: string
+): { ok: true; state: SessionState } | { ok: false; reason: string } => {
+  const cur = state.players[state.activePlayerIndex];
+  if (cur !== userId) return { ok: false, reason: 'WRONG_TURN' };
+  return applyTableAction(state, {
+    sessionId: state.sessionId,
+    userId,
+    type: 'fold',
+    at: Date.now()
+  });
 };
