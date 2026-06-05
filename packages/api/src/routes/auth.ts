@@ -106,8 +106,10 @@ authRoutes.post('/refresh', async (c) => {
 
     return c.json({ accessToken, refreshToken: nextRefresh });
   } catch (error) {
-    const status = error instanceof AppError ? error.statusCode : 401;
-    return c.json({ error: 'Invalid session' }, status);
+    if (error instanceof AppError && error.statusCode === 401) {
+      return c.json({ error: 'Invalid session' }, 401);
+    }
+    return c.json({ error: 'Invalid session' }, 500);
   }
 });
 

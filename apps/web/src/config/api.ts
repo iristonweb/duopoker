@@ -13,6 +13,13 @@ export function getApiBase(): string {
   return '';
 }
 
+/** Same-origin Vercel API lives under `/api`; Express/Render uses bare paths. */
+export function resolveApiUrl(path: string): string {
+  const base = getApiBase();
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return base ? `${base}${normalized}` : `/api${normalized}`;
+}
+
 /** External long-lived backend with Socket.IO (Render, local Express, Fly.io). */
 export function usesRealtimeSocket(): boolean {
   return getApiBase().length > 0;

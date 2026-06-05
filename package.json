@@ -13,12 +13,14 @@
     "prepare": "husky",
     "db:migrate": "pnpm --filter @duopoker/db-schema migrate:deploy",
     "db:push": "pnpm --filter @duopoker/db-schema db:push",
-    "db:generate": "pnpm --filter @duopoker/db-schema build"
+    "db:generate": "pnpm --filter @duopoker/db-schema build",
+    "build:vercel-api": "node scripts/bundle-vercel-api.mjs"
   },
   "dependencies": {
     "hono": "^4.7.10"
   },
   "devDependencies": {
+    "esbuild": "^0.25.0",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.3",

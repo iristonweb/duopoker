@@ -53,6 +53,7 @@ voiceRoutes.post('/token', async (c) => {
     );
   }
 
-  const result = await createVoiceRoomToken(cfg, parsed.data);
+  const { sessionId, userId, displayName } = parsed.data;
+  const result = await createVoiceRoomToken(cfg, { sessionId, userId, displayName });
   return c.json(result);
 });

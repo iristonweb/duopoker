@@ -2,7 +2,7 @@
 
 ## Режим A — всё на Vercel (фронт + API + голос)
 
-Один проект Vercel: React + serverless API (`api/[...path].ts` → `packages/api`).
+Один проект Vercel: React + serverless API (`api/index.ts` + esbuild bundle → `packages/api`).
 
 | Функция | Как работает |
 |---------|----------------|
@@ -61,7 +61,7 @@ Project → **Settings → Environment Variables** (Production + Preview):
 
 **Не добавляй** `VITE_API_URL` — API на том же домене через rewrites.
 
-**Root Directory:** Settings → **Build and Deployment** → Root Directory должен быть **пустым** (корень репозитория, не `apps/web`). Конфиг только в корневом `vercel.json`, handler — `api/[...path].ts`.
+**Root Directory:** Settings → **Build and Deployment** → Root Directory должен быть **пустым** (корень репозитория). Handler — `api/index.ts`, конфиг — корневой `vercel.json`.
 
 Сгенерировать JWT (PowerShell):
 
@@ -82,10 +82,13 @@ Vercel → **Deployments → Redeploy** (если env меняли после п
 ### 4. Проверка после деплоя
 
 ```text
-https://duopoker.vercel.app/health
+https://duopoker.vercel.app/api/health
 → {"status":"ok","runtime":"vercel-serverless"}
 
-https://duopoker.vercel.app/voice/status
+https://duopoker.vercel.app/health
+→ то же (rewrite)
+
+https://duopoker.vercel.app/api/voice/status
 → {"livekit":"configured",...}
 ```
 

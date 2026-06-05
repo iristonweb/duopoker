@@ -15,7 +15,7 @@ import {
 import { PokerTable3D } from '../components/PokerTable3D';
 import { VoiceRoom } from '../components/VoiceRoom';
 import { useAppStore } from '../store/useAppStore';
-import { getApiBase, usesRealtimeSocket } from '../config/api';
+import { resolveApiUrl, usesRealtimeSocket } from '../config/api';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
 
@@ -217,9 +217,7 @@ export const Lobby = () => {
   };
 
   useEffect(() => {
-    const base = getApiBase();
-    if (!base) return;
-    fetch(`${base}/monetization/catalog`)
+    fetch(resolveApiUrl('/monetization/catalog'))
       .then((r) => r.json())
       .then(
         (d: {
@@ -236,7 +234,6 @@ export const Lobby = () => {
   }, []);
 
   const startSubscription = async (tier: string) => {
-    const base = getApiBase();
     const sub = catalogSubs.find((s) => s.tier === tier);
     const priceId = sub?.stripePriceId ?? (catalogMockCheckout ? tier : undefined);
     const token = useAppStore.getState().accessToken;
@@ -250,7 +247,7 @@ export const Lobby = () => {
     }
     setCheckoutMsg(null);
     try {
-      const res = await fetch(`${base}/monetization/checkout-session`, {
+      const res = await fetch(resolveApiUrl('/monetization/checkout-session'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

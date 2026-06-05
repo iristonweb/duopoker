@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
-import { getApiBase, usesRealtimeSocket } from '../config/api';
+import { getApiBase, resolveApiUrl, usesRealtimeSocket } from '../config/api';
 
 const LS_ACCESS = 'duopoker_access';
 const LS_REFRESH = 'duopoker_refresh';
@@ -103,7 +103,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       const rt = get().refreshToken;
       if (!rt) return false;
       try {
-        const res = await fetch(`${getApiBase()}/auth/refresh`, {
+        const res = await fetch(resolveApiUrl('/auth/refresh'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken: rt })
@@ -135,14 +135,14 @@ export const useAppStore = create<AppStore>((set, get) => {
       set({ socket });
     },
     apiFetch: async (path, init = {}) => {
-      const base = getApiBase();
+      const url = resolveApiUrl(path);
       const headers = new Headers(init.headers);
       const token = get().accessToken;
       if (token) headers.set('Authorization', `Bearer ${token}`);
       if (!headers.has('Content-Type') && init.body) {
         headers.set('Content-Type', 'application/json');
       }
-      let res = await fetch(`${base}${path}`, { ...init, headers });
+      let res = await fetch(url, { ...init, headers });
       if (res.status === 401 && get().refreshToken) {
         const ok = await get().refreshAccessToken();
         if (ok) {
@@ -152,7 +152,7 @@ export const useAppStore = create<AppStore>((set, get) => {
           if (!retryHeaders.has('Content-Type') && init.body) {
             retryHeaders.set('Content-Type', 'application/json');
           }
-          res = await fetch(`${base}${path}`, { ...init, headers: retryHeaders });
+          res = await fetch(url, { ...init, headers: retryHeaders });
         }
       }
       return res;
@@ -294,13 +294,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       set({ session: data.session, sessionError: undefined });
     },
     register: async (email, password, displayName) => {
-      const base = getApiBase();
       set({ authError: undefined });
-      if (!base && !import.meta.env.PROD) {
+      if (!getApiBase() && !import.meta.env.PROD) {
         set({ authError: 'Set VITE_API_URL=http://localhost:4000 in apps/web/.env for local auth.' });
         throw new Error('no api base');
       }
-      const res = await fetch(`${base}/auth/register`, {
+      const res = await fetch(resolveApiUrl('/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, displayName })
@@ -336,13 +335,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       await get().fetchProfile();
     },
     login: async (email, password) => {
-      const base = getApiBase();
       set({ authError: undefined });
-      if (!base && !import.meta.env.PROD) {
+      if (!getApiBase() && !import.meta.env.PROD) {
         set({ authError: 'Set VITE_API_URL=http://localhost:4000 in apps/web/.env for local auth.' });
         throw new Error('no api base');
       }
-      const res = await fetch(`${base}/auth/login`, {
+      const res = await fetch(resolveApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

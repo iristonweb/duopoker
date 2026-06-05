@@ -4,9 +4,11 @@
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@duopoker/shared-types/*": ["packages/shared-types/dist/*"],
-      "@duopoker/game-engine/*": ["packages/game-engine/dist/*"],
-      "@duopoker/db-schema": ["packages/db-schema/src/generated/client/index"]
+      "@duopoker/shared-types/*": ["../shared-types/dist/*"],
+      "@duopoker/shared-types/index": ["../shared-types/dist/index"],
+      "@duopoker/game-engine/*": ["../game-engine/dist/*"],
+      "@duopoker/game-engine/index": ["../game-engine/dist/index"],
+      "@duopoker/db-schema": ["../db-schema/src/generated/client/index"]
     }
   },
   "include": ["src"]

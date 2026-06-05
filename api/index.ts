@@ -1,5 +1,6 @@
 import { handle } from 'hono/vercel';
-import app from '../packages/api/src/app';
+// Bundled at build time by scripts/bundle-vercel-api.mjs
+import app from './_app.mjs';
 
 export default handle(app);
 

@@ -19,3 +19,7 @@ packages/db-schema/src/index.js
 .expo
 .idea
 .vscode
+.vercel
+api/_app.mjs
+api/_app.mjs.map
+.env*.local
