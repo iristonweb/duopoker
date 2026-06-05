@@ -32,11 +32,12 @@ const ensureSessionState = async (
 };
 
 /** Add player; auto-start hand when 2+ seated in LOBBY. */
-export const joinTable = async (
+const seatPlayer = async (
   sessionId: string,
   userId: string,
   mode: SessionState['mode'],
-  buyIn: number
+  buyIn: number,
+  clearAssignment: boolean
 ) => {
   let state = await ensureSessionState(sessionId, mode, buyIn);
   state = addPlayerToTable(state, userId);
@@ -44,8 +45,18 @@ export const joinTable = async (
     state = startNewHand(state);
   }
   await persistGameSnapshot(state);
+  if (clearAssignment) {
+    await clearMatchAssignment(userId);
+  }
   return state;
 };
+
+export const joinTable = async (
+  sessionId: string,
+  userId: string,
+  mode: SessionState['mode'],
+  buyIn: number
+) => seatPlayer(sessionId, userId, mode, buyIn, true);
 
 export const processPlayerAction = async (action: PlayerAction) => {
   const existing = await getSessionSnapshot(action.sessionId);
@@ -185,15 +196,11 @@ export const createMatchFromQueue = async (
   buyIn: number
 ) => {
   const sessionId = `sess-${Date.now()}`;
-  const hasBot = ready.some((r) => r.userId.startsWith(BOT_PREFIX));
 
-  if (hasBot) {
-    const humanId = ready.find((r) => !r.userId.startsWith(BOT_PREFIX))!.userId;
-    const botId = ready.find((r) => r.userId.startsWith(BOT_PREFIX))!.userId;
-    await joinTable(sessionId, humanId, mode, buyIn);
-    await joinTable(sessionId, botId, mode, buyIn);
-    await advanceBotTurns(sessionId);
+  for (const player of ready) {
+    await seatPlayer(sessionId, player.userId, mode, buyIn, false);
   }
+  await advanceBotTurns(sessionId);
 
   return {
     sessionId,
@@ -204,3 +211,82 @@ export const createMatchFromQueue = async (
 };
 
 export const matchmakingAllowsSolo = () => config.allowSoloQueue;
+
+export type QueueStatus =
+  | { status: 'idle' }
+  | { status: 'waiting'; mode: SessionState['mode']; buyIn: number }
+  | {
+      status: 'matched';
+      sessionId: string;
+      mode: SessionState['mode'];
+      buyIn: number;
+      players: string[];
+    };
+
+export const getQueueStatus = async (userId: string): Promise<QueueStatus> => {
+  const assignment = await prisma.matchAssignment.findUnique({ where: { userId } });
+  if (assignment) {
+    const snapshot = await getSessionSnapshot(assignment.sessionId);
+    return {
+      status: 'matched',
+      sessionId: assignment.sessionId,
+      mode: assignment.mode,
+      buyIn: assignment.buyIn,
+      players: snapshot?.players ?? [userId]
+    };
+  }
+
+  const ticket = await prisma.matchmakingTicket.findUnique({ where: { userId } });
+  if (ticket) {
+    return { status: 'waiting', mode: ticket.mode, buyIn: ticket.buyIn };
+  }
+
+  return { status: 'idle' };
+};
+
+export const leaveQueue = async (userId: string) => {
+  await prisma.matchmakingTicket.deleteMany({ where: { userId } });
+};
+
+const recordMatchForPlayers = async (
+  sessionId: string,
+  players: string[],
+  mode: SessionState['mode'],
+  buyIn: number
+) => {
+  await prisma.matchAssignment.createMany({
+    data: players.map((userId) => ({ userId, sessionId, mode, buyIn })),
+    skipDuplicates: true
+  });
+};
+
+export const clearMatchAssignment = async (userId: string) => {
+  await prisma.matchAssignment.deleteMany({ where: { userId } });
+};
+
+/** Enter queue once; pair humans or optionally spawn a bot. */
+export const enterMatchmaking = async (
+  ticket: MatchmakingTicket,
+  opts?: { allowSoloQueue?: boolean }
+): Promise<QueueStatus> => {
+  const existing = await getQueueStatus(ticket.userId);
+  if (existing.status === 'matched') return existing;
+
+  const ready = await enqueueMatchmaking(ticket, opts);
+  if (!ready) {
+    const waiting = await getQueueStatus(ticket.userId);
+    return waiting.status === 'waiting' ? waiting : { status: 'waiting', mode: ticket.mode, buyIn: ticket.buyIn };
+  }
+
+  const match = await createMatchFromQueue(ready, ticket.mode, ticket.buyIn);
+  const humans = match.players.filter((id) => !id.startsWith(BOT_PREFIX));
+  await recordMatchForPlayers(match.sessionId, humans, match.mode, match.buyIn);
+
+  return {
+    status: 'matched',
+    sessionId: match.sessionId,
+    mode: match.mode,
+    buyIn: match.buyIn,
+    players: match.players
+  };
+};

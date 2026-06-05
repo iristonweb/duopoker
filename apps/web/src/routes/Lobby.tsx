@@ -2,6 +2,11 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
+  catalogGameModes,
+  lobbyHeroBanner,
+  subscriptionBannerImages
+} from '@duopoker/shared-types';
+import {
   AppBackground,
   Button,
   GlassPanel,
@@ -36,7 +41,8 @@ const container = {
   }
 };
 
-type CatalogSub = { tier: string; stripePriceId?: string; priceUsd?: number };
+type CatalogSub = { tier: string; stripePriceId?: string; priceUsd?: number; imageUrl?: string };
+type CatalogGameMode = { id: 'HOLDEM' | 'RASPISNOY'; title: string; description: string; imageUrl: string };
 
 function AuthPanel() {
   const accessToken = useAppStore((s) => s.accessToken);
@@ -45,6 +51,7 @@ function AuthPanel() {
   const displayName = useAppStore((s) => s.displayName);
   const chips = useAppStore((s) => s.chips);
   const authError = useAppStore((s) => s.authError);
+  const authNotice = useAppStore((s) => s.authNotice);
   const register = useAppStore((s) => s.register);
   const login = useAppStore((s) => s.login);
   const logout = useAppStore((s) => s.logout);
@@ -73,19 +80,26 @@ function AuthPanel() {
         <button
           type="button"
           className={`rounded-lg px-3 py-1 text-xs font-medium ${tab === 'login' ? 'bg-gold/20 text-gold' : 'text-muted'}`}
-          onClick={() => setTab('login')}
+          onClick={() => {
+            setTab('login');
+            useAppStore.setState({ authError: undefined, authNotice: undefined });
+          }}
         >
           Sign in
         </button>
         <button
           type="button"
           className={`rounded-lg px-3 py-1 text-xs font-medium ${tab === 'register' ? 'bg-gold/20 text-gold' : 'text-muted'}`}
-          onClick={() => setTab('register')}
+          onClick={() => {
+            setTab('register');
+            useAppStore.setState({ authError: undefined, authNotice: undefined });
+          }}
         >
           Register
         </button>
       </div>
       {authError ? <p className="mb-2 text-xs text-rose-400">{authError}</p> : null}
+      {authNotice ? <p className="mb-2 text-xs text-emerald-400">{authNotice}</p> : null}
       <form
         className="flex flex-col gap-2"
         onSubmit={async (e) => {
@@ -93,7 +107,8 @@ function AuthPanel() {
           setBusy(true);
           try {
             if (tab === 'register') {
-              await register(emailIn, passwordIn, nameIn || 'Player');
+              const name = nameIn.trim().length >= 2 ? nameIn.trim() : 'Player';
+              await register(emailIn, passwordIn, name);
             } else {
               await login(emailIn, passwordIn);
             }
@@ -107,7 +122,8 @@ function AuthPanel() {
         {tab === 'register' ? (
           <input
             className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-muted"
-            placeholder="Display name"
+            placeholder="Display name (2+ chars)"
+            minLength={2}
             value={nameIn}
             onChange={(e) => setNameIn(e.target.value)}
           />
@@ -149,10 +165,14 @@ function AuthPanel() {
 
 export const Lobby = () => {
   const navigate = useNavigate();
-  const { mode, setMode, connect, queue, session, readyNextHand, fetchProfile } = useAppStore();
+  const { mode, setMode, connect, queue, pollQueueStatus, session, readyNextHand, fetchProfile } =
+    useAppStore();
+  const accessToken = useAppStore((s) => s.accessToken);
   const socket = useAppStore((s) => s.socket);
   const [cosmetics, setCosmetics] = useState<CosmeticItem[]>([]);
   const [catalogSubs, setCatalogSubs] = useState<CatalogSub[]>([]);
+  const [gameModes, setGameModes] = useState<CatalogGameMode[]>(catalogGameModes);
+  const [lobbyBannerUrl, setLobbyBannerUrl] = useState(lobbyHeroBanner);
   const [catalogMockCheckout, setCatalogMockCheckout] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
@@ -189,6 +209,10 @@ export const Lobby = () => {
 
   const startQueue = async () => {
     if (queueBusy) return;
+    if (!accessToken) {
+      setQueueBanner('Sign in to play online against other players.');
+      return;
+    }
     setQueueBusy(true);
     setQueueBanner('Searching for opponents…');
     try {
@@ -196,20 +220,21 @@ export const Lobby = () => {
         await queue();
         return;
       }
+      await queue();
       const poll = async () => {
-        const result = await queue();
+        const result = await pollQueueStatus();
         if (result.status === 'matched' && result.sessionId) {
           if (queuePollRef.current) clearInterval(queuePollRef.current);
           queuePollRef.current = null;
           setQueueBanner(null);
           navigate(`/table/${result.sessionId}`);
-        } else {
+        } else if (result.status === 'waiting') {
           setQueueBanner('Waiting for another player in the queue…');
         }
       };
       await poll();
       if (!queuePollRef.current) {
-        queuePollRef.current = setInterval(poll, 2500);
+        queuePollRef.current = setInterval(poll, 2000);
       }
     } finally {
       setQueueBusy(false);
@@ -223,10 +248,14 @@ export const Lobby = () => {
         (d: {
           cosmetics?: CosmeticItem[];
           subscriptions?: CatalogSub[];
+          gameModes?: CatalogGameMode[];
+          lobbyBannerUrl?: string;
           mockCheckout?: boolean;
         }) => {
           setCosmetics(d.cosmetics ?? []);
           setCatalogSubs(d.subscriptions ?? []);
+          if (d.gameModes?.length) setGameModes(d.gameModes);
+          if (d.lobbyBannerUrl) setLobbyBannerUrl(d.lobbyBannerUrl);
           setCatalogMockCheckout(Boolean(d.mockCheckout));
         }
       )
@@ -273,6 +302,11 @@ export const Lobby = () => {
 
   const tableHref = session?.sessionId ? `/table/${session.sessionId}` : null;
 
+  const holdemMode = gameModes.find((m) => m.id === 'HOLDEM') ?? catalogGameModes[0];
+  const raspisnoyMode = gameModes.find((m) => m.id === 'RASPISNOY') ?? catalogGameModes[1];
+  const subBanner = (tier: keyof typeof subscriptionBannerImages) =>
+    catalogSubs.find((s) => s.tier === tier)?.imageUrl ?? subscriptionBannerImages[tier];
+
   return (
     <div className="relative min-h-screen">
       <AppBackground />
@@ -299,32 +333,51 @@ export const Lobby = () => {
               Premium tables for Texas Hold&apos;em and Raspisnoy — real-time multiplayer, virtual
               chips only.
             </p>
-            <div className="mt-3 flex gap-4 text-xs">
+            <div className="mt-3 flex flex-wrap gap-4 text-xs">
               <Link to="/legal/terms" className="text-gold/80 hover:underline">
                 Terms
               </Link>
               <Link to="/legal/privacy" className="text-gold/80 hover:underline">
                 Privacy
               </Link>
+              <Link to="/legal/community" className="text-gold/80 hover:underline">
+                Community
+              </Link>
             </div>
           </div>
           <AuthPanel />
         </motion.header>
+
+        <motion.div
+          className="mb-8 overflow-hidden rounded-2xl border border-white/10"
+          variants={reduceMotion ? undefined : section}
+          custom={0.5}
+        >
+          <img
+            src={lobbyBannerUrl}
+            alt="DuoPoker premium play-money tables"
+            className="h-36 w-full object-cover sm:h-44"
+            loading="eager"
+            decoding="async"
+          />
+        </motion.div>
 
         <div className="grid flex-1 grid-cols-1 gap-8 lg:grid-cols-12">
           <motion.div className="flex flex-col gap-4 lg:col-span-5" variants={reduceMotion ? undefined : section} custom={1}>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-subtle">Game mode</h2>
             <div className="flex flex-col gap-4">
               <ModeCard
-                title="Texas Hold'em"
-                description="No-limit cadence, community cards, and classic showdown tension."
+                title={holdemMode.title}
+                description={holdemMode.description}
+                bannerUrl={holdemMode.imageUrl}
                 icon={<span aria-hidden>♠</span>}
                 selected={mode === 'HOLDEM'}
                 onClick={() => setMode('HOLDEM')}
               />
               <ModeCard
-                title="Расписной покер"
-                description="Five-card duel: antes, one betting round, best hand wins — fast reads, no community board."
+                title={raspisnoyMode.title}
+                description={raspisnoyMode.description}
+                bannerUrl={raspisnoyMode.imageUrl}
                 icon={<span aria-hidden>♦</span>}
                 selected={mode === 'RASPISNOY'}
                 onClick={() => setMode('RASPISNOY')}
@@ -398,7 +451,7 @@ export const Lobby = () => {
             </GlassPanel>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <SubscriptionTierCard tier="SILVER" price="$4.99/mo">
+              <SubscriptionTierCard tier="SILVER" price="$4.99/mo" bannerUrl={subBanner('SILVER')}>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -408,7 +461,7 @@ export const Lobby = () => {
                   Subscribe
                 </Button>
               </SubscriptionTierCard>
-              <SubscriptionTierCard tier="GOLD" price="$9.99/mo">
+              <SubscriptionTierCard tier="GOLD" price="$9.99/mo" bannerUrl={subBanner('GOLD')}>
                 <Button
                   variant="secondary"
                   size="sm"

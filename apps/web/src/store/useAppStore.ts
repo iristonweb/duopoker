@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
 import { getApiBase, resolveApiUrl, usesRealtimeSocket } from '../config/api';
+import { readApiError } from '../lib/api-error';
 
 const LS_ACCESS = 'duopoker_access';
 const LS_REFRESH = 'duopoker_refresh';
@@ -32,6 +33,7 @@ type AppStore = {
   session?: SessionState;
   socket?: Socket;
   authError?: string;
+  authNotice?: string;
   sessionError?: string;
   pollTimer?: ReturnType<typeof setInterval>;
   setMode: (mode: 'HOLDEM' | 'RASPISNOY') => void;
@@ -41,6 +43,8 @@ type AppStore = {
   connect: () => void;
   apiFetch: (path: string, init?: RequestInit) => Promise<Response>;
   queue: () => Promise<{ status: 'waiting' | 'matched'; sessionId?: string }>;
+  pollQueueStatus: () => Promise<{ status: 'idle' | 'waiting' | 'matched'; sessionId?: string }>;
+  leaveQueue: () => Promise<void>;
   joinSession: (sessionId: string, mode?: 'HOLDEM' | 'RASPISNOY', buyIn?: number) => Promise<void>;
   pollSession: (sessionId: string) => void;
   stopPolling: () => void;
@@ -83,6 +87,7 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     logout: () => {
       get().stopPolling();
+      void get().leaveQueue();
       get().socket?.disconnect();
       localStorage.removeItem(LS_ACCESS);
       localStorage.removeItem(LS_REFRESH);
@@ -159,6 +164,10 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     queue: async () => {
       set({ sessionError: undefined });
+      if (!get().accessToken) {
+        set({ sessionError: 'Sign in to join the queue.' });
+        return { status: 'waiting' as const };
+      }
       if (usesRealtimeSocket()) {
         get().connect();
         get().socket?.emit('queueMatchmaking', {
@@ -171,18 +180,17 @@ export const useAppStore = create<AppStore>((set, get) => {
       const res = await get().apiFetch('/game/queue', {
         method: 'POST',
         body: JSON.stringify({
-          userId: get().userId,
           mode: get().mode,
           buyIn: 100
         })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        set({ sessionError: (err as { code?: string }).code ?? 'queue_failed' });
+        set({ sessionError: readApiError(err, 'queue_failed') });
         return { status: 'waiting' as const };
       }
       const data = (await res.json()) as {
-        status: 'waiting' | 'matched';
+        status: 'waiting' | 'matched' | 'idle';
         sessionId?: string;
         mode?: 'HOLDEM' | 'RASPISNOY';
         buyIn?: number;
@@ -192,6 +200,31 @@ export const useAppStore = create<AppStore>((set, get) => {
         return { status: 'matched', sessionId: data.sessionId };
       }
       return { status: 'waiting' };
+    },
+    pollQueueStatus: async () => {
+      if (!get().accessToken) {
+        return { status: 'idle' as const };
+      }
+      const res = await get().apiFetch('/game/queue/status');
+      if (!res.ok) {
+        return { status: 'idle' as const };
+      }
+      const data = (await res.json()) as {
+        status: 'idle' | 'waiting' | 'matched';
+        sessionId?: string;
+        mode?: 'HOLDEM' | 'RASPISNOY';
+        buyIn?: number;
+      };
+      if (data.status === 'matched' && data.sessionId) {
+        await get().joinSession(data.sessionId, data.mode ?? get().mode, data.buyIn ?? 100);
+        return { status: 'matched', sessionId: data.sessionId };
+      }
+      return { status: data.status === 'idle' ? 'idle' : 'waiting' };
+    },
+    leaveQueue: async () => {
+      if (usesRealtimeSocket()) return;
+      if (!get().accessToken) return;
+      await get().apiFetch('/game/queue', { method: 'DELETE' });
     },
     joinSession: async (sessionId, mode, buyIn = 100) => {
       if (usesRealtimeSocket()) {
@@ -208,7 +241,6 @@ export const useAppStore = create<AppStore>((set, get) => {
         method: 'POST',
         body: JSON.stringify({
           sessionId,
-          userId: get().userId,
           mode: mode ?? get().mode,
           buyIn
         })
@@ -226,9 +258,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       get().stopPolling();
       const tick = async () => {
         try {
-          const res = await get().apiFetch(
-            `/game/session/${encodeURIComponent(sessionId)}?userId=${encodeURIComponent(get().userId)}`
-          );
+          const res = await get().apiFetch(`/game/session/${encodeURIComponent(sessionId)}`);
           if (!res.ok) return;
           const data = (await res.json()) as { session: SessionState | null };
           if (data.session) set({ session: data.session });
@@ -260,7 +290,6 @@ export const useAppStore = create<AppStore>((set, get) => {
         method: 'POST',
         body: JSON.stringify({
           sessionId,
-          userId: get().userId,
           type,
           amount,
           at: Date.now()
@@ -283,7 +312,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       }
       const res = await get().apiFetch('/game/ready-next-hand', {
         method: 'POST',
-        body: JSON.stringify({ sessionId: sid, userId: get().userId })
+        body: JSON.stringify({ sessionId: sid })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -294,29 +323,32 @@ export const useAppStore = create<AppStore>((set, get) => {
       set({ session: data.session, sessionError: undefined });
     },
     register: async (email, password, displayName) => {
-      set({ authError: undefined });
+      set({ authError: undefined, authNotice: undefined });
       if (!getApiBase() && !import.meta.env.PROD) {
         set({ authError: 'Set VITE_API_URL=http://localhost:4000 in apps/web/.env for local auth.' });
         throw new Error('no api base');
       }
-      const res = await fetch(resolveApiUrl('/auth/register'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName })
-      });
+      let res: Response;
+      try {
+        res = await fetch(resolveApiUrl('/auth/register'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, displayName })
+        });
+      } catch {
+        set({ authError: 'Could not reach the server. Check your connection or try again later.' });
+        throw new Error('register failed');
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        const msg =
-          typeof (err as { error?: unknown }).error === 'string'
-            ? (err as { error: string }).error
-            : JSON.stringify((err as { error?: unknown }).error ?? err);
-        set({ authError: msg });
+        set({ authError: readApiError(err, 'Registration failed') });
         throw new Error('register failed');
       }
       const data = (await res.json()) as {
         accessToken: string;
         refreshToken: string;
-        user: { id: string; email: string; displayName: string };
+        user: { id: string; email: string; displayName: string; emailVerified?: boolean };
+        verificationRequired?: boolean;
       };
       localStorage.setItem(LS_ACCESS, data.accessToken);
       localStorage.setItem(LS_REFRESH, data.refreshToken);
@@ -327,7 +359,10 @@ export const useAppStore = create<AppStore>((set, get) => {
         userId: data.user.id,
         email: data.user.email,
         displayName: data.user.displayName,
-        authError: undefined
+        authError: undefined,
+        authNotice: data.verificationRequired
+          ? 'Account created. Check your email for a verification link.'
+          : undefined
       });
       get().socket?.disconnect();
       set({ socket: undefined });
@@ -335,18 +370,25 @@ export const useAppStore = create<AppStore>((set, get) => {
       await get().fetchProfile();
     },
     login: async (email, password) => {
-      set({ authError: undefined });
+      set({ authError: undefined, authNotice: undefined });
       if (!getApiBase() && !import.meta.env.PROD) {
         set({ authError: 'Set VITE_API_URL=http://localhost:4000 in apps/web/.env for local auth.' });
         throw new Error('no api base');
       }
-      const res = await fetch(resolveApiUrl('/auth/login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      let res: Response;
+      try {
+        res = await fetch(resolveApiUrl('/auth/login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+      } catch {
+        set({ authError: 'Could not reach the server. Check your connection or try again later.' });
+        throw new Error('login failed');
+      }
       if (!res.ok) {
-        set({ authError: 'invalid_credentials' });
+        const err = await res.json().catch(() => ({}));
+        set({ authError: readApiError(err, 'Invalid credentials') });
         throw new Error('login failed');
       }
       const data = (await res.json()) as {

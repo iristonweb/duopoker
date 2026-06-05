@@ -4,6 +4,14 @@ import { z } from 'zod';
 import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } from '../auth/jwt.js';
 import { AppError } from '../errors.js';
 import { prisma } from '../lib/prisma.js';
+import { config } from '../config.js';
+import {
+  createVerificationToken,
+  sendVerificationEmail,
+  shouldVerifyEmail,
+  verificationExpiresAt
+} from '../services/email.js';
+import { jsonError } from '../lib/http-error.js';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -34,51 +42,119 @@ const issueSession = async (userId: string, email: string, deviceId: string) => 
 export const authRoutes = new Hono();
 
 authRoutes.post('/register', async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const parsed = registerSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: parsed.error.flatten() }, 400);
-  }
-  const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-  if (existing) {
-    return c.json({ error: 'Email already registered' }, 409);
-  }
-  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
-  const user = await prisma.user.create({
-    data: {
-      email: parsed.data.email,
-      passwordHash,
-      displayName: parsed.data.displayName
+  try {
+    const body = await c.req.json().catch(() => null);
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      const first =
+        fieldErrors.password?.[0] ??
+        fieldErrors.email?.[0] ??
+        fieldErrors.displayName?.[0] ??
+        'Invalid registration data';
+      return c.json({ error: first, details: parsed.error.flatten() }, 400);
     }
-  });
-  const deviceId = c.req.header('x-device-id') ?? 'web';
-  const tokens = await issueSession(user.id, user.email, deviceId);
-  return c.json(
-    { ...tokens, user: { id: user.id, email: user.email, displayName: user.displayName } },
-    201
-  );
+    const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (existing) {
+      return c.json({ error: 'Email already registered' }, 409);
+    }
+    const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const verify = shouldVerifyEmail();
+    const verificationToken = verify ? createVerificationToken() : null;
+    const user = await prisma.user.create({
+      data: {
+        email: parsed.data.email,
+        passwordHash,
+        displayName: parsed.data.displayName,
+        emailVerified: !verify,
+        verificationToken,
+        verificationTokenExpiresAt: verify ? verificationExpiresAt() : null
+      }
+    });
+    if (verify && verificationToken && config.resendApiKey) {
+      try {
+        await sendVerificationEmail(user.email, verificationToken);
+      } catch (err) {
+        console.error('verification email failed', err);
+      }
+    }
+    const deviceId = c.req.header('x-device-id') ?? 'web';
+    const tokens = await issueSession(user.id, user.email, deviceId);
+    return c.json(
+      {
+        ...tokens,
+        user: {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          emailVerified: user.emailVerified
+        },
+        verificationRequired: verify && !user.emailVerified
+      },
+      201
+    );
+  } catch (error) {
+    return jsonError(c, error);
+  }
 });
 
 authRoutes.post('/login', async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const parsed = authSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: parsed.error.flatten() }, 400);
+  try {
+    const body = await c.req.json().catch(() => null);
+    const parsed = authSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Invalid email or password' }, 400);
+    }
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (!user?.passwordHash) {
+      return c.json({ error: 'Invalid credentials' }, 401);
+    }
+    const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
+    if (!ok) {
+      return c.json({ error: 'Invalid credentials' }, 401);
+    }
+    if (config.requireEmailVerification && !user.emailVerified) {
+      return c.json({ error: 'Email not verified. Check your inbox for the verification link.' }, 403);
+    }
+    const deviceId = c.req.header('x-device-id') ?? 'web';
+    const tokens = await issueSession(user.id, user.email, deviceId);
+    return c.json({
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        emailVerified: user.emailVerified
+      }
+    });
+  } catch (error) {
+    return jsonError(c, error);
   }
-  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-  if (!user?.passwordHash) {
-    return c.json({ error: 'Invalid credentials' }, 401);
+});
+
+authRoutes.get('/verify-email', async (c) => {
+  const token = c.req.query('token');
+  if (!token) {
+    return c.json({ error: 'Missing token' }, 400);
   }
-  const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-  if (!ok) {
-    return c.json({ error: 'Invalid credentials' }, 401);
-  }
-  const deviceId = c.req.header('x-device-id') ?? 'web';
-  const tokens = await issueSession(user.id, user.email, deviceId);
-  return c.json({
-    ...tokens,
-    user: { id: user.id, email: user.email, displayName: user.displayName }
+  const user = await prisma.user.findFirst({
+    where: {
+      verificationToken: token,
+      verificationTokenExpiresAt: { gt: new Date() }
+    }
   });
+  if (!user) {
+    return c.json({ error: 'Invalid or expired verification token' }, 400);
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerified: true,
+      verificationToken: null,
+      verificationTokenExpiresAt: null
+    }
+  });
+  return c.json({ ok: true, email: user.email });
 });
 
 authRoutes.post('/refresh', async (c) => {
@@ -132,7 +208,16 @@ authRoutes.get('/me', async (c) => {
     const payload = verifyAccessToken(token);
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, displayName: true, chips: true, level: true, xp: true }
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatar: true,
+        chips: true,
+        level: true,
+        xp: true,
+        emailVerified: true
+      }
     });
     return c.json({ user });
   } catch {

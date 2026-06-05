@@ -79,6 +79,9 @@ model User {
   passwordHash  String?
   displayName   String
   avatar        String?
+  emailVerified Boolean        @default(true)
+  verificationToken String?
+  verificationTokenExpiresAt DateTime?
   chips         Int            @default(10000)
   level         Int            @default(1)
   xp            Int            @default(0)
@@ -136,6 +139,17 @@ model MatchmakingTicket {
   buyIn     Int
   createdAt DateTime @default(now())
   @@map("matchmaking_tickets")
+}
+
+model MatchAssignment {
+  userId    String   @id
+  sessionId String
+  mode      Mode
+  buyIn     Int
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("match_assignments")
 }
 
 model Hand {
