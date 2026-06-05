@@ -7,6 +7,21 @@ export {
   type BrandColors
 } from './theme';
 
+export {
+  catalogCosmetics,
+  catalogGameModes,
+  lobbyHeroBanner,
+  clubsHeroBanner,
+  appBackgroundUrl,
+  subscriptionBannerImages,
+  organizerPlanBanners,
+  chipPackImages,
+  type CatalogCosmetic,
+  type CatalogGameMode,
+  type CatalogSubscription,
+  type OrganizerPlanTier
+} from './catalog-assets';
+
 export type GameMode = 'HOLDEM' | 'RASPISNOY';
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type GameStreet =

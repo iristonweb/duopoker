@@ -10,37 +10,52 @@ Base URL: `http://localhost:4000` (set `PUBLIC_WEB_URL`, `VITE_API_URL`, and `CO
 | POST | `/auth/login` | `{ email, password }` | returns tokens |
 | POST | `/auth/refresh` | `{ refreshToken }` | |
 | POST | `/auth/logout` | `{ refreshToken }` | |
-| GET | `/auth/me` | `Authorization: Bearer …` | |
+| GET | `/auth/me` | `Authorization: Bearer …` | includes `nickname` |
 
-## OAuth
+## Users (`Authorization` required)
 
-| POST | `/oauth/google` | `{ idToken }` | Requires `GOOGLE_CLIENT_ID` |
-| GET | `/oauth/google/status` | | |
-| POST | `/oauth/apple` | | Returns 501 (JWKS validation TBD) |
+| GET | `/users/lookup?nickname=foo` | Resolve `@nickname` → user profile |
 
 ## Profile (`Authorization` required for PUT)
 
+| GET | `/profile/me/nickname` | Current nickname |
+| PUT | `/profile/me/nickname` | `{ nickname }` — 3–20 chars, lowercase |
 | GET | `/profile/:id` | Public read |
 | PUT | `/profile/:id` | Must match JWT user id |
 
 ## Monetization
 
-| GET | `/monetization/catalog` | Public — subscriptions, chip packs, cosmetics |
-| POST | `/monetization/checkout-session` | `{ priceId, mode: subscription \| payment, itemId? }` Stripe Checkout URL |
+| GET | `/monetization/catalog` | Public — subscriptions, chip packs, cosmetics, organizer plans (RUB) |
+| POST | `/monetization/checkout-session` | Stripe Checkout URL (player subs) |
+| POST | `/monetization/yookassa/webhook` | YooKassa payment events (club plans) |
 | POST | `/monetization/shop/cosmetic` | `{ itemId }` | Chips → `user_inventory` |
 | POST | `/monetization/bonus` | Daily bonus (guarded) |
-| POST | `/monetization/purchase` | Trusted purchase log (prefer Stripe webhook in prod) |
+| POST | `/monetization/purchase` | Trusted purchase log (prefer webhooks in prod) |
 
-## Private clubs (`Authorization` required except plans)
+## Private clubs
 
 | Method | Path | Body | Notes |
 |--------|------|------|------|
-| GET | `/clubs/plans` | - | Organizer plans and non-gambling compliance disclaimer |
-| POST | `/clubs` | `{ name, description?, visibility }` | Creates club, owner membership, default BASIC organizer plan |
-| GET | `/clubs/mine` | - | My clubs with role and plan summary |
-| POST | `/clubs/:clubId/members` | `{ userId, role }` | Owner/admin only, plan member-limit enforced |
-| POST | `/clubs/:clubId/private-tables` | `{ name, mode, maxPlayers, virtualBuyIn }` | Owner/admin only, active-table limit enforced |
-| GET | `/clubs/:clubId/private-tables` | - | Club member only |
+| GET | `/clubs/plans` | - | Organizer plans (RUB) + disclaimer |
+| GET | `/clubs/invite/:inviteCode` | - | Public table preview |
+| POST | `/clubs/invite/:inviteCode/accept` | - | Accept invite (auth) |
+| POST | `/clubs` | `{ name, description?, visibility }` | Creates club + BASIC plan |
+| GET | `/clubs/mine` | - | My clubs |
+| GET | `/clubs/:clubId` | - | Dashboard data + members |
+| POST | `/clubs/:clubId/checkout` | `{ tier: PRO \| NETWORK }` | YooKassa redirect URL |
+| POST | `/clubs/:clubId/members` | `{ userId? \| nickname?, role }` | Admin only |
+| POST | `/clubs/:clubId/private-tables` | `{ name, mode, maxPlayers, virtualBuyIn }` | Admin only |
+| GET | `/clubs/:clubId/private-tables` | - | Member |
+| GET | `/clubs/:clubId/private-tables/:tableId` | - | Member |
+| POST | `/clubs/:clubId/private-tables/:tableId/invite` | `{ userId? \| nickname? }` | Admin |
+| POST | `/clubs/:clubId/private-tables/:tableId/accept` | - | Accept table invite |
+| POST | `/clubs/:clubId/private-tables/:tableId/start` | - | Creates `sessionId`, LIVE |
+| POST | `/clubs/:clubId/private-tables/:tableId/join` | - | Join live table |
+| POST | `/clubs/:clubId/private-tables/:tableId/close` | - | Admin |
+
+## Game (REST, auth required)
+
+| GET | `/game/session/:sessionId/players` | Nicknames for seated players |
 
 ## Stripe webhook
 

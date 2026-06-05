@@ -33,8 +33,8 @@ export const redis = {
     const c = connect();
     if (!c) return;
     try {
-      if (args.length > 0) {
-        await c.set(key, value, ...(args as [string, ...number[]]));
+      if (args.length >= 2 && args[0] === 'EX' && typeof args[1] === 'number') {
+        await c.set(key, value, 'EX', args[1]);
       } else {
         await c.set(key, value);
       }

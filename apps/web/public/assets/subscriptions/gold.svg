@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="400" y2="80"><stop stop-color="#FBBF24"/><stop offset="1" stop-color="#92400E"/></linearGradient></defs><rect width="400" height="80" fill="url(#g)" opacity="0.35"/><rect width="400" height="80" fill="#0A0A0A" opacity="0.55"/><text x="24" y="48" fill="#FFD700" font-family="system-ui,sans-serif" font-size="28" font-weight="800">GOLD</text></svg>

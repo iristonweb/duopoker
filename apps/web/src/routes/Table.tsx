@@ -25,7 +25,27 @@ export const Table = () => {
   const stopPolling = useAppStore((s) => s.stopPolling);
   const mode = useAppStore((s) => s.mode);
 
+  const [playerNames, setPlayerNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!routeSessionId || !session?.players?.length) return;
+    const apiFetch = useAppStore.getState().apiFetch;
+    void apiFetch(`/game/session/${encodeURIComponent(routeSessionId)}/players`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { players?: Array<{ userId: string; nickname?: string; displayName: string }> } | null) => {
+        if (!data?.players) return;
+        const map: Record<string, string> = {};
+        for (const p of data.players) {
+          map[p.userId] = p.nickname ? `@${p.nickname}` : p.displayName;
+        }
+        setPlayerNames(map);
+      })
+      .catch(() => undefined);
+  }, [routeSessionId, session?.players?.length, session?.handNumber]);
+
   const [raiseAmount, setRaiseAmount] = useState(0);
+
+  const label = (uid: string) => playerNames[uid] ?? uid.slice(0, 8);
 
   useEffect(() => {
     connect();
@@ -129,7 +149,7 @@ export const Table = () => {
             </span>
             {activeId ? (
               <span className="text-muted">
-                To act: <span className="text-zinc-200">{activeId.slice(0, 8)}…</span>
+                To act: <span className="text-zinc-200">{label(activeId)}</span>
                 {activeId === userId ? ' (you)' : ''}
               </span>
             ) : null}
@@ -139,7 +159,7 @@ export const Table = () => {
           {session.street === 'COMPLETE' ? (
             <div className="mt-4">
               <p className="text-sm text-muted">
-                Hand complete. Winners: {(session.winners ?? []).join(', ') || '—'}
+                Hand complete. Winners: {(session.winners ?? []).map(label).join(', ') || '—'}
               </p>
               <p className="mt-1 text-xs text-subtle">
                 Ready: {(session.readyForNextHand ?? []).length}/{session.players.length}

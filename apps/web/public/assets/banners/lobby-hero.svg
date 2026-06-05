@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" fill="none">
+  <defs>
+    <linearGradient id="heroBg" x1="0" y1="0" x2="1200" y2="280">
+      <stop stop-color="#0A0A0A"/>
+      <stop offset="0.45" stop-color="#052E16"/>
+      <stop offset="1" stop-color="#0A0A0A"/>
+    </linearGradient>
+    <radialGradient id="feltGlow" cx="50%" cy="70%" r="45%">
+      <stop stop-color="#10B981" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#10B981" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="chipGrad" cx="50%" cy="50%" r="50%">
+      <stop stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#B45309"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="280" fill="url(#heroBg)"/>
+  <ellipse cx="720" cy="190" rx="380" ry="95" fill="url(#feltGlow)"/>
+  <ellipse cx="720" cy="195" rx="260" ry="65" fill="#064E3B" stroke="#D4AF37" stroke-width="2" opacity="0.75"/>
+  <rect x="640" y="155" width="36" height="50" rx="4" fill="#FAFAFA" stroke="#D4AF37" stroke-width="1.5" opacity="0.9"/>
+  <rect x="684" y="155" width="36" height="50" rx="4" fill="#FAFAFA" stroke="#D4AF37" stroke-width="1.5" opacity="0.9"/>
+  <rect x="728" y="155" width="36" height="50" rx="4" fill="#FAFAFA" stroke="#D4AF37" stroke-width="1.5" opacity="0.9"/>
+  <text x="80" y="88" fill="#D4AF37" font-family="system-ui,sans-serif" font-size="52" font-weight="800" filter="url(#glow)">DuoPoker</text>
+  <text x="80" y="132" fill="#A7F3D0" font-family="system-ui,sans-serif" font-size="20">Premium play-money tables — Hold'em &amp; Raspisnoy</text>
+  <circle cx="1020" cy="130" r="58" fill="url(#chipGrad)" stroke="#FFD700" stroke-width="3"/>
+  <circle cx="1020" cy="130" r="42" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="1020" y="140" text-anchor="middle" fill="#0A0A0A" font-family="system-ui,sans-serif" font-size="26" font-weight="800">DP</text>
+  <circle cx="960" cy="175" r="22" fill="url(#chipGrad)" stroke="#D4AF37" stroke-width="2" opacity="0.85"/>
+  <circle cx="1085" cy="175" r="18" fill="url(#chipGrad)" stroke="#D4AF37" stroke-width="2" opacity="0.7"/>
+</svg>

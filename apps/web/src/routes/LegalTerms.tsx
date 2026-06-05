@@ -21,6 +21,12 @@ export function LegalTerms() {
             We may update these terms; continued use constitutes acceptance. For support, contact
             your deployment administrator.
           </p>
+          <h2 className="mt-6 text-lg font-semibold text-zinc-100">Organizer policy</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Private club subscriptions unlock organizer tools (member limits, moderation, scheduling).
+            They do not purchase game outcomes, odds, or cash prizes. No rake, cashout, or peer-to-peer
+            money transfers are supported.
+          </p>
         </GlassPanel>
       </div>
     </div>

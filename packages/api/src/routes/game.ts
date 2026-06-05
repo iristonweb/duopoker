@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
 import { authGuard } from '../middleware/auth.js';
+import { canJoinPrivateSession, getSessionPlayerProfiles } from '../services/private-table-auth.js';
 import {
   advanceBotTurns,
   enterMatchmaking,
@@ -77,6 +78,12 @@ gameRoutes.post('/join', async (c) => {
   }
 
   const { sessionId, mode, buyIn } = parsed.data;
+
+  const access = await canJoinPrivateSession(sessionId, userId);
+  if (!access.ok) {
+    return c.json({ error: access.reason, code: access.reason }, 403);
+  }
+
   let state = await joinTable(sessionId, userId, mode, buyIn);
   const botState = await advanceBotTurns(sessionId);
   if (botState) state = botState;
@@ -147,4 +154,18 @@ gameRoutes.get('/session/:sessionId', async (c) => {
   return c.json({
     session: sanitizeStateForViewer(snapshot, userId)
   });
+});
+
+gameRoutes.get('/session/:sessionId/players', async (c) => {
+  const userId = c.get('auth').userId;
+  const sessionId = c.req.param('sessionId');
+  const snapshot = await getSessionSnapshot(sessionId);
+  if (!snapshot) {
+    return c.json({ error: 'Session not found' }, 404);
+  }
+  if (!snapshot.players.includes(userId)) {
+    return c.json({ error: 'Not seated at this table' }, 403);
+  }
+  const players = await getSessionPlayerProfiles(snapshot.players);
+  return c.json({ players });
 });

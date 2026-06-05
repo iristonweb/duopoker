@@ -9,6 +9,7 @@ async function main() {
     create: {
       email: 'demo@duopoker.dev',
       displayName: 'DemoPlayer',
+      nickname: 'demoplayer',
       chips: 12000
     }
   });

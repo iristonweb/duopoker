@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { signAccessToken, signRefreshToken } from '../auth/jwt.js';
 import { redis } from '../services/redis.js';
+import { resolveUniqueNickname } from '../lib/nickname.js';
 import { prisma } from '../services/prisma.js';
 
 export const oauthRouter = Router();
@@ -40,12 +41,14 @@ oauthRouter.post('/google', async (req, res, next) => {
     }
 
     const name = payload.name ?? email.split('@')[0]!;
+    const nickname = await resolveUniqueNickname(prisma, name, email);
     const user = await prisma.user.upsert({
       where: { email },
       update: { displayName: name },
       create: {
         email,
-        displayName: name
+        displayName: name,
+        nickname
       }
     });
 

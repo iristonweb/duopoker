@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" fill="none">
+  <defs>
+    <pattern id="cardPat" width="120" height="120" patternUnits="userSpaceOnUse">
+      <rect width="120" height="120" fill="#0A0A0A"/>
+      <rect x="20" y="25" width="28" height="40" rx="3" fill="#064E3B" opacity="0.15" transform="rotate(-12 34 45)"/>
+      <circle cx="85" cy="75" r="14" fill="#D4AF37" opacity="0.08"/>
+    </pattern>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop stop-color="#0A0A0A" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0A0A0A" stop-opacity="0.85"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#cardPat)"/>
+  <ellipse cx="960" cy="540" rx="600" ry="280" fill="#064E3B" opacity="0.06"/>
+  <rect width="1920" height="1080" fill="url(#vignette)"/>
+</svg>

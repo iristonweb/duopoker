@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   catalogGameModes,
+  clubsHeroBanner,
   lobbyHeroBanner,
   subscriptionBannerImages
 } from '@duopoker/shared-types';
@@ -173,6 +174,7 @@ export const Lobby = () => {
   const [catalogSubs, setCatalogSubs] = useState<CatalogSub[]>([]);
   const [gameModes, setGameModes] = useState<CatalogGameMode[]>(catalogGameModes);
   const [lobbyBannerUrl, setLobbyBannerUrl] = useState(lobbyHeroBanner);
+  const [clubsBannerUrl, setClubsBannerUrl] = useState(clubsHeroBanner);
   const [catalogMockCheckout, setCatalogMockCheckout] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
@@ -250,12 +252,14 @@ export const Lobby = () => {
           subscriptions?: CatalogSub[];
           gameModes?: CatalogGameMode[];
           lobbyBannerUrl?: string;
+          clubsBannerUrl?: string;
           mockCheckout?: boolean;
         }) => {
           setCosmetics(d.cosmetics ?? []);
           setCatalogSubs(d.subscriptions ?? []);
           if (d.gameModes?.length) setGameModes(d.gameModes);
           if (d.lobbyBannerUrl) setLobbyBannerUrl(d.lobbyBannerUrl);
+          if (d.clubsBannerUrl) setClubsBannerUrl(d.clubsBannerUrl);
           setCatalogMockCheckout(Boolean(d.mockCheckout));
         }
       )
@@ -471,17 +475,67 @@ export const Lobby = () => {
                   Subscribe
                 </Button>
               </SubscriptionTierCard>
+              <SubscriptionTierCard tier="PLATINUM" price="$19.99/mo" bannerUrl={subBanner('PLATINUM')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => void startSubscription('PLATINUM')}
+                >
+                  Subscribe
+                </Button>
+              </SubscriptionTierCard>
+              <SubscriptionTierCard tier="ROYAL" price="$49.99/mo" bannerUrl={subBanner('ROYAL')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => void startSubscription('ROYAL')}
+                >
+                  Subscribe
+                </Button>
+              </SubscriptionTierCard>
             </div>
             {checkoutMsg ? <p className="text-xs text-amber-400">{checkoutMsg}</p> : null}
           </motion.div>
         </div>
 
         <motion.div
+          className="mt-10 overflow-hidden rounded-2xl border border-white/10"
+          variants={reduceMotion ? undefined : section}
+          custom={2.5}
+        >
+          <img
+            src={clubsBannerUrl}
+            alt="Private clubs for your company"
+            className="h-32 w-full object-cover sm:h-40"
+            loading="lazy"
+          />
+          <div className="flex flex-col gap-3 border-t border-white/10 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-100">Приватные клубы</h2>
+              <p className="text-sm text-muted">Столы для команды · оплата через ЮMoney · приглашения @nickname</p>
+            </div>
+            <Link to="/clubs">
+              <Button variant="primary">Мои клубы</Button>
+            </Link>
+          </div>
+        </motion.div>
+
+        <motion.div
           className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-2"
           variants={reduceMotion ? undefined : section}
           custom={3}
         >
-          <SkinSelector catalog={cosmetics} />
+          <SkinSelector
+            catalog={cosmetics}
+            onBuy={(itemId) => {
+              void useAppStore
+                .getState()
+                .buyCosmetic(itemId)
+                .catch(() => setCheckoutMsg('Purchase failed — sign in and check chip balance.'));
+            }}
+          />
           <VoiceChatPanel>
             <VoiceRoom />
           </VoiceChatPanel>

@@ -7,6 +7,7 @@ import type { SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
+import { canJoinPrivateSession } from '../services/private-table-auth.js';
 import {
   advanceBotTurns,
   enqueueMatchmaking,
@@ -160,6 +161,13 @@ export const createRealtimeServer = (app: Express) => {
 
       const { sessionId, mode, buyIn } = joined.data;
       const userId = socket.data.userId ?? joined.data.userId;
+
+      const access = await canJoinPrivateSession(sessionId, userId);
+      if (!access.ok) {
+        socket.emit('sessionError', { code: access.reason });
+        return;
+      }
+
       registerUserSocket(userId, socket.id);
       await socket.join(sessionId);
       const state = joinTable(sessionId, userId, mode, buyIn);

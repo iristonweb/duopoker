@@ -6,8 +6,15 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { MatchRedirect } from './components/MatchRedirect';
 import { Lobby } from './routes/Lobby';
 import { LegalPrivacy } from './routes/LegalPrivacy';
+import { LegalCommunity } from './routes/LegalCommunity';
 import { LegalTerms } from './routes/LegalTerms';
+import { VerifyEmail } from './routes/VerifyEmail';
 import { Table } from './routes/Table';
+import { Clubs } from './routes/Clubs';
+import { ClubNew } from './routes/ClubNew';
+import { ClubDashboard } from './routes/ClubDashboard';
+import { TableManager } from './routes/TableManager';
+import { InviteAccept } from './routes/InviteAccept';
 
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
@@ -22,9 +29,16 @@ const App = () => (
     <MatchRedirect />
     <Routes>
       <Route path="/lobby" element={<Lobby />} />
+      <Route path="/clubs" element={<Clubs />} />
+      <Route path="/clubs/new" element={<ClubNew />} />
+      <Route path="/clubs/:clubId" element={<ClubDashboard />} />
+      <Route path="/clubs/:clubId/tables/:tableId" element={<TableManager />} />
+      <Route path="/invite/:code" element={<InviteAccept />} />
       <Route path="/table/:sessionId" element={<Table />} />
       <Route path="/legal/terms" element={<LegalTerms />} />
       <Route path="/legal/privacy" element={<LegalPrivacy />} />
+      <Route path="/legal/community" element={<LegalCommunity />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/" element={<Navigate to="/lobby" replace />} />
       <Route path="*" element={<Navigate to="/lobby" replace />} />
     </Routes>

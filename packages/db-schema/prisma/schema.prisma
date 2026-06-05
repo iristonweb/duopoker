@@ -41,6 +41,14 @@ enum PaymentProvider {
   STRIPE
   APPLE_IAP
   GOOGLE_PLAY
+  YOOKASSA
+}
+
+enum PrivateTableSeatStatus {
+  INVITED
+  ACCEPTED
+  SEATED
+  DECLINED
 }
 
 enum PaymentStatus {
@@ -78,6 +86,7 @@ model User {
   email         String         @unique
   passwordHash  String?
   displayName   String
+  nickname      String         @unique
   avatar        String?
   emailVerified Boolean        @default(true)
   verificationToken String?
@@ -93,6 +102,8 @@ model User {
   payments      PaymentEvent[]
   clubsOwned    Club[]         @relation("club_owner")
   clubMemberships ClubMembership[]
+  tableSeats    PrivateTableSeat[]
+  tableInvitesSent PrivateTableSeat[] @relation("seat_inviter")
   @@map("users")
 }
 
@@ -241,12 +252,31 @@ model PrivateTable {
   status           PrivateTableStatus @default(SCHEDULED)
   maxPlayers       Int                @default(9)
   virtualBuyIn     Int                @default(1000)
+  sessionId        String?            @unique
+  inviteCode       String             @unique @default(cuid())
   createdAt        DateTime           @default(now())
   startsAt         DateTime?
   closedAt         DateTime?
   club             Club               @relation(fields: [clubId], references: [id])
+  seats            PrivateTableSeat[]
   @@index([clubId, status])
+  @@index([inviteCode])
   @@map("private_tables")
+}
+
+model PrivateTableSeat {
+  id              String                 @id @default(cuid())
+  tableId         String
+  userId          String
+  status          PrivateTableSeatStatus @default(INVITED)
+  invitedByUserId String?
+  invitedAt       DateTime               @default(now())
+  table           PrivateTable           @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  user            User                   @relation(fields: [userId], references: [id])
+  invitedBy       User?                  @relation("seat_inviter", fields: [invitedByUserId], references: [id])
+  @@unique([tableId, userId])
+  @@index([userId])
+  @@map("private_table_seats")
 }
 
 model OrganizerSubscription {
@@ -259,6 +289,7 @@ model OrganizerSubscription {
   expiresAt              DateTime
   billingProvider        PaymentProvider
   providerSubscriptionId String?
+  providerPaymentId      String?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   club                   Club              @relation(fields: [clubId], references: [id])

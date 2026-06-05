@@ -25,6 +25,7 @@ const guestId = (): string => {
 type AppStore = {
   userId: string;
   email?: string;
+  nickname?: string;
   displayName?: string;
   chips?: number;
   accessToken?: string;
@@ -57,6 +58,38 @@ type AppStore = {
   register: (email: string, password: string, displayName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   fetchProfile: () => Promise<void>;
+  fetchClubs: () => Promise<{ clubs: ClubSummary[] }>;
+  createClub: (name: string, description?: string) => Promise<{ club: { id: string } }>;
+  fetchClub: (clubId: string) => Promise<ClubDetail>;
+  upgradeClubPlan: (clubId: string, tier: 'PRO' | 'NETWORK') => Promise<void>;
+  addClubMember: (clubId: string, query: string) => Promise<void>;
+  createPrivateTable: (
+    clubId: string,
+    data: { name: string; mode: 'HOLDEM' | 'RASPISNOY'; maxPlayers?: number; virtualBuyIn?: number }
+  ) => Promise<{ table: { id: string } }>;
+  inviteToTable: (clubId: string, tableId: string, query: string) => Promise<void>;
+  startPrivateTable: (clubId: string, tableId: string) => Promise<string>;
+  joinPrivateTable: (clubId: string, tableId: string) => Promise<string>;
+  acceptInviteByCode: (code: string) => Promise<{ clubId: string; tableId: string }>;
+  buyCosmetic: (itemId: string) => Promise<void>;
+};
+
+export type ClubSummary = {
+  id: string;
+  name: string;
+  myRole?: string;
+  organizerPlan?: { tier: string; expiresAt: string };
+  _count?: { members: number; privateTables: number };
+  limits?: { maxMembers: number; maxActiveTables: number };
+  members?: Array<{ user: { id: string; nickname: string; displayName: string }; role: string }>;
+  usage?: { members: number; activeTables: number };
+};
+
+export type ClubDetail = {
+  club: ClubSummary & {
+    members: Array<{ user: { id: string; nickname: string; displayName: string }; role: string }>;
+    usage?: { members: number; activeTables: number };
+  };
 };
 
 const readStored = (): { access?: string; refresh?: string; storedUserId?: string } => {
@@ -410,18 +443,105 @@ export const useAppStore = create<AppStore>((set, get) => {
         const res = await get().apiFetch('/auth/me');
         if (!res.ok) return;
         const data = (await res.json()) as {
-          user: { chips: number; displayName: string; email: string } | null;
+          user: { chips: number; displayName: string; email: string; nickname?: string } | null;
         };
         if (data.user) {
           set({
             chips: data.user.chips,
             displayName: data.user.displayName,
-            email: data.user.email
+            email: data.user.email,
+            nickname: data.user.nickname
           });
         }
       } catch {
         /* ignore */
       }
+    },
+    fetchClubs: async () => {
+      const res = await get().apiFetch('/clubs/mine');
+      if (!res.ok) throw new Error('Failed to load clubs');
+      return (await res.json()) as { clubs: ClubSummary[] };
+    },
+    createClub: async (name, description) => {
+      const res = await get().apiFetch('/clubs', {
+        method: 'POST',
+        body: JSON.stringify({ name, description })
+      });
+      if (!res.ok) throw new Error('Failed to create club');
+      return (await res.json()) as { club: { id: string } };
+    },
+    fetchClub: async (clubId) => {
+      const res = await get().apiFetch(`/clubs/${clubId}`);
+      if (!res.ok) throw new Error('Failed to load club');
+      return (await res.json()) as ClubDetail;
+    },
+    upgradeClubPlan: async (clubId, tier) => {
+      const res = await get().apiFetch(`/clubs/${clubId}/checkout`, {
+        method: 'POST',
+        body: JSON.stringify({ tier })
+      });
+      if (!res.ok) throw new Error('Checkout failed');
+      const data = (await res.json()) as { confirmationUrl: string };
+      window.location.href = data.confirmationUrl;
+    },
+    addClubMember: async (clubId, query) => {
+      const body = query.startsWith('@') || !query.includes('-')
+        ? { nickname: query.replace(/^@/, '') }
+        : { userId: query };
+      const res = await get().apiFetch(`/clubs/${clubId}/members`, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Failed to add member');
+    },
+    createPrivateTable: async (clubId, data) => {
+      const res = await get().apiFetch(`/clubs/${clubId}/private-tables`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create table');
+      return (await res.json()) as { table: { id: string } };
+    },
+    inviteToTable: async (clubId, tableId, query) => {
+      const body = query.startsWith('@') || !query.includes('-')
+        ? { nickname: query.replace(/^@/, '') }
+        : { userId: query };
+      const res = await get().apiFetch(`/clubs/${clubId}/private-tables/${tableId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Failed to invite');
+    },
+    startPrivateTable: async (clubId, tableId) => {
+      const res = await get().apiFetch(`/clubs/${clubId}/private-tables/${tableId}/start`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('Failed to start table');
+      const data = (await res.json()) as { sessionId: string };
+      return data.sessionId;
+    },
+    joinPrivateTable: async (clubId, tableId) => {
+      const res = await get().apiFetch(`/clubs/${clubId}/private-tables/${tableId}/join`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('Failed to join table');
+      const data = (await res.json()) as { sessionId: string };
+      await get().joinSession(data.sessionId);
+      return data.sessionId;
+    },
+    acceptInviteByCode: async (code) => {
+      const res = await get().apiFetch(`/clubs/invite/${code}/accept`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to accept invite');
+      const data = (await res.json()) as { clubId: string; tableId: string };
+      return data;
+    },
+    buyCosmetic: async (itemId) => {
+      const res = await get().apiFetch('/monetization/shop/cosmetic', {
+        method: 'POST',
+        body: JSON.stringify({ itemId })
+      });
+      if (!res.ok) throw new Error('Purchase failed');
+      await get().fetchProfile();
     }
   };
 });

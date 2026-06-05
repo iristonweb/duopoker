@@ -19,11 +19,31 @@ test('metrics endpoint is available', async ({ request }, testInfo) => {
 });
 
 test('lobby page renders title', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5173/lobby');
+  await page.goto('http://127.0.0.1:5180/lobby');
   await expect(page.getByRole('heading', { name: /DuoPoker/i })).toBeVisible();
 });
 
+test('lobby shows cosmetic preview images', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5180/lobby');
+  await expect(page.locator('img[src="/assets/cosmetics/deck_neon.svg"]').first()).toBeVisible();
+});
+
 test('legal terms route is reachable', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5173/legal/terms');
+  await page.goto('http://127.0.0.1:5180/legal/terms');
   await expect(page.getByRole('heading', { name: /Terms of use/i })).toBeVisible();
+});
+
+test('lobby shows private clubs section', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5180/lobby');
+  await expect(page.getByRole('heading', { name: /Приватные клубы/i })).toBeVisible();
+});
+
+test('clubs route renders', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5180/clubs');
+  await expect(page.getByRole('heading', { name: /Приватные клубы/i })).toBeVisible();
+});
+
+test('legal community route is reachable', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5180/legal/community');
+  await expect(page.getByRole('heading', { name: /Community rules/i })).toBeVisible();
 });

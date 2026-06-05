@@ -54,7 +54,7 @@ Project → **Settings → Environment Variables** (Production + Preview):
 | `JWT_REFRESH_SECRET` | другая случайная строка |
 | `PUBLIC_WEB_URL` | `https://duopoker.vercel.app` (твой домен) |
 | `ALLOW_SOLO_QUEUE` | `true` |
-| `MOCK_CHECKOUT` | `true` (пока без Stripe) |
+| `MOCK_CHECKOUT` | `true` для demo; **`false` + Stripe keys для реальных платежей** |
 | `LIVEKIT_API_KEY` | из cloud.livekit.io |
 | `LIVEKIT_API_SECRET` | из cloud.livekit.io |
 | `LIVEKIT_URL` | `wss://xxx.livekit.cloud` |
@@ -115,7 +115,29 @@ pnpm --filter @duopoker/web dev        # :5180
 
 ---
 
-## Stripe (позже)
+---
+
+## YooKassa / ЮMoney (оплата клубов)
+
+Организаторские планы PRO и NETWORK оплачиваются через ЮKassa (ЮMoney для бизнеса).
+
+| Переменная | Описание |
+|------------|----------|
+| `YOOKASSA_SHOP_ID` | ID магазина в личном кабинете ЮKassa |
+| `YOOKASSA_SECRET_KEY` | Секретный ключ API |
+| `MOCK_CHECKOUT=true` | Dev: мгновенная активация плана без редиректа |
+
+Webhook URL (режим A):
+
+```text
+https://duopoker.vercel.app/api/monetization/yookassa/webhook
+```
+
+Return URL после оплаты: `/clubs/:clubId?checkout=success`
+
+---
+
+## Stripe (player subscriptions)
 
 Webhook URL (режим A):
 

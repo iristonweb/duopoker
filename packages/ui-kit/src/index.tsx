@@ -5,5 +5,6 @@ export { GlassCard, GlassPanel, type GlassPanelProps } from './components/GlassP
 export { LegalDisclaimer } from './components/LegalDisclaimer';
 export { ModeCard, type ModeCardProps } from './components/ModeCard';
 export { SkinSelector, type CosmeticItem } from './components/SkinSelector';
+export { OrganizerPlanCard } from './components/OrganizerPlanCard';
 export { SubscriptionTierCard } from './components/SubscriptionTierCard';
 export { VoiceChatPanel } from './components/VoiceChatPanel';

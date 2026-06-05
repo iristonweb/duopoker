@@ -1,6 +1,17 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { z } from 'zod';
+import {
+  catalogCosmetics,
+  catalogGameModes,
+  chipPackImages,
+  clubsHeroBanner,
+  lobbyHeroBanner,
+  organizerPlanBanners,
+  subscriptionBannerImages
+} from '@duopoker/shared-types';
+import { ORGANIZER_PLAN_PRICES_RUB, PLAN_LIMITS } from '../services/club-plans.js';
+import { handleYooKassaWebhook } from '../services/yookassa.js';
 import { config } from '../config.js';
 import { authGuard } from '../middleware/auth-guard.js';
 import { creditDailyBonus, recordPurchase } from '../services/monetization.js';
@@ -26,64 +37,80 @@ export const monetizationRouter = Router();
 monetizationRouter.get('/catalog', (_req, res) => {
   res.json({
     mockCheckout: config.mockCheckout,
+    lobbyBannerUrl: lobbyHeroBanner,
+    clubsBannerUrl: clubsHeroBanner,
+    gameModes: catalogGameModes,
     subscriptions: [
       {
         tier: 'SILVER',
         priceUsd: 4.99,
         chipsBonusPct: 50,
-        stripePriceId: config.stripePriceSilver || undefined
+        stripePriceId: config.stripePriceSilver || undefined,
+        imageUrl: subscriptionBannerImages.SILVER
       },
       {
         tier: 'GOLD',
         priceUsd: 9.99,
         voiceChat: true,
-        stripePriceId: config.stripePriceGold || undefined
+        stripePriceId: config.stripePriceGold || undefined,
+        imageUrl: subscriptionBannerImages.GOLD
       },
       {
         tier: 'PLATINUM',
         priceUsd: 19.99,
         coach: true,
-        stripePriceId: config.stripePricePlatinum || undefined
+        stripePriceId: config.stripePricePlatinum || undefined,
+        imageUrl: subscriptionBannerImages.PLATINUM
       },
       {
         tier: 'ROYAL',
         priceUsd: 49.99,
         apiStats: true,
-        stripePriceId: config.stripePriceRoyal || undefined
+        stripePriceId: config.stripePriceRoyal || undefined,
+        imageUrl: subscriptionBannerImages.ROYAL
       }
     ],
     chipPacks: [
-      { id: 'chips_2500', chips: 2500, priceUsd: 2.99 },
-      { id: 'chips_10000', chips: 10000, priceUsd: 9.99 }
+      { id: 'chips_2500', chips: 2500, priceUsd: 2.99, imageUrl: chipPackImages.chips_2500 },
+      { id: 'chips_10000', chips: 10000, priceUsd: 9.99, imageUrl: chipPackImages.chips_10000 }
     ],
     organizerPlans: [
       {
         tier: 'BASIC',
-        priceUsdMonthly: 15,
-        maxMembers: 30,
-        maxActiveTables: 2
+        priceRubMonthly: 0,
+        maxMembers: PLAN_LIMITS.BASIC.maxMembers,
+        maxActiveTables: PLAN_LIMITS.BASIC.maxActiveTables,
+        imageUrl: organizerPlanBanners.BASIC
       },
       {
         tier: 'PRO',
-        priceUsdMonthly: 39,
-        maxMembers: 150,
-        maxActiveTables: 8
+        priceRubMonthly: ORGANIZER_PLAN_PRICES_RUB.PRO,
+        maxMembers: PLAN_LIMITS.PRO.maxMembers,
+        maxActiveTables: PLAN_LIMITS.PRO.maxActiveTables,
+        imageUrl: organizerPlanBanners.PRO
       },
       {
         tier: 'NETWORK',
-        priceUsdMonthly: 99,
-        maxMembers: 600,
-        maxActiveTables: 20
+        priceRubMonthly: ORGANIZER_PLAN_PRICES_RUB.NETWORK,
+        maxMembers: PLAN_LIMITS.NETWORK.maxMembers,
+        maxActiveTables: PLAN_LIMITS.NETWORK.maxActiveTables,
+        imageUrl: organizerPlanBanners.NETWORK
       }
     ],
-    cosmetics: [
-      { id: 'deck_neon', name: 'Neon deck backs', rarity: 'RARE', chipCost: 1800 },
-      { id: 'table_void', name: 'Void table', rarity: 'EPIC', chipCost: 4500 },
-      { id: 'frame_gold', name: 'Gold avatar frame', rarity: 'LEGENDARY', chipCost: 9000 }
-    ],
+    cosmetics: catalogCosmetics,
     disclaimer:
       'Virtual chips and cosmetics are non-refundable and non-withdrawable. No real-money payouts, no rake, and no cashout.'
   });
+});
+
+monetizationRouter.post('/yookassa/webhook', async (req, res) => {
+  try {
+    const result = await handleYooKassaWebhook(req.body);
+    return res.json({ received: true, ...result });
+  } catch (e) {
+    console.error('YooKassa webhook', e);
+    return res.status(500).json({ error: 'Handler failed' });
+  }
 });
 
 monetizationRouter.use(authGuard);
@@ -160,6 +187,9 @@ monetizationRouter.post('/bonus', async (req, res) => {
 });
 
 monetizationRouter.post('/purchase', async (req, res) => {
+  if (config.isProduction && !config.mockCheckout) {
+    return res.status(403).json({ error: 'Purchases must be confirmed via Stripe webhooks in production' });
+  }
   const parsed = purchaseSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   if (parsed.data.userId !== req.auth?.userId) {

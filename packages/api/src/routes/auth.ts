@@ -11,6 +11,7 @@ import {
   shouldVerifyEmail,
   verificationExpiresAt
 } from '../services/email.js';
+import { resolveUniqueNickname } from '../lib/nickname.js';
 import { jsonError } from '../lib/http-error.js';
 
 const authSchema = z.object({
@@ -61,11 +62,14 @@ authRoutes.post('/register', async (c) => {
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
     const verify = shouldVerifyEmail();
     const verificationToken = verify ? createVerificationToken() : null;
+    const tempId = `tmp_${Date.now()}`;
+    const nickname = await resolveUniqueNickname(prisma, parsed.data.displayName, tempId);
     const user = await prisma.user.create({
       data: {
         email: parsed.data.email,
         passwordHash,
         displayName: parsed.data.displayName,
+        nickname,
         emailVerified: !verify,
         verificationToken,
         verificationTokenExpiresAt: verify ? verificationExpiresAt() : null
@@ -87,6 +91,7 @@ authRoutes.post('/register', async (c) => {
           id: user.id,
           email: user.email,
           displayName: user.displayName,
+          nickname: user.nickname,
           emailVerified: user.emailVerified
         },
         verificationRequired: verify && !user.emailVerified
@@ -212,6 +217,7 @@ authRoutes.get('/me', async (c) => {
         id: true,
         email: true,
         displayName: true,
+        nickname: true,
         avatar: true,
         chips: true,
         level: true,

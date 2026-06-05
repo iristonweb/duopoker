@@ -21,7 +21,12 @@ export function LegalPrivacy() {
             Analytics and error reporting (for example Sentry) may be enabled when configured by
             your deployment; see deployment documentation for details.
           </p>
-          <h2 className="mt-6 text-lg font-semibold text-zinc-100">Play-money and club policy</h2>
+          <h2 className="mt-6 text-lg font-semibold text-zinc-100">Data retention and deletion</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Account data is retained while your account is active. You may request deletion by
+            contacting your deployment administrator. Payment records may be retained as required
+            by billing providers and applicable law.
+          </p>
           <p className="mt-3 text-sm leading-relaxed text-muted">
             DuoPoker is a social play-money product. Private club fees purchase access to platform
             tools (club administration, invites, table hosting limits) and do not purchase odds,

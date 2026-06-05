@@ -3,8 +3,16 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } from '../auth/jwt.js';
 import { AppError } from '../errors.js';
+import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { prisma } from '../services/prisma.js';
+import { resolveUniqueNickname } from '../lib/nickname.js';
+import {
+  createVerificationToken,
+  sendVerificationEmail,
+  shouldVerifyEmail,
+  verificationExpiresAt
+} from '../services/email.js';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -50,15 +58,40 @@ authRouter.post('/register', async (req, res, next) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const verify = shouldVerifyEmail();
+    const verificationToken = verify ? createVerificationToken() : null;
+    const tempId = `tmp_${Date.now()}`;
+    const nickname = await resolveUniqueNickname(prisma, parsed.data.displayName, tempId);
     const user = await prisma.user.create({
       data: {
         email: parsed.data.email,
         passwordHash,
-        displayName: parsed.data.displayName
+        displayName: parsed.data.displayName,
+        nickname,
+        emailVerified: !verify,
+        verificationToken,
+        verificationTokenExpiresAt: verify ? verificationExpiresAt() : null
       }
     });
+    if (verify && verificationToken) {
+      try {
+        await sendVerificationEmail(user.email, verificationToken);
+      } catch (err) {
+        console.error('verification email failed', err);
+      }
+    }
     const tokens = await issueSession(user.id, user.email, req);
-    return res.status(201).json({ ...tokens, user: { id: user.id, email: user.email, displayName: user.displayName } });
+    return res.status(201).json({
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        nickname: user.nickname,
+        emailVerified: user.emailVerified
+      },
+      verificationRequired: verify && !user.emailVerified
+    });
   } catch (e) {
     return next(e);
   }
@@ -78,8 +111,48 @@ authRouter.post('/login', async (req, res, next) => {
     if (!ok) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    if (config.requireEmailVerification && !user.emailVerified) {
+      return res.status(403).json({
+        error: 'Email not verified. Check your inbox for the verification link.'
+      });
+    }
     const tokens = await issueSession(user.id, user.email, req);
-    return res.json({ ...tokens, user: { id: user.id, email: user.email, displayName: user.displayName } });
+    return res.json({
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        nickname: user.nickname,
+        emailVerified: user.emailVerified
+      }
+    });
+  } catch (e) {
+    return next(e);
+  }
+});
+
+authRouter.get('/verify-email', async (req, res, next) => {
+  try {
+    const token = z.string().min(1).parse(req.query.token);
+    const user = await prisma.user.findFirst({
+      where: {
+        verificationToken: token,
+        verificationTokenExpiresAt: { gt: new Date() }
+      }
+    });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        verificationToken: null,
+        verificationTokenExpiresAt: null
+      }
+    });
+    return res.json({ ok: true, email: user.email });
   } catch (e) {
     return next(e);
   }
@@ -134,7 +207,17 @@ authRouter.get('/me', async (req, res, next) => {
     const payload = verifyAccessToken(token);
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, displayName: true, chips: true, level: true, xp: true }
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        nickname: true,
+        avatar: true,
+        chips: true,
+        level: true,
+        xp: true,
+        emailVerified: true
+      }
     });
     return res.json({ user });
   } catch {

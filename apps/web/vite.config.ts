@@ -12,14 +12,28 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['manifest.webmanifest'],
+      includeAssets: ['manifest.webmanifest', 'icons/icon.svg', 'assets/**/*'],
       manifest: {
         name: 'DuoPoker',
         short_name: 'DuoPoker',
         theme_color: '#0A0A0A',
         background_color: '#0A0A0A',
         display: 'standalone',
-        start_url: '/lobby'
+        start_url: '/lobby',
+        icons: [
+          {
+            src: '/icons/icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/icon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
+          }
+        ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,svg,webmanifest}']
