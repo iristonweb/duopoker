@@ -1,7 +1,14 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install",
   "buildCommand": "pnpm --filter @duopoker/db-schema build && pnpm --filter @duopoker/game-engine build && pnpm --filter @duopoker/shared-types build && pnpm --filter @duopoker/web build",
   "outputDirectory": "apps/web/dist",
+  "functions": {
+    "apps/web/api/index.ts": {
+      "maxDuration": 30,
+      "includeFiles": "packages/db-schema/src/generated/**"
+    }
+  },
   "rewrites": [
     { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
     { "source": "/profile/:path*", "destination": "/api/profile/:path*" },
@@ -9,6 +16,8 @@
     { "source": "/monetization/:path*", "destination": "/api/monetization/:path*" },
     { "source": "/clubs/:path*", "destination": "/api/clubs/:path*" },
     { "source": "/voice/:path*", "destination": "/api/voice/:path*" },
-    { "source": "/health", "destination": "/api/health" }
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
