@@ -5,8 +5,10 @@
     "rootDir": "src",
     "declaration": true,
     "declarationMap": true,
+    "baseUrl": ".",
     "paths": {
-      "@duopoker/shared-types/*": ["packages/shared-types/dist/*"]
+      "@duopoker/shared-types/*": ["../shared-types/dist/*"],
+      "@duopoker/shared-types/index": ["../shared-types/dist/index"]
     }
   },
   "include": ["src"],
