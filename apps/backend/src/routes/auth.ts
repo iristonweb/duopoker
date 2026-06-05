@@ -90,7 +90,14 @@ authRouter.post('/refresh', async (req, res, next) => {
     const refreshToken = z.string().min(1).parse(req.body?.refreshToken);
     const payload = verifyRefreshToken(refreshToken);
     const storedToken = await redis.get(`session:${payload.userId}`);
-    if (!storedToken || storedToken !== refreshToken) {
+    const deviceOk = await prisma.deviceSession.findFirst({
+      where: {
+        userId: payload.userId,
+        refreshToken,
+        expiresAt: { gt: new Date() }
+      }
+    });
+    if ((!storedToken || storedToken !== refreshToken) && !deviceOk) {
       throw new AppError('Invalid session', 401);
     }
 

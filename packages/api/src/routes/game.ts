@@ -1,0 +1,146 @@
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
+import {
+  advanceBotTurns,
+  createMatchFromQueue,
+  enqueueMatchmaking,
+  getSessionSnapshot,
+  joinTable,
+  matchmakingAllowsSolo,
+  processPlayerAction,
+  requestNextHand
+} from '../services/game-session.js';
+
+const queueSchema = z.object({
+  userId: z.string().min(1),
+  mode: z.enum(['HOLDEM', 'RASPISNOY']),
+  buyIn: z.number().int().positive()
+});
+
+const joinSchema = z.object({
+  sessionId: z.string().min(1),
+  userId: z.string().min(1),
+  mode: z.enum(['HOLDEM', 'RASPISNOY']).default('HOLDEM'),
+  buyIn: z.number().int().positive().default(100)
+});
+
+const actionSchema = z.object({
+  sessionId: z.string().min(1),
+  userId: z.string().min(1),
+  type: z.enum(['bet', 'check', 'fold', 'call', 'raise']),
+  amount: z.number().int().nonnegative().optional(),
+  at: z.number().default(() => Date.now())
+});
+
+const readySchema = z.object({
+  sessionId: z.string().min(1),
+  userId: z.string().min(1)
+});
+
+export const gameRoutes = new Hono();
+
+gameRoutes.post('/queue', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = queueSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const ready = await enqueueMatchmaking(
+    { ...parsed.data, createdAt: Date.now() },
+    { allowSoloQueue: matchmakingAllowsSolo() }
+  );
+
+  if (!ready) {
+    return c.json({
+      status: 'waiting' as const,
+      mode: parsed.data.mode,
+      buyIn: parsed.data.buyIn
+    });
+  }
+
+  const match = await createMatchFromQueue(ready, parsed.data.mode, parsed.data.buyIn);
+  return c.json({
+    status: 'matched' as const,
+    sessionId: match.sessionId,
+    mode: match.mode,
+    buyIn: match.buyIn,
+    players: match.players
+  });
+});
+
+gameRoutes.post('/join', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = joinSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten(), code: 'INVALID_JOIN_PAYLOAD' }, 400);
+  }
+
+  const { sessionId, userId, mode, buyIn } = parsed.data;
+  let state = await joinTable(sessionId, userId, mode, buyIn);
+  const botState = await advanceBotTurns(sessionId);
+  if (botState) state = botState;
+
+  return c.json({
+    session: sanitizeStateForViewer(state, userId)
+  });
+});
+
+gameRoutes.post('/action', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = actionSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten(), code: 'INVALID_ACTION_PAYLOAD' }, 400);
+  }
+
+  const result = await processPlayerAction(parsed.data);
+  if (result.rejected) {
+    return c.json({ error: result.reason, code: result.reason }, 400);
+  }
+
+  let outState = result.state;
+  const botState = await advanceBotTurns(parsed.data.sessionId);
+  if (botState) outState = botState;
+
+  return c.json({
+    session: sanitizeStateForViewer(outState, parsed.data.userId),
+    replay: result.replay
+  });
+});
+
+gameRoutes.post('/ready-next-hand', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = readySchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const result = await requestNextHand(parsed.data.sessionId, parsed.data.userId);
+  if (!result.ok) {
+    return c.json({ error: result.reason, code: result.reason }, 400);
+  }
+
+  let out = result.state;
+  if (result.started) {
+    const botState = await advanceBotTurns(parsed.data.sessionId);
+    if (botState) out = botState;
+  }
+
+  return c.json({
+    session: sanitizeStateForViewer(out, parsed.data.userId),
+    started: result.started
+  });
+});
+
+gameRoutes.get('/session/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId');
+  const userId = c.req.query('userId') ?? '';
+  const snapshot = await getSessionSnapshot(sessionId);
+  if (!snapshot) {
+    return c.json({ session: null }, 404);
+  }
+  return c.json({
+    session: sanitizeStateForViewer(snapshot, userId || undefined)
+  });
+});

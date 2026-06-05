@@ -20,7 +20,7 @@ export const config = {
   port: Number(process.env.PORT ?? 4000),
   jwtSecret: process.env.JWT_SECRET ?? 'dev-jwt-secret',
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET ?? 'dev-jwt-refresh-secret',
-  redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6380',
+  redisUrl: process.env.REDIS_URL ?? '',
   mongoUrl: process.env.MONGO_URL ?? 'mongodb://localhost:27017',
   mongoDbName: process.env.MONGO_DB ?? 'duopoker',
   oauthGoogleEnabled: process.env.OAUTH_GOOGLE_ENABLED === 'true',
@@ -36,4 +36,7 @@ export const config = {
   publicWebUrl: process.env.PUBLIC_WEB_URL ?? 'http://localhost:5173',
   /** Comma-separated list, e.g. https://app.example.com,https://www.example.com */
   corsOrigin: splitOrigins(process.env.CORS_ORIGIN ?? process.env.PUBLIC_WEB_URL),
+  livekitApiKey: process.env.LIVEKIT_API_KEY ?? '',
+  livekitApiSecret: process.env.LIVEKIT_API_SECRET ?? '',
+  livekitUrl: process.env.LIVEKIT_URL ?? ''
 };

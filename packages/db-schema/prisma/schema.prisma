@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/client"
+  provider      = "prisma-client-js"
+  output        = "../src/generated/client"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -127,6 +128,14 @@ model GameSession {
   /** Serialized SessionState snapshot for reconnect / multi-instance recovery */
   gameState  Json?
   @@map("game_sessions")
+}
+
+model MatchmakingTicket {
+  userId    String   @id
+  mode      Mode
+  buyIn     Int
+  createdAt DateTime @default(now())
+  @@map("matchmaking_tickets")
 }
 
 model Hand {

@@ -1,5 +1,14 @@
 {
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @duopoker/web build",
-  "outputDirectory": "apps/web/dist"
+  "buildCommand": "pnpm --filter @duopoker/db-schema build && pnpm --filter @duopoker/game-engine build && pnpm --filter @duopoker/shared-types build && pnpm --filter @duopoker/web build",
+  "outputDirectory": "apps/web/dist",
+  "rewrites": [
+    { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
+    { "source": "/profile/:path*", "destination": "/api/profile/:path*" },
+    { "source": "/game/:path*", "destination": "/api/game/:path*" },
+    { "source": "/monetization/:path*", "destination": "/api/monetization/:path*" },
+    { "source": "/clubs/:path*", "destination": "/api/clubs/:path*" },
+    { "source": "/voice/:path*", "destination": "/api/voice/:path*" },
+    { "source": "/health", "destination": "/api/health" }
+  ]
 }

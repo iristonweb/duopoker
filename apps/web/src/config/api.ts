@@ -1,18 +1,23 @@
 /**
- * Resolves the backend origin (REST + Socket.IO).
+ * API / WebSocket origin.
  *
- * In Vercel/production, `VITE_API_URL` must be set at **build** time to your real API
- * (e.g. https://api.example.com). An **empty** env var string is treated as missing:
- * without that, browsers would call `/auth/...` on the static site host and get 404.
+ * **Production (full realtime):** set `VITE_API_URL` to your Render/Fly backend
+ * (e.g. `https://duopoker-api.onrender.com`). REST + Socket.IO + voice use the same host.
+ *
+ * **Vercel-only fallback:** leave empty — same-origin `/api/*` serverless + REST polling (no voice).
  */
-export function getApiBase(): string | null {
+export function getApiBase(): string {
   const raw = import.meta.env.VITE_API_URL as string | undefined;
   const t = typeof raw === 'string' ? raw.trim() : '';
   if (t) return t.replace(/\/$/, '');
-  if (import.meta.env.DEV) return 'http://localhost:4000';
-  return null;
+  return '';
+}
+
+/** External long-lived backend with Socket.IO (Render, local Express, Fly.io). */
+export function usesRealtimeSocket(): boolean {
+  return getApiBase().length > 0;
 }
 
 export function isBackendConfigured(): boolean {
-  return getApiBase() !== null;
+  return usesRealtimeSocket() || import.meta.env.PROD;
 }

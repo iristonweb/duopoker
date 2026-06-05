@@ -2,28 +2,30 @@
 
 ## Monorepo layout
 
-- `apps/web` — React + Vite + Tailwind + R3F lobby and table preview.
-- `apps/backend` — Express HTTP API, Socket.IO realtime, Prisma → PostgreSQL, Redis sessions, MongoDB analytics/replays.
-- `apps/mobile` — Expo shell + socket client.
+- `apps/web` — React + Vite + Tailwind + R3F lobby and table UI.
+- `packages/api` — Hono serverless API (Vercel `api/[[...path]].ts`), Prisma → PostgreSQL, stateless game sessions.
+- `apps/backend` — **Legacy** Express + Socket.IO stack for local Docker dev (not used on Vercel).
+- `apps/mobile` — Expo shell.
 - `packages/game-engine` — Hold'em / Raspisnoy rules, hand evaluation, table state machine, side pots, per-viewer state sanitization. See [RASPISNOY.md](./RASPISNOY.md).
 - `packages/shared-types` — Shared TS types (sessions, cards, theme tokens).
 - `packages/ui-kit` — Glass-morphism UI primitives.
 - `packages/db-schema` — Prisma schema and migrations.
 
-## Data flow
+## Data flow (Vercel / serverless)
 
-1. Clients authenticate via `/auth/register`, `/auth/login`, or `/oauth/google` (ID token).
-2. JWT access token is sent on Socket.IO `auth.token` (optional). Fallback guest IDs are still accepted for development.
-3. Matchmaking queues users in-memory; when enough players share mode + buy-in, a session id is broadcast.
-4. `joinSession` adds the player and may call `startNewHand` when two or more players are seated.
-5. `playerAction` drives `applyTableAction` in `game-engine`. Resulting `SessionState` is broadcast and persisted to PostgreSQL (`game_sessions.gameState`) for reconnect.
-6. Chip economy and cosmetics use `/monetization/*`. Stripe Checkout + webhook applies subscriptions (`subscriptions` table) or chip packs / inventory.
-7. Club organizers use `/clubs/*` to create private clubs/tables with plan-based limits (BASIC/PRO/NETWORK), while gameplay remains play-money only.
+1. Clients authenticate via `/auth/register`, `/auth/login` (JWT + `device_sessions` in Postgres).
+2. Matchmaking: `POST /game/queue` writes a row to `matchmaking_tickets`; when two players share mode + buy-in, a session id is returned.
+3. `POST /game/join` adds the player and may call `startNewHand` when two or more players are seated.
+4. `POST /game/action` drives `applyTableAction` in `game-engine`. State is persisted to `game_sessions.gameState`.
+5. Clients poll `GET /game/session/:id?userId=` every ~1.5s on the table page (no WebSockets on standard Vercel).
+6. Chip economy and cosmetics use `/monetization/*`. Stripe Checkout + webhook applies subscriptions or chip packs.
+7. Club organizers use `/clubs/*` for private clubs/tables with plan-based limits (play-money only).
 
 ## Scaling notes
 
-- In-memory `sessions` map is authoritative during a running process; Redis Pub/Sub is used for matchmaking fan-out. For multi-node, persist snapshots (already JSON) and optionally load from Redis.
-- Rate limiting applies per HTTP route and per socket user for actions.
+- Game state is **Postgres-authoritative** — safe for multi-instance serverless (read-modify-write per action).
+- Matchmaking uses the `matchmaking_tickets` table instead of in-memory queues.
+- Optional: add Upstash Redis later for rate limits or pub/sub if sub-second latency is required.
 
 ## Compliance posture
 

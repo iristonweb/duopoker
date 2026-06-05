@@ -4,6 +4,7 @@ import { AppBackground, Button, GlassPanel } from '@duopoker/ui-kit';
 import type { SessionState } from '@duopoker/shared-types/index';
 import { PokerTable3D } from '../components/PokerTable3D';
 import { useAppStore } from '../store/useAppStore';
+import { usesRealtimeSocket } from '../config/api';
 
 const maxRoundBet = (s: SessionState) =>
   s.players.reduce((m, p) => Math.max(m, s.playerRoundBet[p] ?? 0), 0);
@@ -19,6 +20,10 @@ export const Table = () => {
   const readyNextHand = useAppStore((s) => s.readyNextHand);
   const connect = useAppStore((s) => s.connect);
   const socket = useAppStore((s) => s.socket);
+  const joinSession = useAppStore((s) => s.joinSession);
+  const pollSession = useAppStore((s) => s.pollSession);
+  const stopPolling = useAppStore((s) => s.stopPolling);
+  const mode = useAppStore((s) => s.mode);
 
   const [raiseAmount, setRaiseAmount] = useState(0);
 
@@ -27,9 +32,16 @@ export const Table = () => {
   }, [connect]);
 
   useEffect(() => {
-    if (!socket || !routeSessionId) return;
-    socket.emit('reconnectSession', { sessionId: routeSessionId });
-  }, [socket, routeSessionId]);
+    if (!routeSessionId) return;
+    if (usesRealtimeSocket()) {
+      joinSession(routeSessionId, mode);
+      socket?.emit('reconnectSession', { sessionId: routeSessionId });
+      return;
+    }
+    void joinSession(routeSessionId, mode);
+    pollSession(routeSessionId);
+    return () => stopPolling();
+  }, [routeSessionId, joinSession, pollSession, stopPolling, mode, socket]);
 
   const sid = session?.sessionId;
   const matchRoute = sid && routeSessionId && sid === routeSessionId;

@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usesRealtimeSocket } from '../config/api';
 import { useAppStore } from '../store/useAppStore';
 
-/**
- * Listens for matchmaking and joins the table room, then navigates to the game route.
- */
+/** Navigates to the table when Socket.IO matchmaking finds a match. */
 export function MatchRedirect() {
   const navigate = useNavigate();
   const socket = useAppStore((s) => s.socket);
@@ -12,7 +11,7 @@ export function MatchRedirect() {
   const mode = useAppStore((s) => s.mode);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!usesRealtimeSocket() || !socket) return;
     const onMatch = (match: { sessionId: string; buyIn?: number; mode?: string }) => {
       socket.emit('joinSession', {
         sessionId: match.sessionId,

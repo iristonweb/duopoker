@@ -23,7 +23,12 @@ services:
         value: https://duopoker.vercel.app
       - key: CORS_ORIGIN
         value: https://duopoker.vercel.app
-      # Set these in Render dashboard after creation:
-      # - DATABASE_URL
-      # - REDIS_URL
-      # - MONGO_URL
+      # Required — set in Render dashboard:
+      # - DATABASE_URL  (Neon PostgreSQL connection string)
+      # Optional:
+      # - REDIS_URL     (Upstash — omit to use Postgres device_sessions only)
+      # - MONGO_URL     (replays/analytics — API starts without it)
+      # LiveKit voice (cloud.livekit.io → Project → Settings):
+      # - LIVEKIT_API_KEY
+      # - LIVEKIT_API_SECRET
+      # - LIVEKIT_URL   (wss://xxx.livekit.cloud)

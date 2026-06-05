@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   AppBackground,
@@ -15,7 +15,7 @@ import {
 import { PokerTable3D } from '../components/PokerTable3D';
 import { VoiceRoom } from '../components/VoiceRoom';
 import { useAppStore } from '../store/useAppStore';
-import { getApiBase, isBackendConfigured } from '../config/api';
+import { getApiBase, usesRealtimeSocket } from '../config/api';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
 
@@ -148,6 +148,7 @@ function AuthPanel() {
 }
 
 export const Lobby = () => {
+  const navigate = useNavigate();
   const { mode, setMode, connect, queue, session, readyNextHand, fetchProfile } = useAppStore();
   const socket = useAppStore((s) => s.socket);
   const [cosmetics, setCosmetics] = useState<CosmeticItem[]>([]);
@@ -155,6 +156,8 @@ export const Lobby = () => {
   const [catalogMockCheckout, setCatalogMockCheckout] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
+  const [queueBusy, setQueueBusy] = useState(false);
+  const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reduceMotion = useReducedMotion();
   const showDevPanel = import.meta.env.DEV;
 
@@ -167,7 +170,7 @@ export const Lobby = () => {
   }, [fetchProfile]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!usesRealtimeSocket() || !socket) return;
     const onWait = () => setQueueBanner('Waiting for another player in the queue…');
     const onFound = () => setQueueBanner(null);
     socket.on('matchmakingWaiting', onWait);
@@ -177,6 +180,41 @@ export const Lobby = () => {
       socket.off('matchFound', onFound);
     };
   }, [socket]);
+
+  useEffect(() => {
+    return () => {
+      if (queuePollRef.current) clearInterval(queuePollRef.current);
+    };
+  }, []);
+
+  const startQueue = async () => {
+    if (queueBusy) return;
+    setQueueBusy(true);
+    setQueueBanner('Searching for opponents…');
+    try {
+      if (usesRealtimeSocket()) {
+        await queue();
+        return;
+      }
+      const poll = async () => {
+        const result = await queue();
+        if (result.status === 'matched' && result.sessionId) {
+          if (queuePollRef.current) clearInterval(queuePollRef.current);
+          queuePollRef.current = null;
+          setQueueBanner(null);
+          navigate(`/table/${result.sessionId}`);
+        } else {
+          setQueueBanner('Waiting for another player in the queue…');
+        }
+      };
+      await poll();
+      if (!queuePollRef.current) {
+        queuePollRef.current = setInterval(poll, 2500);
+      }
+    } finally {
+      setQueueBusy(false);
+    }
+  };
 
   useEffect(() => {
     const base = getApiBase();
@@ -204,10 +242,6 @@ export const Lobby = () => {
     const token = useAppStore.getState().accessToken;
     if (!token) {
       setCheckoutMsg('Sign in to subscribe.');
-      return;
-    }
-    if (!base) {
-      setCheckoutMsg('Set VITE_API_URL to your backend URL and redeploy.');
       return;
     }
     if (!priceId) {
@@ -252,22 +286,6 @@ export const Lobby = () => {
         animate="show"
         variants={reduceMotion ? undefined : container}
       >
-        {!isBackendConfigured() ? (
-          <div
-            role="status"
-            className="mb-6 rounded-xl border border-amber-500/35 bg-amber-950/50 px-4 py-3 text-sm text-amber-100"
-          >
-            <p className="font-medium text-amber-50">API not configured for this deployment</p>
-            <p className="mt-2 text-xs leading-relaxed text-amber-100/90">
-              Vercel only hosts the static frontend. Add{' '}
-              <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-[0.8rem]">VITE_API_URL</code>{' '}
-              in Project → Settings → Environment Variables (value = your backend origin, e.g.{' '}
-              <span className="font-mono text-zinc-200">https://your-api.onrender.com</span>), then redeploy.
-              Leaving <code className="font-mono text-[0.75rem]">VITE_API_URL</code> empty causes requests to hit this
-              site and return 404 — do not leave it blank.
-            </p>
-          </div>
-        ) : null}
         <motion.header
           className="mb-10 flex flex-col gap-4 border-b border-white/10 pb-8 sm:flex-row sm:items-start sm:justify-between"
           variants={reduceMotion ? undefined : section}
@@ -315,7 +333,13 @@ export const Lobby = () => {
                 onClick={() => setMode('RASPISNOY')}
               />
             </div>
-            <Button variant="primary" size="lg" className="w-full sm:w-auto" onClick={queue}>
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full sm:w-auto"
+              disabled={queueBusy}
+              onClick={() => void startQueue()}
+            >
               Queue {mode === 'HOLDEM' ? "Hold'em" : 'Raspisnoy'}
             </Button>
             {queueBanner ? <p className="text-xs text-amber-400/90">{queueBanner}</p> : null}

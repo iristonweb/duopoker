@@ -1,3 +1,4 @@
+import './load-env.js';
 import cors from 'cors';
 import express from 'express';
 import { config } from './config.js';
@@ -10,6 +11,7 @@ import { monetizationRouter } from './routes/monetization.js';
 import { oauthRouter } from './routes/oauth.js';
 import { profileRouter } from './routes/profile.js';
 import { stripeWebhookHandler } from './routes/stripe-webhook.js';
+import { voiceRouter } from './routes/voice.js';
 import { createRealtimeServer } from './socket/server.js';
 import { renderMetrics } from './services/metrics.js';
 import { isMongoReady, tryConnectMongo } from './services/mongo.js';
@@ -38,6 +40,7 @@ app.use('/profile', profileRouter);
 app.use('/clubs', clubsRouter);
 app.use('/monetization', monetizationRouter);
 app.use('/oauth', oauthRouter);
+app.use('/voice', voiceRouter);
 app.use(errorHandler);
 
 const { httpServer } = createRealtimeServer(app);

@@ -2,6 +2,11 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const apiProxy = {
+  target: 'http://localhost:4000',
+  changeOrigin: true
+};
+
 export default defineConfig({
   plugins: [
     react(),
@@ -17,15 +22,22 @@ export default defineConfig({
         start_url: '/lobby'
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,svg,webmanifest}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/localhost:4000\/.*/i,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'api-cache' }
-          }
-        ]
+        globPatterns: ['**/*.{js,css,html,ico,svg,webmanifest}']
       }
     })
-  ]
+  ],
+  server: {
+    port: 5180,
+    strictPort: true,
+    proxy: {
+      '/auth': { ...apiProxy, rewrite: (p) => `/api${p}` },
+      '/profile': { ...apiProxy, rewrite: (p) => `/api${p}` },
+      '/game': { ...apiProxy, rewrite: (p) => `/api${p}` },
+      '/monetization': { ...apiProxy, rewrite: (p) => `/api${p}` },
+      '/clubs': { ...apiProxy, rewrite: (p) => `/api${p}` },
+      '/voice': { ...apiProxy, rewrite: (p) => `/api${p}` },
+      '/health': { ...apiProxy, rewrite: (p) => `/api${p}` },
+      '/api': apiProxy
+    }
+  }
 });
