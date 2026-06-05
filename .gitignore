@@ -5,7 +5,9 @@ node_modules
 .env
 .env.*
 !.env.example
+!.env.vercel.example
 !**/.env.example
+!**/.env.vercel.example
 dist
 coverage
 packages/db-schema/src/generated

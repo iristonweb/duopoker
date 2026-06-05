@@ -13,9 +13,21 @@ Local-first monorepo for cross-platform poker platform with dual modes (Hold'em 
 2. Postgres: `docker compose -f infra/docker-compose.yml up postgres -d`
 3. Build schema: `pnpm --filter @duopoker/db-schema build`
 4. API: `pnpm --filter @duopoker/api dev` (port 3001)
-5. Web: `pnpm --filter @duopoker/web dev` (port 5173, proxies API)
+5. Web: `pnpm --filter @duopoker/web dev` (port 5180)
 
-See [docs/DEPLOY.md](docs/DEPLOY.md) for Vercel deployment.
+## Environment variables
+
+| File | Назначение |
+|------|------------|
+| [`.env.vercel.example`](.env.vercel.example) | Шаблон для **Vercel** (без секретов, в git) |
+| [`.env.vercel.local`](.env.vercel.local) | Готовый файл для **Import** в Vercel (gitignore, только у тебя локально) |
+| [`apps/backend/.env.example`](apps/backend/.env.example) | Локальный Express / Render |
+| [`apps/web/.env.example`](apps/web/.env.example) | Локальный Vite |
+| [`packages/db-schema/.env.example`](packages/db-schema/.env.example) | `pnpm db:push` |
+
+Vercel: **не задавай** `VITE_API_URL`. Import `.env.vercel.local` → Redeploy.
+
+See [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Compliance
 - No real-money gambling.
