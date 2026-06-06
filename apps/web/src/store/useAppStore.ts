@@ -38,6 +38,9 @@ type AppStore = {
   subscriptionTier: SubscriptionTier;
   equipped: EquippedCosmetics;
   inventory: string[];
+  gamesPlayed: number;
+  gamesWon: number;
+  gamesLost: number;
   accessToken?: string;
   refreshToken?: string;
   mode: 'HOLDEM' | 'RASPISNOY';
@@ -171,6 +174,9 @@ export const useAppStore = create<AppStore>((set, get) => {
     subscriptionTier: 'FREE',
     equipped: loadResolvedEquipped(initial.storedUserId ?? guestId(), 'FREE'),
     inventory: [],
+    gamesPlayed: 0,
+    gamesWon: 0,
+    gamesLost: 0,
     accessToken: initial.access,
     refreshToken: initial.refresh,
     mode: 'HOLDEM',
@@ -621,6 +627,7 @@ export const useAppStore = create<AppStore>((set, get) => {
           } | null;
           subscription?: { tier: SubscriptionTier } | null;
           inventory?: Array<{ itemId: string; equipped?: boolean }>;
+          stats?: { gamesPlayed: number; gamesWon: number; gamesLost: number };
         };
         if (data.user) {
           const uid = get().userId;
@@ -639,7 +646,10 @@ export const useAppStore = create<AppStore>((set, get) => {
             userRole: data.user.role ?? 'USER',
             subscriptionTier: tier,
             inventory,
-            equipped
+            equipped,
+            gamesPlayed: data.stats?.gamesPlayed ?? 0,
+            gamesWon: data.stats?.gamesWon ?? 0,
+            gamesLost: data.stats?.gamesLost ?? 0
           });
         }
       } catch {

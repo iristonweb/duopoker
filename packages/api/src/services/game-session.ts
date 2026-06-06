@@ -21,6 +21,8 @@ import { newSessionId } from './session-access.js';
 import { loadGameSnapshot, persistGameSnapshot } from './session-persistence.js';
 import { prisma } from '../lib/prisma.js';
 import { recordReferralHands } from './referrals.js';
+import { recordGameOutcome } from './game-stats.js';
+import { playersWithChips } from '@duopoker/game-engine/index';
 
 export const BOT_PREFIX = 'duopoker-bot';
 
@@ -218,9 +220,11 @@ export const enqueueMatchmaking = async (
 export const autoStartNextHand = async (sessionId: string): Promise<SessionState | null> => {
   const state = await getSessionSnapshot(sessionId);
   if (!state || !shouldAutoStartNextHand(state)) return state;
-  const next = await saveState(buildAutoNextHand(state));
-  const botState = await advanceBotTurns(sessionId);
-  return botState ?? next;
+  const next = buildAutoNextHand(state);
+  if (state.street === 'COMPLETE' && next.street === 'LOBBY' && playersWithChips(state).length < 2) {
+    void recordGameOutcome(state).catch((err) => console.warn('game stats record failed', err));
+  }
+  return saveState(next);
 };
 
 export const enforceActionTimeout = async (sessionId: string): Promise<SessionState | null> => {

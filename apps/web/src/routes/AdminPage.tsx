@@ -29,7 +29,9 @@ type AdminUserDetail = AdminUser & {
   subscription: { tier: string; expiresAt: string; status: string } | null;
   inventory: { itemId: string; equipped: boolean; rarity: string }[];
   stats: {
-    handsPlayed: number;
+    gamesPlayed: number;
+    gamesWon: number;
+    gamesLost: number;
     inQueue: boolean;
     matchAssignment: string | null;
     clubMemberships: number;
@@ -445,7 +447,9 @@ export function AdminPage() {
                   <div><span className="text-subtle">{t('admin.chips')}</span><p className="font-semibold">{selected.chips.toLocaleString()}</p></div>
                   <div><span className="text-subtle">{t('admin.level')}</span><p className="font-semibold">{selected.level} · {selected.xp} XP</p></div>
                   <div><span className="text-subtle">{t('admin.subscription')}</span><p className="font-semibold">{selected.subscription?.tier ?? 'FREE'}</p></div>
-                  <div><span className="text-subtle">{t('admin.handsWon')}</span><p className="font-semibold">{selected.stats.handsPlayed}</p></div>
+                  <div><span className="text-subtle">{t('admin.gamesPlayed')}</span><p className="font-semibold">{selected.stats.gamesPlayed}</p></div>
+                  <div><span className="text-subtle">{t('admin.gamesWon')}</span><p className="font-semibold text-emerald">{selected.stats.gamesWon}</p></div>
+                  <div><span className="text-subtle">{t('admin.gamesLost')}</span><p className="font-semibold">{selected.stats.gamesLost}</p></div>
                   <div><span className="text-subtle">{t('admin.role')}</span><p className="font-semibold">{selected.role}</p></div>
                   <div><span className="text-subtle">{t('admin.inventory')}</span><p className="font-semibold">{selected.inventory.length} {t('admin.items')}</p></div>
                 </div>

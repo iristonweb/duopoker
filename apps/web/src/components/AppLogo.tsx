@@ -12,7 +12,11 @@ export function AppLogo({
   size?: 'sm' | 'md' | 'lg';
 }) {
   const sizeClass =
-    size === 'sm' ? 'h-9 w-9 sm:h-10 sm:w-10' : size === 'lg' ? 'h-14 w-14 sm:h-16 sm:w-16' : 'h-11 w-11 sm:h-12 sm:w-12';
+    size === 'sm'
+      ? 'h-10 w-10 sm:h-11 sm:w-11'
+      : size === 'lg'
+        ? 'h-[4.5rem] w-[4.5rem] sm:h-20 sm:w-20'
+        : 'h-12 w-12 sm:h-14 sm:w-14';
 
   const image = (
     <img

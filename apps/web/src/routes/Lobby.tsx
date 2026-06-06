@@ -867,24 +867,10 @@ export const Lobby = () => {
         </motion.div>
 
         <motion.div
-          className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-2"
+          className="mt-10"
           variants={reduceMotion ? undefined : section}
           custom={3}
         >
-          <GlassPanel glow="gold" className="flex flex-col justify-between border-gold/15 p-6">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
-                {t('cosmetics.eyebrow')}
-              </p>
-              <h2 className="mt-1 font-display text-xl font-semibold text-ivory">{t('cosmetics.title')}</h2>
-              <p className="mt-2 text-sm text-muted">{t('profile.cosmeticsOnProfile')}</p>
-            </div>
-            <Link to="/profile" className="mt-6">
-              <Button variant="secondary" size="md" className="w-full">
-                {t('profile.openProfile')}
-              </Button>
-            </Link>
-          </GlassPanel>
           <ReferralPanel variant="lobby" />
         </motion.div>
 

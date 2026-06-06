@@ -123,7 +123,9 @@ export type AdminUserDetail = {
   subscription: { tier: string; expiresAt: Date; status: string } | null;
   inventory: { itemId: string; equipped: boolean; rarity: string }[];
   stats: {
-    handsPlayed: number;
+    gamesPlayed: number;
+    gamesWon: number;
+    gamesLost: number;
     inQueue: boolean;
     matchAssignment: string | null;
     clubMemberships: number;
@@ -150,6 +152,9 @@ export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetai
       chips: true,
       level: true,
       xp: true,
+      gamesPlayed: true,
+      gamesWon: true,
+      gamesLost: true,
       emailVerified: true,
       createdAt: true,
       subscriptions: {
@@ -174,8 +179,7 @@ export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetai
   });
   if (!user) return null;
 
-  const [handsPlayed, queueTicket, assignment] = await Promise.all([
-    prisma.hand.count({ where: { winnerId: userId } }),
+  const [queueTicket, assignment] = await Promise.all([
     prisma.matchmakingTicket.findUnique({ where: { userId } }),
     prisma.matchAssignment.findUnique({ where: { userId } })
   ]);
@@ -189,7 +193,9 @@ export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetai
     subscription: topSub,
     inventory,
     stats: {
-      handsPlayed,
+      gamesPlayed: user.gamesPlayed,
+      gamesWon: user.gamesWon,
+      gamesLost: user.gamesLost,
       inQueue: Boolean(queueTicket),
       matchAssignment: assignment?.sessionId ?? null,
       clubMemberships: _count.clubMemberships

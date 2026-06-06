@@ -269,6 +269,9 @@ authRoutes.get('/me', async (c) => {
         chips: true,
         level: true,
         xp: true,
+        gamesPlayed: true,
+        gamesWon: true,
+        gamesLost: true,
         emailVerified: true,
         role: true,
         subscriptions: {
@@ -289,7 +292,12 @@ authRoutes.get('/me', async (c) => {
     return c.json({
       user: { ...decryptProfileRow(profile), role },
       subscription: topSub,
-      inventory
+      inventory,
+      stats: {
+        gamesPlayed: user.gamesPlayed,
+        gamesWon: user.gamesWon,
+        gamesLost: user.gamesLost
+      }
     });
   } catch {
     return c.json({ error: 'Unauthorized' }, 401);

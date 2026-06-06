@@ -9,6 +9,8 @@ import {
   lobbyHeroBanner,
   lobbyPreviewBanner,
   organizerPlanBanners,
+  perksUnlockedAtTier,
+  paidCosmeticSetsUpToTier,
   SUBSCRIPTION_PRICES_RUB,
   CHIP_PACK_PRICES_RUB,
   subscriptionBannerImages
@@ -99,6 +101,8 @@ const buildCatalogSubscriptions = () =>
     tier,
     priceRubMonthly: SUBSCRIPTION_PRICES_RUB[tier],
     ...flags,
+    perksUnlocked: perksUnlockedAtTier(tier),
+    cosmeticSetsUnlocked: paidCosmeticSetsUpToTier(tier),
     stripePriceId: stripePriceForTier(tier),
     imageUrl: subscriptionBannerImages[tier]
   }));

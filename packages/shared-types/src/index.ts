@@ -19,6 +19,16 @@ export {
 } from './brand';
 
 export {
+  PAID_SUBSCRIPTION_TIERS,
+  perksUnlockedAtTier,
+  subscriptionCosmeticsUpToTier,
+  paidCosmeticSetsUpToTier,
+  SUBSCRIPTION_PERK_MIN_TIER,
+  tierHasPerk,
+  type SubscriptionPerkId
+} from './subscription-perks';
+
+export {
   catalogCosmetics,
   catalogGameModes,
   lobbyHeroBanner,

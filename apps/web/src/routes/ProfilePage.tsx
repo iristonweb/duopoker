@@ -39,6 +39,9 @@ export const ProfilePage = () => {
   const avatarUrl = useAppStore((s) => s.avatarUrl);
   const tableStatus = useAppStore((s) => s.tableStatus);
   const chips = useAppStore((s) => s.chips);
+  const gamesPlayed = useAppStore((s) => s.gamesPlayed);
+  const gamesWon = useAppStore((s) => s.gamesWon);
+  const gamesLost = useAppStore((s) => s.gamesLost);
   const equipped = useAppStore((s) => s.equipped);
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
   const inventory = useAppStore((s) => s.inventory);
@@ -174,6 +177,26 @@ export const ProfilePage = () => {
             <div className="p-6 sm:p-8">
               <ProfileEditor />
             </div>
+          </GlassPanel>
+        </motion.div>
+
+        <motion.div
+          initial={reduceMotion ? false : 'hidden'}
+          animate="show"
+          variants={reduceMotion ? undefined : fade}
+          className="mb-8 grid grid-cols-3 gap-3 sm:gap-4"
+        >
+          <GlassPanel className="border-white/10 p-4 text-center sm:p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('profile.statsPlayed')}</p>
+            <p className="mt-2 font-display text-2xl font-semibold text-ivory">{gamesPlayed}</p>
+          </GlassPanel>
+          <GlassPanel glow="emerald" className="border-emerald/20 p-4 text-center sm:p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('profile.statsWon')}</p>
+            <p className="mt-2 font-display text-2xl font-semibold text-emerald">{gamesWon}</p>
+          </GlassPanel>
+          <GlassPanel className="border-white/10 p-4 text-center sm:p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('profile.statsLost')}</p>
+            <p className="mt-2 font-display text-2xl font-semibold text-muted">{gamesLost}</p>
           </GlassPanel>
         </motion.div>
 
