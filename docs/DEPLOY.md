@@ -150,6 +150,67 @@ Login → `GET /api/auth/me` should return `"role":"SUPERADMIN"`. Admin UI: `/ad
 
 ---
 
+## Founder / Superadmin
+
+The founder account (`iristonweb@gmail.com` by default) receives **SUPERADMIN**, **Royal lifetime**, all cosmetics, and 999 999 chips.
+
+### Automatic (after deploy)
+
+Set optional env on Vercel:
+
+| Variable | Value |
+|----------|--------|
+| `FOUNDER_EMAIL` | `iristonweb@gmail.com` (default if omitted) |
+
+On **login or register**, matching email gets the founder package idempotently. Sign out and sign in again if `/admin` does not appear immediately.
+
+### One-time bootstrap (HTTP)
+
+| Variable | Value |
+|----------|--------|
+| `FOUNDER_GRANT_SECRET` | random long string |
+
+After redeploy:
+
+```bash
+curl -X POST "https://duopoker.ru/api/admin/bootstrap-founder?email=iristonweb@gmail.com" \
+  -H "x-founder-secret: YOUR_SECRET"
+```
+
+### Manual (Neon DATABASE_URL)
+
+```powershell
+$env:DATABASE_URL="postgresql://..."
+node scripts/grant-founder.mjs iristonweb@gmail.com
+```
+
+Verify: `GET /api/auth/me` → `"role":"SUPERADMIN"`. Admin UI: `/admin`.
+
+---
+
+## Player subscriptions (YooKassa, RUB)
+
+Prices are in rubles (see `packages/shared-types/src/pricing.ts`):
+
+| Tier | Price |
+|------|-------|
+| Silver | 490 ₽/mo |
+| Gold | 990 ₽/mo |
+| Platinum | 1 990 ₽/mo |
+| Royal | 4 990 ₽/mo |
+
+Checkout: `POST /api/monetization/subscription/checkout` → redirect to YooKassa.
+
+Webhook (same as clubs):
+
+```text
+https://duopoker.ru/api/monetization/yookassa/webhook
+```
+
+Required env: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`. For local demo without payments: `MOCK_CHECKOUT=true` (non-production only).
+
+---
+
 ---
 
 ## YooKassa / ЮMoney (оплата клубов)

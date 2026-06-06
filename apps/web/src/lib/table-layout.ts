@@ -15,3 +15,21 @@ export const botDisplayIndex = (userId: string) => {
   if (suffix && /^\d+$/.test(suffix)) return Number(suffix) + 1;
   return 1;
 };
+
+/** Absolute Tailwind position classes for seat index around the table. */
+export const seatLayout = (index: number, total: number): string => {
+  if (total <= 2) {
+    return index === 0
+      ? 'left-1/2 top-[4%] -translate-x-1/2'
+      : 'bottom-[4%] left-1/2 -translate-x-1/2';
+  }
+  const positions = [
+    'left-1/2 top-[3%] -translate-x-1/2',
+    'right-[4%] top-[20%]',
+    'right-[5%] bottom-[22%]',
+    'left-1/2 bottom-[3%] -translate-x-1/2',
+    'left-[4%] bottom-[22%]',
+    'left-[4%] top-[20%]'
+  ];
+  return positions[index % positions.length] ?? positions[0];
+};

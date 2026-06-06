@@ -73,6 +73,7 @@ type AppStore = {
     amount?: number;
   }) => Promise<void>;
   readyNextHand: () => Promise<void>;
+  leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
   register: (email: string, password: string, displayName: string, nickname: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   fetchProfile: () => Promise<void>;
@@ -241,6 +242,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       socket.on('sessionError', (err: { code?: string }) => {
         set({ sessionError: err.code ?? 'session_error' });
       });
+      socket.on('leftTable', () => {
+        get().stopPolling();
+        set({ session: undefined, sessionError: undefined });
+      });
       socket.on('connect', () => {
         const sid = get().session?.sessionId;
         if (sid) socket.emit('reconnectSession', { sessionId: sid });
@@ -375,9 +380,13 @@ export const useAppStore = create<AppStore>((set, get) => {
       const tick = async () => {
         try {
           const res = await get().apiFetch(`/game/session/${encodeURIComponent(sessionId)}`);
+          if (res.status === 403) {
+            set({ session: undefined, sessionError: 'NOT_SEATED' });
+            return;
+          }
           if (!res.ok) return;
           const data = (await res.json()) as { session: SessionState | null };
-          if (data.session) set({ session: data.session });
+          if (data.session) set({ session: data.session, sessionError: undefined });
         } catch {
           /* ignore */
         }
@@ -437,6 +446,27 @@ export const useAppStore = create<AppStore>((set, get) => {
       }
       const data = (await res.json()) as { session: SessionState };
       set({ session: data.session, sessionError: undefined });
+    },
+    leaveTable: async (sessionId) => {
+      get().stopPolling();
+      if (usesRealtimeSocket()) {
+        get().connect();
+        get().socket?.emit('leaveTable', { sessionId, userId: get().userId });
+        set({ session: undefined, sessionError: undefined });
+        return { ok: true };
+      }
+      const res = await get().apiFetch('/game/leave', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const reason = (err as { code?: string }).code ?? 'leave_failed';
+        set({ sessionError: reason });
+        return { ok: false, reason };
+      }
+      set({ session: undefined, sessionError: undefined });
+      return { ok: true };
     },
     register: async (email, password, displayName, nickname) => {
       set({ authError: undefined, authNotice: undefined });

@@ -31,6 +31,18 @@ describe('sanitizeStateForViewer', () => {
     const view = sanitizeStateForViewer(state, 'u1');
     expect(view.playerCards.u2?.length).toBe(2);
   });
+
+  it('hides ghost board from free viewers', () => {
+    const state = {
+      ...baseHand(),
+      street: 'COMPLETE' as const,
+      ghostCommunityCards: ['AS', 'KS', 'QS', 'JS', 'TS'] as SessionState['ghostCommunityCards']
+    };
+    const free = sanitizeStateForViewer(state, 'u1', { subscriptionTier: 'FREE' });
+    expect(free.ghostCommunityCards).toBeUndefined();
+    const silver = sanitizeStateForViewer(state, 'u1', { subscriptionTier: 'SILVER' });
+    expect(silver.ghostCommunityCards?.length).toBe(5);
+  });
 });
 
 describe('applyTableAction — heads-up Hold\'em', () => {
@@ -59,6 +71,7 @@ describe('applyTableAction — heads-up Hold\'em', () => {
     if (!r.ok) return;
     expect(r.state.street).toBe('COMPLETE');
     expect(r.state.winners?.length).toBe(1);
+    expect(r.state.ghostCommunityCards?.length).toBe(5);
   });
 });
 

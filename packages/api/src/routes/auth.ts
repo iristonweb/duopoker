@@ -14,6 +14,18 @@ import {
 import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
 import { decryptProfileRow } from '../lib/profile-privacy.js';
 import { jsonError } from '../lib/http-error.js';
+import { grantFounderPackage } from '../services/admin-grants.js';
+
+const ensureFounderAccount = async (email: string): Promise<'SUPERADMIN' | 'USER' | null> => {
+  if (email.toLowerCase() !== config.founderEmail) return null;
+  const result = await grantFounderPackage(email);
+  if (!result.ok) return null;
+  const updated = await prisma.user.findUnique({
+    where: { id: result.userId },
+    select: { role: true }
+  });
+  return updated?.role ?? 'SUPERADMIN';
+};
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -97,6 +109,7 @@ authRoutes.post('/register', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
+    const founderRole = await ensureFounderAccount(user.email);
     return c.json(
       {
         ...tokens,
@@ -106,7 +119,7 @@ authRoutes.post('/register', async (c) => {
           displayName: user.displayName,
           nickname: user.nickname,
           emailVerified: user.emailVerified,
-          role: user.role
+          role: founderRole ?? user.role
         },
         verificationRequired: verify && !user.emailVerified
       },
@@ -140,6 +153,7 @@ authRoutes.post('/login', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
+    const founderRole = await ensureFounderAccount(user.email);
     return c.json({
       ...tokens,
       user: {
@@ -148,7 +162,7 @@ authRoutes.post('/login', async (c) => {
         displayName: user.displayName,
         nickname: user.nickname,
         emailVerified: user.emailVerified,
-        role: user.role
+        role: founderRole ?? user.role
       }
     });
   } catch (error) {

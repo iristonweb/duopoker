@@ -67,7 +67,8 @@ export const config = {
   livekitUrl: process.env.LIVEKIT_URL ?? '',
   dataEncryptionKey: process.env.DATA_ENCRYPTION_KEY?.trim() ?? '',
   dailyBonusChips: 500,
-  founderGrantSecret: process.env.FOUNDER_GRANT_SECRET?.trim() ?? ''
+  founderGrantSecret: process.env.FOUNDER_GRANT_SECRET?.trim() ?? '',
+  founderEmail: (process.env.FOUNDER_EMAIL?.trim() || 'iristonweb@gmail.com').toLowerCase()
 };
 
 export const allowDevMockCheckout = (): boolean =>

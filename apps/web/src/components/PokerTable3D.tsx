@@ -1,17 +1,21 @@
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows, Environment, Text } from '@react-three/drei';
+import { ContactShadows, Environment } from '@react-three/drei';
+import { motion } from 'framer-motion';
 import type { Card, EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types/index';
 import { resolveEquipped } from '@duopoker/shared-types';
 import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipStack, PokerChipVisual } from './cosmetics/PokerChipVisual';
-import { isBotUserId } from '../lib/table-layout';
+import { isBotUserId, seatLayout } from '../lib/table-layout';
+import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 
 export type TablePlayerVisual = {
   userId: string;
   name: string;
   stack: number;
+  roundBet?: number;
+  isDealer?: boolean;
   avatar?: string | null;
   tableStatus?: string | null;
   tier?: SubscriptionTier;
@@ -29,24 +33,9 @@ type Props = {
   players?: TablePlayerVisual[];
   heroDeckId?: string;
   heroChipId?: string;
+  /** Semi-transparent preview of cards that would have been dealt (subscription perk). */
+  ghostCommunityCards?: Card[];
   className?: string;
-};
-
-const seatLayout = (index: number, total: number): string => {
-  if (total <= 2) {
-    return index === 0
-      ? 'left-1/2 top-[6%] -translate-x-1/2'
-      : 'bottom-[8%] left-1/2 -translate-x-1/2';
-  }
-  const positions = [
-    'left-1/2 top-[5%] -translate-x-1/2',
-    'right-[6%] top-[24%]',
-    'right-[8%] bottom-[26%]',
-    'left-1/2 bottom-[7%] -translate-x-1/2',
-    'left-[6%] bottom-[26%]',
-    'left-[6%] top-[24%]'
-  ];
-  return positions[index % positions.length] ?? positions[0];
 };
 
 export function PokerTable3D({
@@ -56,19 +45,16 @@ export function PokerTable3D({
   players = [],
   heroDeckId = 'deck_classic',
   heroChipId = 'chip_classic',
+  ghostCommunityCards = [],
   className
 }: Props) {
+  const showGhostBoard = ghostCommunityCards.length === 5;
+  const boardCards = showGhostBoard ? ghostCommunityCards : communityCards;
   return (
-    <div
-      className={cn(
-        'relative w-full max-w-5xl overflow-hidden',
-        'h-[26rem] sm:h-[32rem] lg:h-[34rem]',
-        className
-      )}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_55%,_#000_100%)]" />
+    <div className={cn('relative h-full min-h-0 w-full overflow-hidden', className)}>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_50%,_#000_100%)]" />
 
-      <div className="pointer-events-none absolute inset-x-[8%] top-[10%] h-[72%] rounded-[50%] bg-[radial-gradient(ellipse_at_center,_rgba(232,197,71,0.14)_0%,_transparent_62%)] blur-2xl" />
+      <div className="pointer-events-none absolute inset-x-[4%] top-[8%] h-[78%] rounded-[50%] bg-[radial-gradient(ellipse_at_center,_rgba(232,197,71,0.18)_0%,_transparent_65%)] blur-3xl" />
 
       <Canvas camera={{ position: [0, 7.2, 8.6], fov: 32 }} dpr={[1, 2]} shadows className="!absolute inset-0">
         <color attach="background" args={['#030305']} />
@@ -98,13 +84,10 @@ export function PokerTable3D({
           <meshStandardMaterial color="#c9a227" metalness={0.72} roughness={0.22} />
         </mesh>
         <ContactShadows position={[0, 0.005, 0]} opacity={0.55} scale={14} blur={3.2} far={6} />
-        <Text position={[0, 0.42, -2.05]} fontSize={0.2} color="#f5e6a8" anchorX="center" fontWeight={600}>
-          {pot.toLocaleString()}
-        </Text>
       </Canvas>
 
       <div
-        className="pointer-events-none absolute left-1/2 top-[14%] h-[58%] w-[78%] max-w-[42rem] -translate-x-1/2 rounded-[50%] border-[3px] border-[#8b6914]/80 shadow-[inset_0_0_80px_rgba(0,0,0,0.55),0_0_40px_rgba(232,197,71,0.12)]"
+        className="pointer-events-none absolute left-1/2 top-[12%] h-[68%] w-[88%] max-w-[52rem] -translate-x-1/2 rounded-[50%] border-[3px] border-[#8b6914]/80 shadow-[inset_0_0_80px_rgba(0,0,0,0.55),0_0_48px_rgba(232,197,71,0.15)]"
         style={{
           backgroundImage:
             'radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, transparent 55%), url(/assets/table-felt.png)',
@@ -112,21 +95,30 @@ export function PokerTable3D({
         }}
       >
         <div className="absolute inset-[10%] rounded-[50%] border border-white/[0.06]" />
-        <div className="absolute inset-0 rounded-[50%] bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(0,0,0,0.35)_100%)]" />
+        <div className="absolute inset-0 rounded-[50%] bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(0,0,0,0.38)_100%)]" />
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-10">
-        <div className="absolute left-1/2 top-[38%] flex -translate-x-1/2 gap-1.5 sm:gap-2">
-          {communityCards.length ? (
-            communityCards.map((c, i) => (
-              <PlayingCard
+        <div className="absolute left-1/2 top-[36%] flex -translate-x-1/2 gap-1.5 sm:gap-2.5">
+          {boardCards.length ? (
+            boardCards.map((c, i) => (
+              <motion.div
                 key={`${c}-${i}`}
-                card={c}
-                faceUp
-                size="sm"
-                deckId={heroDeckId}
-                className="shadow-[0_12px_32px_rgba(0,0,0,0.55)] transition-transform duration-300 hover:-translate-y-1"
-              />
+                initial={{ opacity: 0, y: -16, rotateY: 90 }}
+                animate={{ opacity: showGhostBoard ? 0.72 : 1, y: 0, rotateY: 0 }}
+                transition={{ delay: i * 0.07, duration: 0.35 }}
+              >
+                <PlayingCard
+                  card={c}
+                  faceUp
+                  size="sm"
+                  deckId={heroDeckId}
+                  className={cn(
+                    'shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:scale-110',
+                    showGhostBoard && 'ring-1 ring-violet-400/40 saturate-[0.85]'
+                  )}
+                />
+              </motion.div>
             ))
           ) : (
             Array.from({ length: 5 }).map((_, i) => (
@@ -135,23 +127,14 @@ export function PokerTable3D({
                 faceUp={false}
                 size="sm"
                 deckId={heroDeckId}
-                className="opacity-35"
+                className="border border-gold/15 opacity-50 sm:scale-110"
               />
             ))
           )}
         </div>
 
-        <div className="absolute left-1/2 top-[52%] flex -translate-x-1/2 items-center gap-2.5 rounded-full border border-gold/30 bg-black/60 px-5 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_24px_rgba(232,197,71,0.15)] backdrop-blur-md">
-          <PokerChipVisual chipId={heroChipId} size="sm" />
-          <div className="flex flex-col items-start leading-tight">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-gold/70">Pot</span>
-            <span className="font-mono text-sm font-bold text-gold-light">{pot.toLocaleString()}</span>
-          </div>
-          {street ? (
-            <span className="ml-1 rounded-full border border-emerald/30 bg-emerald/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald">
-              {street}
-            </span>
-          ) : null}
+        <div className="absolute left-1/2 top-[50%] -translate-x-1/2">
+          <AnimatedPotDisplay pot={pot} chipId={heroChipId} street={street} />
         </div>
 
         {players.map((player, index) => {
@@ -160,19 +143,28 @@ export function PokerTable3D({
           const deckId = equipped.deck;
           const cards = player.holeCards ?? [];
           const isHeroSeat = index === players.length - 1 || (players.length <= 2 && index === 1);
+          const roundBet = player.roundBet ?? 0;
+
           return (
             <div
               key={player.userId}
               className={cn(
-                'absolute flex flex-col items-center gap-1.5 transition-all duration-300',
+                'absolute flex flex-col items-center gap-1 transition-all duration-300',
                 seatLayout(index, players.length),
-                player.isActive && 'z-20 scale-[1.04]',
+                player.isActive && 'z-20 scale-[1.05]',
                 player.isFolded && 'opacity-45 grayscale-[0.35]'
               )}
             >
               {player.isActive ? (
-                <span className="absolute -inset-4 rounded-3xl border-2 border-emerald/50 bg-emerald/[0.07] shadow-[0_0_28px_rgba(74,222,128,0.35)]" />
+                <span className="absolute -inset-3 animate-pulse-glow rounded-3xl border-2 border-emerald/50 bg-emerald/[0.07] shadow-[0_0_28px_rgba(74,222,128,0.35)] sm:-inset-4" />
               ) : null}
+
+              {player.isDealer ? (
+                <span className="absolute -right-1 -top-1 z-[2] flex h-5 w-5 items-center justify-center rounded-full border border-gold/40 bg-gold/20 text-[10px] font-bold text-gold-light shadow-glow-gold">
+                  D
+                </span>
+              ) : null}
+
               <PlayerAvatar
                 name={player.name}
                 avatarUrl={player.avatar}
@@ -185,10 +177,28 @@ export function PokerTable3D({
                 size={isHeroSeat ? 'lg' : players.length > 4 ? 'sm' : 'md'}
                 showTier={tier === 'ROYAL' || tier === 'PLATINUM'}
               />
-              <div className="relative z-[1] flex items-center gap-2 rounded-xl border border-white/10 bg-black/55 px-2.5 py-1 shadow-lg backdrop-blur-sm">
+
+              <p className="relative z-[1] max-w-[5.5rem] truncate text-center text-[10px] font-medium text-zinc-200 sm:max-w-[7rem] sm:text-xs">
+                {player.name}
+              </p>
+
+              <div className="relative z-[1] flex items-center gap-1.5 rounded-xl border border-white/10 bg-black/55 px-2 py-0.5 shadow-lg backdrop-blur-sm sm:px-2.5 sm:py-1">
                 <PokerChipStack chipId={equipped.chip} count={Math.min(4, 2 + Math.floor(player.stack / 5000))} />
                 <span className="font-mono text-[10px] font-semibold text-emerald">{player.stack.toLocaleString()}</span>
               </div>
+
+              {roundBet > 0 ? (
+                <motion.div
+                  key={roundBet}
+                  initial={{ scale: 0.6, y: 8, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  className="relative z-[1] flex items-center gap-1 rounded-full border border-gold/25 bg-black/50 px-2 py-0.5"
+                >
+                  <PokerChipVisual chipId={equipped.chip} size="sm" className="scale-75" />
+                  <span className="font-mono text-[9px] font-bold text-gold-light">{roundBet.toLocaleString()}</span>
+                </motion.div>
+              ) : null}
+
               {cards.length ? (
                 <div className="relative z-[1] flex gap-0.5 sm:gap-1">
                   {cards.map((c, ci) => (
@@ -197,11 +207,11 @@ export function PokerTable3D({
                       card={c}
                       faceUp={Boolean(player.revealCards)}
                       deckId={deckId}
-                      size="sm"
+                      size={isHeroSeat ? 'md' : 'sm'}
                       className={cn(
                         'shadow-[0_8px_24px_rgba(0,0,0,0.5)]',
-                        isHeroSeat && ci === 0 && '-rotate-6',
-                        isHeroSeat && ci === 1 && 'rotate-6'
+                        isHeroSeat && ci === 0 && '-rotate-[8deg]',
+                        isHeroSeat && ci === 1 && 'rotate-[8deg]'
                       )}
                     />
                   ))}
@@ -211,6 +221,13 @@ export function PokerTable3D({
           );
         })}
       </div>
+
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse 75% 65% at 50% 45%, transparent 35%, rgba(5,5,8,0.55) 100%)'
+        }}
+      />
     </div>
   );
 }

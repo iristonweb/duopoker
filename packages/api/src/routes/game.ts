@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
+import { sanitizeSessionForUser } from '../services/sanitize-session.js';
 import { authGuard } from '../middleware/auth.js';
 import { getSessionPlayerProfiles } from '../services/private-table-auth.js';
 import { assertCanJoinSession } from '../services/session-access.js';
@@ -10,6 +10,7 @@ import {
   getSessionSnapshot,
   joinTable,
   leaveQueue,
+  leaveTable,
   matchmakingAllowsSolo,
   processPlayerAction,
   requestNextHand,
@@ -41,6 +42,10 @@ const actionSchema = z.object({
 });
 
 const readySchema = z.object({
+  sessionId: z.string().min(1)
+});
+
+const leaveSchema = z.object({
   sessionId: z.string().min(1)
 });
 
@@ -110,6 +115,24 @@ gameRoutes.delete('/queue', async (c) => {
   return c.body(null, 204);
 });
 
+gameRoutes.post('/leave', async (c) => {
+  const userId = c.get('auth').userId;
+  const body = await c.req.json().catch(() => null);
+  const parsed = leaveSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten(), code: 'INVALID_LEAVE_PAYLOAD' }, 400);
+  }
+
+  const result = await leaveTable(parsed.data.sessionId, userId);
+  if (!result.ok) {
+    return c.json({ error: result.reason, code: result.reason }, 400);
+  }
+
+  const ticked = await tickSession(parsed.data.sessionId);
+  const outState = ticked ?? result.state;
+  return c.json({ session: await sanitizeSessionForUser(outState, userId), left: true });
+});
+
 gameRoutes.post('/join', async (c) => {
   const userId = c.get('auth').userId;
   const body = await c.req.json().catch(() => null);
@@ -130,7 +153,7 @@ gameRoutes.post('/join', async (c) => {
   if (ticked) state = ticked;
 
   return c.json({
-    session: sanitizeStateForViewer(state, userId)
+    session: await sanitizeSessionForUser(state, userId)
   });
 });
 
@@ -152,7 +175,7 @@ gameRoutes.post('/action', async (c) => {
   if (ticked) outState = ticked;
 
   return c.json({
-    session: sanitizeStateForViewer(outState, userId),
+    session: await sanitizeSessionForUser(outState, userId),
     replay: result.replay
   });
 });
@@ -177,7 +200,7 @@ gameRoutes.post('/ready-next-hand', async (c) => {
   }
 
   return c.json({
-    session: sanitizeStateForViewer(out, userId),
+    session: await sanitizeSessionForUser(out, userId),
     started: result.started
   });
 });
@@ -195,7 +218,7 @@ gameRoutes.get('/session/:sessionId', async (c) => {
   const ticked = await tickSession(sessionId);
   if (ticked) snapshot = ticked;
   return c.json({
-    session: sanitizeStateForViewer(snapshot, userId)
+    session: await sanitizeSessionForUser(snapshot, userId)
   });
 });
 

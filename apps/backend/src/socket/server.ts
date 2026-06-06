@@ -7,6 +7,7 @@ import type { SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
+import { getSubscriptionTiersBatch, getUserSubscriptionTier } from '../services/subscription-tier.js';
 import { assertCanJoinSession, newSessionId } from '../services/session-access.js';
 import {
   autoStartNextHand,
@@ -14,6 +15,7 @@ import {
   foldActivePlayerOnTimeout,
   getSessionSnapshot,
   joinTable,
+  leaveTable,
   processPlayerAction,
   requestNextHand,
   seatPlayersBatch,
@@ -88,9 +90,14 @@ const clearActionTimer = (sessionId: string) => {
 
 const emitStateToSession = async (io: Server, sessionId: string, state: SessionState) => {
   const sockets = await io.in(sessionId).fetchSockets();
+  const viewerIds = sockets
+    .map((s) => (typeof s.data.userId === 'string' ? s.data.userId : undefined))
+    .filter((id): id is string => Boolean(id));
+  const tiers = await getSubscriptionTiersBatch(viewerIds);
   for (const s of sockets) {
     const viewerId = typeof s.data.userId === 'string' ? s.data.userId : undefined;
-    s.emit('stateUpdate', sanitizeStateForViewer(state, viewerId));
+    const subscriptionTier = viewerId ? tiers.get(viewerId) ?? 'FREE' : 'FREE';
+    s.emit('stateUpdate', sanitizeStateForViewer(state, viewerId, { subscriptionTier }));
   }
 };
 
@@ -206,10 +213,11 @@ export const createRealtimeServer = (app: Express) => {
       await socket.join(sessionId);
       const state = joinTable(sessionId, userId, mode, buyIn);
       await redis.publish(`lobby:${sessionId}`, JSON.stringify({ type: 'join', userId }));
+      const subscriptionTier = await getUserSubscriptionTier(userId);
       socket.emit('sessionEvent', {
         type: 'PLAYER_JOINED',
         userId,
-        state: sanitizeStateForViewer(state, userId)
+        state: sanitizeStateForViewer(state, userId, { subscriptionTier })
       });
       await broadcastSessionState(io, sessionId, state);
     });
@@ -259,9 +267,10 @@ export const createRealtimeServer = (app: Express) => {
       socket.join(sessionId);
       const snapshot = await tickSession(sessionId);
       const viewerId = typeof socket.data.userId === 'string' ? socket.data.userId : undefined;
+      const subscriptionTier = viewerId ? await getUserSubscriptionTier(viewerId) : 'FREE';
       socket.emit('sessionReconnected', {
         sessionId,
-        snapshot: snapshot ? sanitizeStateForViewer(snapshot, viewerId) : null
+        snapshot: snapshot ? sanitizeStateForViewer(snapshot, viewerId, { subscriptionTier }) : null
       });
       if (snapshot) {
         await broadcastSessionState(io, sessionId, snapshot);
@@ -280,6 +289,24 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: result.reason });
         return;
       }
+      await broadcastSessionState(io, sessionId, result.state);
+    });
+
+    socket.on('leaveTable', async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
+      if (!sessionId || typeof sessionId !== 'string') return;
+      const userId = resolveUserId(socket, payloadUserId);
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
+      clearActionTimer(sessionId);
+      const result = await leaveTable(sessionId, userId);
+      if (!result.ok) {
+        socket.emit('sessionError', { code: result.reason });
+        return;
+      }
+      await socket.leave(sessionId);
+      socket.emit('leftTable', { sessionId });
       await broadcastSessionState(io, sessionId, result.state);
     });
 

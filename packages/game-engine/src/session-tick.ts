@@ -1,6 +1,6 @@
 import type { SessionState } from '@duopoker/shared-types/index';
 import { isAutomatedPlayer } from './bot-actions';
-import { startNewHand } from './holdem-table';
+import { resetToLobbyAfterGame, startNewHand } from './holdem-table';
 
 export const ACTION_TIMEOUT_MS = 60_000;
 export const NEXT_HAND_DELAY_MS = 2800;
@@ -44,15 +44,32 @@ export const shouldAutoStartNextHand = (state: SessionState, now = Date.now()): 
 };
 
 export const buildAutoNextHand = (state: SessionState): SessionState => {
-  const seated = playersWithChips(state);
-  const stacks = Object.fromEntries(seated.map((p) => [p, state.stacks[p] ?? 0]));
-  return startNewHand({
+  const active = playersWithChips(state);
+  if (active.length < 2) {
+    return resetToLobbyAfterGame(state);
+  }
+
+  const spectators = state.players.filter((p) => !active.includes(p));
+  const hand = startNewHand({
     ...state,
-    players: seated,
-    stacks,
+    players: active,
+    stacks: Object.fromEntries(active.map((p) => [p, state.stacks[p] ?? 0])),
     readyForNextHand: [],
     handCompletedAt: undefined,
     winners: undefined,
     winnersShare: undefined
   });
+
+  if (hand.street !== 'PREFLOP') {
+    return resetToLobbyAfterGame(state);
+  }
+
+  if (spectators.length === 0) {
+    return hand;
+  }
+
+  return {
+    ...hand,
+    players: [...hand.players, ...spectators]
+  };
 };

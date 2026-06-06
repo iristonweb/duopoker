@@ -43,6 +43,7 @@ export function SubscriptionTierCard({
   bannerUrl,
   tierName,
   perkDescription,
+  featureBullets,
   perks,
   active = false,
   featured = false,
@@ -54,6 +55,7 @@ export function SubscriptionTierCard({
   bannerUrl?: string;
   tierName?: string;
   perkDescription?: string;
+  featureBullets?: string[];
   perks?: string[];
   active?: boolean;
   featured?: boolean;
@@ -117,8 +119,20 @@ export function SubscriptionTierCard({
           <p className="shrink-0 text-base font-semibold text-gold sm:text-lg">{price}</p>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted">{summary}</p>
-        {perks?.length ? (
+        {featureBullets?.length ? (
           <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
+            {featureBullets.map((bullet) => (
+              <li key={bullet} className="flex items-start gap-2 text-xs text-ivory/90">
+                <span className="mt-0.5 text-emerald" aria-hidden>
+                  ✓
+                </span>
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {perks?.length ? (
+          <ul className={cn('space-y-1.5', featureBullets?.length ? 'mt-2' : 'mt-3 border-t border-white/10 pt-3')}>
             {perks.map((perk) => (
               <li key={perk} className="flex items-start gap-2 text-xs text-ivory/85">
                 <span className="mt-0.5 text-gold" aria-hidden>

@@ -6,8 +6,19 @@ export type LiveKitConfig = {
   url: string;
 };
 
-export const isLiveKitConfigured = (cfg: LiveKitConfig): boolean =>
-  Boolean(cfg.apiKey && cfg.apiSecret && cfg.url);
+const PLACEHOLDER_MARKERS = ['your-project', 'xxx.livekit', 'example.livekit', 'changeme', 'placeholder'];
+
+export const isLiveKitConfigured = (cfg: LiveKitConfig): boolean => {
+  const { apiKey, apiSecret, url } = cfg;
+  if (!apiKey?.trim() || !apiSecret?.trim() || !url?.trim()) return false;
+  const urlLower = url.toLowerCase();
+  if (!urlLower.startsWith('wss://') && !urlLower.startsWith('ws://')) return false;
+  if (PLACEHOLDER_MARKERS.some((m) => urlLower.includes(m) || apiKey.toLowerCase().includes(m))) {
+    return false;
+  }
+  if (apiKey.length < 10 || apiSecret.length < 10) return false;
+  return true;
+};
 
 /** Room name safe for LiveKit (alphanumeric + hyphen). */
 export const voiceRoomName = (sessionId: string): string =>

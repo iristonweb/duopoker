@@ -2,6 +2,26 @@ import { prisma } from '../lib/prisma.js';
 
 const DAILY_BONUS_PROVIDER = 'STRIPE' as const;
 
+export type PaidSubscriptionTier = 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
+
+export const activateSubscription = async (userId: string, tier: PaidSubscriptionTier) => {
+  const subId = `${userId}-${tier}`;
+  await prisma.subscription.upsert({
+    where: { id: subId },
+    create: {
+      id: subId,
+      userId,
+      tier,
+      status: 'ACTIVE',
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+    },
+    update: {
+      status: 'ACTIVE',
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+    }
+  });
+};
+
 export const claimDailyBonus = async (
   userId: string,
   amount: number

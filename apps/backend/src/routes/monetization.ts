@@ -8,6 +8,8 @@ import {
   clubsHeroBanner,
   lobbyHeroBanner,
   organizerPlanBanners,
+  SUBSCRIPTION_PRICES_RUB,
+  CHIP_PACK_PRICES_RUB,
   subscriptionBannerImages
 } from '@duopoker/shared-types';
 import { ORGANIZER_PLAN_PRICES_RUB, PLAN_LIMITS } from '../services/club-plans.js';
@@ -43,36 +45,46 @@ monetizationRouter.get('/catalog', (_req, res) => {
     subscriptions: [
       {
         tier: 'SILVER',
-        priceUsd: 4.99,
+        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.SILVER,
         chipsBonusPct: 50,
         stripePriceId: config.stripePriceSilver || undefined,
         imageUrl: subscriptionBannerImages.SILVER
       },
       {
         tier: 'GOLD',
-        priceUsd: 9.99,
+        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.GOLD,
         voiceChat: true,
         stripePriceId: config.stripePriceGold || undefined,
         imageUrl: subscriptionBannerImages.GOLD
       },
       {
         tier: 'PLATINUM',
-        priceUsd: 19.99,
+        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.PLATINUM,
         coach: true,
         stripePriceId: config.stripePricePlatinum || undefined,
         imageUrl: subscriptionBannerImages.PLATINUM
       },
       {
         tier: 'ROYAL',
-        priceUsd: 49.99,
+        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.ROYAL,
         apiStats: true,
         stripePriceId: config.stripePriceRoyal || undefined,
         imageUrl: subscriptionBannerImages.ROYAL
       }
     ],
     chipPacks: [
-      { id: 'chips_2500', chips: 2500, priceUsd: 2.99, imageUrl: chipPackImages.chips_2500 },
-      { id: 'chips_10000', chips: 10000, priceUsd: 9.99, imageUrl: chipPackImages.chips_10000 }
+      {
+        id: 'chips_2500',
+        chips: 2500,
+        priceRub: CHIP_PACK_PRICES_RUB.chips_2500,
+        imageUrl: chipPackImages.chips_2500
+      },
+      {
+        id: 'chips_10000',
+        chips: 10000,
+        priceRub: CHIP_PACK_PRICES_RUB.chips_10000,
+        imageUrl: chipPackImages.chips_10000
+      }
     ],
     organizerPlans: [
       {

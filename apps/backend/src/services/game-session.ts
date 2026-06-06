@@ -10,6 +10,7 @@ import {
   markReadyForNextHand,
   normalizeSessionState,
   pickBotAction,
+  removePlayerFromTable,
   shouldAutoStartNextHand,
   shouldForceActionTimeout,
   startNewHand
@@ -262,6 +263,24 @@ export const foldActivePlayerOnTimeout = async (
   const botState = await advanceBotTurns(sessionId);
   const after = botState ?? save(result.state);
   return (await autoStartNextHand(sessionId)) ?? after;
+};
+
+export const leaveTable = async (sessionId: string, userId: string) => {
+  const state = sessions.get(sessionId) ?? (await getSessionSnapshot(sessionId));
+  if (!state) {
+    return { ok: false as const, reason: 'SESSION_NOT_FOUND' };
+  }
+  if (!state.players.includes(userId)) {
+    return { ok: false as const, reason: 'NOT_SEATED' };
+  }
+  const result = removePlayerFromTable(state, userId);
+  if (!result.ok) {
+    return { ok: false as const, reason: result.reason };
+  }
+  const saved = save(result.state);
+  const botState = await advanceBotTurns(sessionId);
+  const after = botState ?? saved;
+  return { ok: true as const, state: after };
 };
 
 export const listSessionIdsForUser = (userId: string): string[] => {

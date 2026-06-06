@@ -93,8 +93,16 @@ export function VoiceRoom() {
       refreshCount(room);
       setStatus('live');
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : t('voice.connectionFailed'));
-      setStatus('error');
+      const raw = e instanceof Error ? e.message : String(e);
+      const invalidKey =
+        /invalid api key|could not establish signal|permission denied|unauthorized/i.test(raw);
+      if (invalidKey) {
+        setErrorMsg(t('voice.invalidCredentials'));
+        setStatus('unavailable');
+      } else {
+        setErrorMsg(raw || t('voice.connectionFailed'));
+        setStatus('error');
+      }
       await leaveVoice();
     }
   };

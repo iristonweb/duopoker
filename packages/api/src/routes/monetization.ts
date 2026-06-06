@@ -9,13 +9,19 @@ import {
   lobbyHeroBanner,
   lobbyPreviewBanner,
   organizerPlanBanners,
+  SUBSCRIPTION_PRICES_RUB,
+  CHIP_PACK_PRICES_RUB,
   subscriptionBannerImages
 } from '@duopoker/shared-types';
 import { ORGANIZER_PLAN_PRICES_RUB, PLAN_LIMITS } from '../services/club-plans.js';
-import { handleYooKassaWebhook } from '../services/yookassa.js';
+import {
+  createPlayerSubscriptionPayment,
+  handleYooKassaWebhook,
+  isYooKassaConfigured
+} from '../services/yookassa.js';
 import { config, allowDevMockCheckout } from '../config.js';
 import { authGuard } from '../middleware/auth.js';
-import { claimDailyBonus, recordPurchase } from '../services/monetization.js';
+import { activateSubscription, claimDailyBonus, recordPurchase } from '../services/monetization.js';
 import { prisma } from '../lib/prisma.js';
 
 const purchaseSchema = z.object({
@@ -36,6 +42,10 @@ const mockSubscribeSchema = z.object({
   tier: z.enum(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'])
 });
 
+const subscriptionCheckoutSchema = z.object({
+  tier: z.enum(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'])
+});
+
 const subscriptionTiers = ['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const;
 type PaidTier = (typeof subscriptionTiers)[number];
 
@@ -45,30 +55,12 @@ const tierFromToken = (token: string): PaidTier | null => {
   return tierFromPrice(token);
 };
 
-const activateSubscription = async (userId: string, tier: PaidTier) => {
-  const subId = `${userId}-${tier}`;
-  await prisma.subscription.upsert({
-    where: { id: subId },
-    create: {
-      id: subId,
-      userId,
-      tier,
-      status: 'ACTIVE',
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
-    },
-    update: {
-      status: 'ACTIVE',
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
-    }
-  });
-};
-
 const cosmeticCosts: Record<string, number> = {
   deck_neon: 1800,
   table_void: 4500
 };
 
-const tierFromPrice = (priceId: string): 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL' | null => {
+const tierFromPrice = (priceId: string): PaidTier | null => {
   if (priceId === config.stripePriceSilver) return 'SILVER';
   if (priceId === config.stripePriceGold) return 'GOLD';
   if (priceId === config.stripePricePlatinum) return 'PLATINUM';
@@ -76,56 +68,49 @@ const tierFromPrice = (priceId: string): 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL
   return null;
 };
 
+const buildCatalogSubscriptions = () =>
+  ([
+    { tier: 'SILVER' as const, chipsBonusPct: 50 },
+    { tier: 'GOLD' as const, voiceChat: true },
+    { tier: 'PLATINUM' as const, coach: true },
+    { tier: 'ROYAL' as const, apiStats: true }
+  ] as const).map(({ tier, ...flags }) => ({
+    tier,
+    priceRubMonthly: SUBSCRIPTION_PRICES_RUB[tier],
+    ...flags,
+    stripePriceId:
+      tier === 'SILVER'
+        ? config.stripePriceSilver || undefined
+        : tier === 'GOLD'
+          ? config.stripePriceGold || undefined
+          : tier === 'PLATINUM'
+            ? config.stripePricePlatinum || undefined
+            : config.stripePriceRoyal || undefined,
+    imageUrl: subscriptionBannerImages[tier]
+  }));
+
 export const monetizationRoutes = new Hono();
 
 monetizationRoutes.get('/catalog', (c) =>
   c.json({
     mockCheckout: config.mockCheckout,
+    yookassaConfigured: isYooKassaConfigured(),
     lobbyBannerUrl: lobbyHeroBanner,
     lobbyPreviewUrl: lobbyPreviewBanner,
     clubsBannerUrl: clubsHeroBanner,
     gameModes: catalogGameModes,
-    subscriptions: [
-      {
-        tier: 'SILVER',
-        priceUsd: 4.99,
-        chipsBonusPct: 50,
-        stripePriceId: config.stripePriceSilver || undefined,
-        imageUrl: subscriptionBannerImages.SILVER
-      },
-      {
-        tier: 'GOLD',
-        priceUsd: 9.99,
-        voiceChat: true,
-        stripePriceId: config.stripePriceGold || undefined,
-        imageUrl: subscriptionBannerImages.GOLD
-      },
-      {
-        tier: 'PLATINUM',
-        priceUsd: 19.99,
-        coach: true,
-        stripePriceId: config.stripePricePlatinum || undefined,
-        imageUrl: subscriptionBannerImages.PLATINUM
-      },
-      {
-        tier: 'ROYAL',
-        priceUsd: 49.99,
-        apiStats: true,
-        stripePriceId: config.stripePriceRoyal || undefined,
-        imageUrl: subscriptionBannerImages.ROYAL
-      }
-    ],
+    subscriptions: buildCatalogSubscriptions(),
     chipPacks: [
       {
         id: 'chips_2500',
         chips: 2500,
-        priceUsd: 2.99,
+        priceRub: CHIP_PACK_PRICES_RUB.chips_2500,
         imageUrl: chipPackImages.chips_2500
       },
       {
         id: 'chips_10000',
         chips: 10000,
-        priceUsd: 9.99,
+        priceRub: CHIP_PACK_PRICES_RUB.chips_10000,
         imageUrl: chipPackImages.chips_10000
       }
     ],
@@ -240,6 +225,28 @@ monetizationRoutes.post('/shop/cosmetic', async (c) => {
   return c.json({ ok: true, itemId });
 });
 
+monetizationRoutes.post('/subscription/checkout', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = subscriptionCheckoutSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+  const uid = c.get('auth').userId;
+  const returnUrl = `${config.publicWebUrl.replace(/\/$/, '')}/lobby?checkout=success`;
+  try {
+    const result = await createPlayerSubscriptionPayment({
+      userId: uid,
+      tier: parsed.data.tier,
+      returnUrl
+    });
+    return c.json({ confirmationUrl: result.confirmationUrl, paymentId: result.paymentId });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Checkout failed';
+    if (message === 'YOOKASSA_NOT_CONFIGURED') {
+      return c.json({ error: 'YooKassa not configured' }, 503);
+    }
+    return c.json({ error: message }, 500);
+  }
+});
+
 monetizationRoutes.post('/checkout-session', async (c) => {
   const body = await c.req.json().catch(() => null);
   const parsed = checkoutSchema.safeParse(body);
@@ -274,7 +281,7 @@ monetizationRoutes.post('/checkout-session', async (c) => {
 
 monetizationRoutes.post('/mock-subscribe', async (c) => {
   if (!allowDevMockCheckout()) {
-    return c.json({ error: 'Use Stripe checkout in production' }, 403);
+    return c.json({ error: 'Use YooKassa or mock checkout in production' }, 403);
   }
   const body = await c.req.json().catch(() => null);
   const parsed = mockSubscribeSchema.safeParse(body);
