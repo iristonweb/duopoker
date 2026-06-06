@@ -218,7 +218,12 @@
     "potBet": "Банк",
     "seats": "{{count}} мест",
     "voiceTitle": "Голосовой чат за столом",
-    "voiceEyebrow": "Голос"
+    "voiceEyebrow": "Голос",
+    "timeLeft": "{{seconds}}с",
+    "actionError": "Ошибка действия: {{code}}",
+    "nextHandAuto": "Следующая раздача через {{seconds}}с…",
+    "dealingNext": "Раздаём следующую…",
+    "gameOver": "Игра окончена — недостаточно игроков с фишками."
   },
   "clubs": {
     "title": "Приватные клубы",

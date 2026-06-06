@@ -5,7 +5,7 @@ import { LanguageSwitch } from './LanguageSwitch';
 /** Top brand bar on all pages except lobby (lobby has its own header). */
 export function AppBrandBar() {
   const { pathname } = useLocation();
-  if (pathname === '/lobby') return null;
+  if (pathname === '/lobby' || pathname.startsWith('/table/')) return null;
 
   return (
     <div className="relative z-20 border-b border-white/10 bg-background/90 backdrop-blur-glass">

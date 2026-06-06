@@ -218,7 +218,12 @@
     "potBet": "Pot",
     "seats": "{{count}} seats",
     "voiceTitle": "Table voice chat",
-    "voiceEyebrow": "Voice"
+    "voiceEyebrow": "Voice",
+    "timeLeft": "{{seconds}}s",
+    "actionError": "Action failed: {{code}}",
+    "nextHandAuto": "Next hand in {{seconds}}s…",
+    "dealingNext": "Dealing next hand…",
+    "gameOver": "Game over — not enough players with chips."
   },
   "clubs": {
     "title": "Private clubs",
