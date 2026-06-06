@@ -32,16 +32,23 @@ const defaultSlotTabs: { id: CosmeticSlot; label: string }[] = [
   { id: 'table', label: 'Table felt' }
 ];
 
+const previewStage =
+  'relative flex h-[7.25rem] w-full items-center justify-center overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-b from-[#0c141c] to-[#030508]';
+
+const feltSpotlight =
+  'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(13,61,40,0.45)_0%,rgba(3,5,8,0.15)_52%,transparent_72%)]';
+
 function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemId: string; imageUrl: string }) {
   const src = catalogPreviewUrl(itemId) ?? imageUrl;
 
   if (slot === 'deck') {
     return (
-      <div className="flex h-[7.25rem] w-full items-center justify-center rounded-xl bg-[#06080c] px-2 py-2">
+      <div className={previewStage}>
+        <div className={feltSpotlight} />
         <img
           src={src}
           alt=""
-          className="h-full w-auto max-w-full object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.55)]"
+          className="relative z-[1] h-[6.5rem] w-auto max-w-[88%] object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.55)]"
           loading="lazy"
           decoding="async"
         />
@@ -51,11 +58,12 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
 
   if (slot === 'chip') {
     return (
-      <div className="flex h-[7.25rem] w-full items-center justify-center rounded-xl bg-[#06080c] p-1.5">
+      <div className={previewStage}>
+        <div className={feltSpotlight} />
         <img
           src={src}
           alt=""
-          className="max-h-full max-w-full object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.55)]"
+          className="relative z-[1] h-[5.5rem] w-[5.5rem] object-contain object-center drop-shadow-[0_8px_18px_rgba(0,0,0,0.6)]"
           loading="lazy"
           decoding="async"
         />
@@ -65,16 +73,17 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
 
   if (slot === 'frame') {
     return (
-      <div className="flex h-[7.25rem] w-full items-center justify-center rounded-xl bg-[#06080c] p-2">
+      <div className={previewStage}>
+        <div className={feltSpotlight} />
         {itemId === 'frame_none' ? (
-          <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald/30 via-zinc-800 to-black ring-2 ring-white/25">
+          <div className="relative z-[1] flex h-[5rem] w-[5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald/30 via-zinc-800 to-black ring-2 ring-white/25">
             <span className="font-display text-sm font-semibold text-ivory/90">DP</span>
           </div>
         ) : (
           <img
             src={src}
             alt=""
-            className="max-h-full max-w-full object-contain drop-shadow-[0_0_12px_rgba(232,197,71,0.15)]"
+            className="relative z-[1] h-[5.5rem] w-[5.5rem] object-contain object-center drop-shadow-[0_0_14px_rgba(232,197,71,0.18)]"
             loading="lazy"
             decoding="async"
           />
@@ -85,11 +94,12 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
 
   if (slot === 'title') {
     return (
-      <div className="flex h-[7.25rem] w-full items-center justify-center rounded-xl bg-[#06080c] px-2 py-2.5">
+      <div className={previewStage}>
+        <div className={feltSpotlight} />
         <img
           src={src}
           alt=""
-          className="max-h-[4.75rem] w-full object-contain object-center drop-shadow-[0_4px_12px_rgba(0,0,0,0.65)]"
+          className="relative z-[1] max-h-[4.5rem] w-[94%] object-contain object-center drop-shadow-[0_4px_14px_rgba(0,0,0,0.65)]"
           loading="lazy"
           decoding="async"
         />
@@ -99,11 +109,9 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
 
   return (
     <div
-      className="h-[7.25rem] w-full overflow-hidden rounded-xl border border-white/[0.06] shadow-inner"
+      className={`${previewStage} bg-cover bg-center`}
       style={{
-        backgroundImage: `radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, transparent 60%), url(${src})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
+        backgroundImage: `radial-gradient(ellipse at center, rgba(255,255,255,0.05) 0%, transparent 55%), url(${src})`
       }}
     />
   );

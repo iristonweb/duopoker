@@ -1,6 +1,8 @@
 /**
- * Restore true PNG transparency on chip / frame / title *_game.png assets.
- * Uses edge-connected flood fill so light gold/silver foreground is preserved.
+ * Restore true RGBA transparency on chip / frame / title *_game.png assets.
+ * 1. Flood-fill white/checkerboard matte from edges (+ frame interior)
+ * 2. Defringe near-white halos
+ * 3. Trim, pad to square, resize — export as non-palette PNG (avoids white matte in browsers)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,19 +12,16 @@ import sharp from 'sharp';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cosmeticsDir = path.join(root, 'apps/web/public/assets/cosmetics');
 
+const EXPORT_SIZE = 512;
+
 const isMatteBackground = (r, g, b) => {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  const chroma = max - min;
-  return chroma <= 30 && max >= 132;
+  return max - min <= 30 && max >= 132;
 };
 
-const similarBackground = (r1, g1, b1, r2, g2, b2) => {
-  const dr = Math.abs(r1 - r2);
-  const dg = Math.abs(g1 - g2);
-  const db = Math.abs(b1 - b2);
-  return dr + dg + db <= 48;
-};
+const similarBackground = (r1, g1, b1, r2, g2, b2) =>
+  Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2) <= 48;
 
 const floodFromSeeds = (data, width, height, channels, seeds) => {
   const total = width * height;
@@ -46,9 +45,8 @@ const floodFromSeeds = (data, width, height, channels, seeds) => {
 
   while (head < tail) {
     const idx = queue[head++];
+    data[idx * channels + 3] = 0;
     const o = idx * channels;
-    data[o + 3] = 0;
-
     const r0 = data[o];
     const g0 = data[o + 1];
     const b0 = data[o + 2];
@@ -88,18 +86,34 @@ const removeFrameInterior = (data, width, height, channels) => {
   const cx = Math.floor(width / 2);
   const cy = Math.floor(height / 2);
   const radius = Math.floor(Math.min(width, height) * 0.22);
-  const seeds = [];
-  for (let a = 0; a < 360; a += 15) {
+  const seeds = [cy * width + cx];
+  for (let a = 0; a < 360; a += 12) {
     const rad = (a * Math.PI) / 180;
     const x = Math.round(cx + Math.cos(rad) * radius);
     const y = Math.round(cy + Math.sin(rad) * radius);
     if (x >= 0 && y >= 0 && x < width && y < height) seeds.push(y * width + x);
   }
-  seeds.push(cy * width + cx);
   floodFromSeeds(data, width, height, channels, seeds);
 };
 
-const processFile = async (filePath) => {
+const defringeNearWhite = (data, channels) => {
+  for (let i = 0; i < data.length; i += channels) {
+    const a = data[i + 3];
+    if (a < 8) continue;
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const max = Math.max(r, g, b);
+    const chroma = max - Math.min(r, g, b);
+    if (chroma > 38) continue;
+    if (max >= 200) {
+      const keep = Math.max(0, 1 - (max - 175) / 80);
+      data[i + 3] = Math.round(a * keep * keep);
+    }
+  }
+};
+
+const processFile = async (filePath, kind) => {
   const archiveDir = path.join(path.dirname(filePath), '_sources');
   fs.mkdirSync(archiveDir, { recursive: true });
   const base = path.basename(filePath);
@@ -113,35 +127,54 @@ const processFile = async (filePath) => {
   const out = Buffer.from(data);
 
   removeEdgeBackground(out, width, height, channels);
-  if (filePath.includes(`${path.sep}frames${path.sep}`)) {
-    removeFrameInterior(out, width, height, channels);
+  if (kind === 'frames') removeFrameInterior(out, width, height, channels);
+  defringeNearWhite(out, channels);
+
+  const transparentBg = { r: 0, g: 0, b: 0, alpha: 0 };
+  const rgbaPng = await sharp(out, { raw: { width, height, channels: 4 } }).png().toBuffer();
+
+  let working = rgbaPng;
+  try {
+    working = await sharp(rgbaPng).trim({ threshold: 8 }).png().toBuffer();
+  } catch {
+    /* keep full canvas */
   }
 
-  await sharp(out, { raw: { width, height, channels: 4 } })
-    .png({ compressionLevel: 9, quality: 95, effort: 10 })
-    .toFile(filePath);
+  const tMeta = await sharp(working).metadata();
+  const tw = tMeta.width ?? width;
+  const th = tMeta.height ?? height;
+
+  let exporter = sharp(working);
+  if (kind === 'titles') {
+    exporter = exporter.resize(480, 140, { fit: 'inside', background: transparentBg });
+  } else {
+    const side = Math.max(tw, th);
+    const padTop = Math.floor((side - th) / 2);
+    const padLeft = Math.floor((side - tw) / 2);
+    exporter = exporter
+      .extend({
+        top: padTop,
+        bottom: side - th - padTop,
+        left: padLeft,
+        right: side - tw - padLeft,
+        background: transparentBg
+      })
+      .resize(EXPORT_SIZE, EXPORT_SIZE, { fit: 'contain', background: transparentBg });
+  }
+
+  await exporter.png({ compressionLevel: 9, palette: false, effort: 10 }).toFile(filePath);
 
   const meta = await sharp(filePath).metadata();
-  const check = await sharp(filePath).ensureAlpha().raw().toBuffer();
-  let transparent = 0;
-  let whiteOpaque = 0;
-  for (let i = 0; i < check.length; i += 4) {
-    if (check[i + 3] < 16) transparent++;
-    else if (check[i] > 240 && check[i + 1] > 240 && check[i + 2] > 240) whiteOpaque++;
-  }
-  const px = width * height;
   console.log(
-    `${path.relative(cosmeticsDir, filePath)} → alpha=${meta.hasAlpha} transparent=${((transparent / px) * 100).toFixed(1)}% white=${((whiteOpaque / px) * 100).toFixed(2)}%`
+    `${path.relative(cosmeticsDir, filePath)} → ${meta.width}x${meta.height} alpha=${meta.hasAlpha} palette=${meta.isPalette ?? false}`
   );
 };
 
-const slots = ['chips', 'frames', 'titles'];
-
-for (const slot of slots) {
+for (const slot of ['chips', 'frames', 'titles']) {
   const dir = path.join(cosmeticsDir, slot);
   if (!fs.existsSync(dir)) continue;
   for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('_game.png')).sort()) {
-    await processFile(path.join(dir, f));
+    await processFile(path.join(dir, f), slot);
   }
 }
 
