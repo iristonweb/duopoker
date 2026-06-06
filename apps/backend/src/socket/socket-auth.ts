@@ -1,5 +1,6 @@
 import type { Server } from 'socket.io';
 import { verifyAccessToken } from '../auth/jwt.js';
+import { config } from '../config.js';
 
 declare module 'socket.io' {
   interface SocketData {
@@ -8,11 +9,18 @@ declare module 'socket.io' {
   }
 }
 
-/** Attaches authenticated user to socket.data when client sends `auth.token` JWT. */
-export const attachOptionalSocketAuth = (io: Server) => {
+const resolveUserId = (socket: import('socket.io').Socket, payloadUserId?: string): string | undefined => {
+  if (typeof socket.data.userId === 'string') return socket.data.userId;
+  if (!config.isProduction && typeof payloadUserId === 'string') return payloadUserId;
+  return undefined;
+};
+
+/** JWT required in production; optional in local dev for guest testing. */
+export const attachSocketAuth = (io: Server) => {
   io.use((socket, next) => {
     const token = (socket.handshake.auth as { token?: string } | undefined)?.token;
     if (!token) {
+      if (config.isProduction) return next(new Error('AUTH_REQUIRED'));
       return next();
     }
     try {
@@ -21,8 +29,10 @@ export const attachOptionalSocketAuth = (io: Server) => {
       socket.data.email = p.email;
       return next();
     } catch {
-      // Allow anonymous play with userId in payloads; client should refresh JWT for auth-only flows.
+      if (config.isProduction) return next(new Error('INVALID_TOKEN'));
       return next();
     }
   });
 };
+
+export { resolveUserId };

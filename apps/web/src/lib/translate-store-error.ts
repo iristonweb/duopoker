@@ -6,6 +6,11 @@ export function translateAuthError(code: string | undefined): string {
   return i18n.t(`auth.errors.${code}`, { defaultValue: code });
 }
 
+export function translateProfileError(code: string | undefined): string {
+  if (!code) return '';
+  return i18n.t(`profile.errors.${code}`, { defaultValue: code });
+}
+
 export function translateQueueError(code: string | undefined): string {
   if (!code) return '';
   return i18n.t(`queue.errors.${code}`, { defaultValue: code });

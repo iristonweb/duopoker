@@ -73,7 +73,7 @@ type AppStore = {
     amount?: number;
   }) => Promise<void>;
   readyNextHand: () => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string, nickname: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   fetchProfile: () => Promise<void>;
   updateProfile: (data: {
@@ -81,6 +81,7 @@ type AppStore = {
     avatar?: string | null;
     tableStatus?: string | null;
   }) => Promise<{ ok: boolean; error?: string }>;
+  updateNickname: (nickname: string) => Promise<{ ok: boolean; error?: string }>;
   fetchClubs: () => Promise<{ clubs: ClubSummary[] }>;
   createClub: (name: string, description?: string) => Promise<{ club: { id: string } }>;
   fetchClub: (clubId: string) => Promise<ClubDetail>;
@@ -412,14 +413,19 @@ export const useAppStore = create<AppStore>((set, get) => {
       const data = (await res.json()) as { session: SessionState };
       set({ session: data.session, sessionError: undefined });
     },
-    register: async (email, password, displayName) => {
+    register: async (email, password, displayName, nickname) => {
       set({ authError: undefined, authNotice: undefined });
       let res: Response;
       try {
         res = await fetch(resolveApiUrl('/auth/register'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, displayName })
+          body: JSON.stringify({
+            email,
+            password,
+            displayName,
+            nickname: nickname.replace(/^@/, '').trim().toLowerCase()
+          })
         });
       } catch {
         set({ authError: 'network' });
@@ -437,6 +443,7 @@ export const useAppStore = create<AppStore>((set, get) => {
           id: string;
           email: string;
           displayName: string;
+          nickname?: string;
           emailVerified?: boolean;
           role?: 'USER' | 'SUPERADMIN';
         };
@@ -451,6 +458,7 @@ export const useAppStore = create<AppStore>((set, get) => {
         userId: data.user.id,
         email: data.user.email,
         displayName: data.user.displayName,
+        nickname: data.user.nickname,
         userRole: data.user.role ?? 'USER',
         authError: undefined,
         authNotice: data.verificationRequired ? 'verificationRequired' : undefined
@@ -537,11 +545,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       }
     },
     updateProfile: async (data) => {
-      const uid = get().userId;
       const token = get().accessToken;
       if (!token) return { ok: false, error: 'notSignedIn' };
       try {
-        const res = await get().apiFetch(`/profile/${encodeURIComponent(uid)}`, {
+        const res = await get().apiFetch('/profile/me', {
           method: 'PUT',
           body: JSON.stringify(data)
         });
@@ -551,14 +558,35 @@ export const useAppStore = create<AppStore>((set, get) => {
         }
         const updated = (await res.json()) as {
           displayName: string;
+          nickname?: string;
           avatar?: string | null;
           tableStatus?: string | null;
         };
         set({
           displayName: updated.displayName,
+          nickname: updated.nickname ?? get().nickname,
           avatarUrl: updated.avatar ?? null,
           tableStatus: updated.tableStatus ?? null
         });
+        return { ok: true };
+      } catch {
+        return { ok: false, error: 'network' };
+      }
+    },
+    updateNickname: async (nickname) => {
+      const token = get().accessToken;
+      if (!token) return { ok: false, error: 'notSignedIn' };
+      try {
+        const res = await get().apiFetch('/profile/me/nickname', {
+          method: 'PUT',
+          body: JSON.stringify({ nickname: nickname.replace(/^@/, '').trim().toLowerCase() })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return { ok: false, error: readApiError(err, 'saveFailed') };
+        }
+        const updated = (await res.json()) as { nickname: string; displayName: string };
+        set({ nickname: updated.nickname, displayName: updated.displayName });
         return { ok: true };
       } catch {
         return { ok: false, error: 'network' };

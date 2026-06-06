@@ -64,5 +64,10 @@ export const config = {
   })(),
   livekitApiKey: process.env.LIVEKIT_API_KEY ?? '',
   livekitApiSecret: process.env.LIVEKIT_API_SECRET ?? '',
-  livekitUrl: process.env.LIVEKIT_URL ?? ''
+  livekitUrl: process.env.LIVEKIT_URL ?? '',
+  dataEncryptionKey: process.env.DATA_ENCRYPTION_KEY?.trim() ?? '',
+  dailyBonusChips: 500
 };
+
+export const allowDevMockCheckout = (): boolean =>
+  !config.isProduction && (config.mockCheckout || !config.stripeSecretKey);

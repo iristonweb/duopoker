@@ -13,12 +13,11 @@ import {
 } from '@duopoker/shared-types';
 import { ORGANIZER_PLAN_PRICES_RUB, PLAN_LIMITS } from '../services/club-plans.js';
 import { handleYooKassaWebhook } from '../services/yookassa.js';
-import { config } from '../config.js';
+import { config, allowDevMockCheckout } from '../config.js';
 import { authGuard } from '../middleware/auth.js';
-import { creditDailyBonus, recordPurchase } from '../services/monetization.js';
+import { claimDailyBonus, recordPurchase } from '../services/monetization.js';
 import { prisma } from '../lib/prisma.js';
 
-const bonusSchema = z.object({ userId: z.string(), amount: z.number().int().positive() });
 const purchaseSchema = z.object({
   userId: z.string(),
   itemId: z.string(),
@@ -203,6 +202,9 @@ monetizationRoutes.post('/stripe/webhook', async (c) => {
 });
 
 monetizationRoutes.post('/yookassa/webhook', async (c) => {
+  if (config.isProduction && !config.yookassaShopId) {
+    return c.json({ error: 'YooKassa not configured' }, 503);
+  }
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
     return c.json({ error: 'Invalid payload' }, 400);
@@ -245,7 +247,7 @@ monetizationRoutes.post('/checkout-session', async (c) => {
   const uid = c.get('auth').userId;
 
   const mockTier = tierFromToken(parsed.data.priceId);
-  if (config.mockCheckout || !config.stripeSecretKey) {
+  if (allowDevMockCheckout()) {
     if (parsed.data.mode === 'subscription' && mockTier) {
       await activateSubscription(uid, mockTier);
       return c.json({ id: 'mock_checkout_session', activated: true, tier: mockTier });
@@ -271,7 +273,7 @@ monetizationRoutes.post('/checkout-session', async (c) => {
 });
 
 monetizationRoutes.post('/mock-subscribe', async (c) => {
-  if (config.isProduction && config.stripeSecretKey && !config.mockCheckout) {
+  if (!allowDevMockCheckout()) {
     return c.json({ error: 'Use Stripe checkout in production' }, 403);
   }
   const body = await c.req.json().catch(() => null);
@@ -283,19 +285,17 @@ monetizationRoutes.post('/mock-subscribe', async (c) => {
 });
 
 monetizationRoutes.post('/bonus', async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const parsed = bonusSchema.safeParse(body);
-  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
-  if (parsed.data.userId !== c.get('auth').userId) {
-    return c.json({ error: 'Forbidden' }, 403);
+  const uid = c.get('auth').userId;
+  const result = await claimDailyBonus(uid, config.dailyBonusChips);
+  if (!result.ok) {
+    return c.json({ error: result.error }, 409);
   }
-  await creditDailyBonus(parsed.data.userId, parsed.data.amount);
-  return c.json({ ok: true });
+  return c.json({ ok: true, amount: result.amount });
 });
 
 monetizationRoutes.post('/purchase', async (c) => {
-  if (config.isProduction && !config.mockCheckout) {
-    return c.json({ error: 'Purchases must be confirmed via Stripe webhooks in production' }, 403);
+  if (!allowDevMockCheckout()) {
+    return c.json({ error: 'Purchases must be confirmed via payment webhooks' }, 403);
   }
   const body = await c.req.json().catch(() => null);
   const parsed = purchaseSchema.safeParse(body);

@@ -4,6 +4,7 @@ import { authGuard } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
 import { normalizeNicknameInput } from '../lib/nickname.js';
 import { joinTable } from '../services/game-session.js';
+import { newSessionId } from '../services/session-access.js';
 import {
   NON_GAMBLING_DISCLAIMER,
   ORGANIZER_PLAN_PRICES_RUB,
@@ -521,7 +522,7 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/start', async (c) => {
     return c.json({ error: 'Table is closed' }, 409);
   }
 
-  const sessionId = `club-${tableId.slice(-8)}-${Date.now()}`;
+  const sessionId = newSessionId('club');
 
   await prisma.privateTable.update({
     where: { id: tableId },
@@ -612,6 +613,11 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/close', async (c) => {
   if (!(await requireClubAdmin(clubId, actorId))) {
     return c.json({ error: 'Admin role required' }, 403);
   }
+
+  const existing = await prisma.privateTable.findFirst({
+    where: { id: tableId, clubId }
+  });
+  if (!existing) return c.json({ error: 'Table not found' }, 404);
 
   const table = await prisma.privateTable.update({
     where: { id: tableId },

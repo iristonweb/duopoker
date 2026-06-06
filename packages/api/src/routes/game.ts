@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
 import { authGuard } from '../middleware/auth.js';
-import { canJoinPrivateSession, getSessionPlayerProfiles } from '../services/private-table-auth.js';
+import { getSessionPlayerProfiles } from '../services/private-table-auth.js';
+import { assertCanJoinSession } from '../services/session-access.js';
 import {
   enterMatchmaking,
   getQueueStatus,
@@ -86,7 +87,7 @@ gameRoutes.post('/join', async (c) => {
 
   const { sessionId, mode, buyIn } = parsed.data;
 
-  const access = await canJoinPrivateSession(sessionId, userId);
+  const access = await assertCanJoinSession(sessionId, userId);
   if (!access.ok) {
     return c.json({ error: access.reason, code: access.reason }, 403);
   }

@@ -1,15 +1,35 @@
 import { prisma } from '../lib/prisma.js';
 
-export const creditDailyBonus = async (userId: string, amount: number) => {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { chips: { increment: amount } }
-  });
-};
+const DAILY_BONUS_PROVIDER = 'STRIPE' as const;
 
-const CHIP_PACKS: Record<string, number> = {
-  chips_2500: 2500,
-  chips_10000: 10000
+export const claimDailyBonus = async (
+  userId: string,
+  amount: number
+): Promise<{ ok: true; amount: number } | { ok: false; error: string }> => {
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const providerEventId = `daily_bonus:${userId}:${dayKey}`;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.paymentEvent.create({
+        data: {
+          userId,
+          provider: DAILY_BONUS_PROVIDER,
+          providerEventId,
+          amount: 0,
+          status: 'SUCCEEDED',
+          metadata: { type: 'daily_bonus', chips: amount, day: dayKey }
+        }
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { chips: { increment: amount } }
+      });
+    });
+    return { ok: true, amount };
+  } catch {
+    return { ok: false, error: 'ALREADY_CLAIMED' };
+  }
 };
 
 export const recordPurchase = async (
@@ -31,6 +51,10 @@ export const recordPurchase = async (
       metadata: { itemId }
     }
   });
+  const CHIP_PACKS: Record<string, number> = {
+    chips_2500: 2500,
+    chips_10000: 10000
+  };
   const chipGrant = CHIP_PACKS[itemId];
   if (chipGrant) {
     await prisma.user.update({

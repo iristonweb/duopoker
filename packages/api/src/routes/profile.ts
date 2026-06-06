@@ -3,19 +3,18 @@ import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
 import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
-
-const avatarField = z
-  .string()
-  .max(600_000)
-  .refine(
-    (v) => v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:image/'),
-    'Avatar must be a URL or image data URL'
-  );
+import {
+  decryptProfileRow,
+  encryptProfileWrite,
+  ownerProfileSelect,
+  publicProfileSelect,
+  safeAvatarField
+} from '../lib/profile-privacy.js';
 
 const profileSchema = z
   .object({
     displayName: z.string().min(2).max(40).optional(),
-    avatar: avatarField.optional().nullable(),
+    avatar: safeAvatarField.optional().nullable(),
     tableStatus: z.string().max(80).optional().nullable()
   })
   .refine((data) => Object.values(data).some((v) => v !== undefined), {
@@ -25,18 +24,6 @@ const profileSchema = z
 const nicknameSchema = z.object({
   nickname: z.string().min(3).max(20)
 });
-
-const userSelect = {
-  id: true,
-  email: true,
-  displayName: true,
-  nickname: true,
-  avatar: true,
-  tableStatus: true,
-  chips: true,
-  level: true,
-  xp: true
-} as const;
 
 export const profileRoutes = new Hono();
 
@@ -75,14 +62,30 @@ profileRoutes.put('/me/nickname', async (c) => {
   return c.json(updated);
 });
 
-profileRoutes.get('/:id', async (c) => {
-  const user = await prisma.user.findUnique({
-    where: { id: c.req.param('id') },
-    select: userSelect
+profileRoutes.put('/me', async (c) => {
+  const userId = c.get('auth').userId;
+  const body = await c.req.json().catch(() => null);
+  const parsed = profileSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: encryptProfileWrite(parsed.data),
+    select: ownerProfileSelect
   });
+  return c.json(decryptProfileRow(updated));
+});
+
+profileRoutes.get('/:id', async (c) => {
+  const requesterId = c.get('auth').userId;
+  const id = c.req.param('id');
+  const select = id === requesterId ? ownerProfileSelect : publicProfileSelect;
+  const user = await prisma.user.findUnique({ where: { id }, select });
   if (!user) return c.json({ error: 'User not found' }, 404);
   return c.json({
-    ...user,
+    ...decryptProfileRow(user),
     complianceDisclaimer: 'Virtual chips are not redeemable for real money.'
   });
 });
@@ -100,8 +103,8 @@ profileRoutes.put('/:id', async (c) => {
 
   const updated = await prisma.user.update({
     where: { id },
-    data: parsed.data,
-    select: userSelect
+    data: encryptProfileWrite(parsed.data),
+    select: ownerProfileSelect
   });
-  return c.json(updated);
+  return c.json(decryptProfileRow(updated));
 });

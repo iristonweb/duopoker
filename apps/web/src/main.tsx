@@ -10,6 +10,7 @@ import { Lobby } from './routes/Lobby';
 import { LegalPrivacy } from './routes/LegalPrivacy';
 import { LegalCommunity } from './routes/LegalCommunity';
 import { LegalTerms } from './routes/LegalTerms';
+import { ProfilePage } from './routes/ProfilePage';
 import { VerifyEmail } from './routes/VerifyEmail';
 import { Table } from './routes/Table';
 import { Clubs } from './routes/Clubs';
@@ -43,6 +44,7 @@ const App = () => (
       <Route path="/legal/terms" element={<LegalTerms />} />
       <Route path="/legal/privacy" element={<LegalPrivacy />} />
       <Route path="/legal/community" element={<LegalCommunity />} />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/" element={<Navigate to="/lobby" replace />} />
       <Route path="*" element={<Navigate to="/lobby" replace />} />

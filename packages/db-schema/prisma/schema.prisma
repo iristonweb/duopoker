@@ -1,6 +1,10 @@
 generator client {
   provider      = "prisma-client-js"
   output        = "../src/generated/prisma-client"
+  /**
+   * WASM avoids Windows EPERM locks on query_engine-windows.dll.node
+   */
+  engineType      = "wasm"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 

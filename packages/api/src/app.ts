@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import './types/hono.js';
 import { config } from './config.js';
 import { rateLimit } from './middleware/rate-limit.js';
+import { securityHeaders } from './middleware/security-headers.js';
 import { authRoutes } from './routes/auth.js';
 import { clubsRoutes } from './routes/clubs.js';
 import { gameRoutes } from './routes/game.js';
@@ -22,9 +23,7 @@ app.use(
     origin: (origin) => {
       if (!origin) return config.publicWebUrl.replace(/\/$/, '');
       const normalized = origin.replace(/\/$/, '');
-      if (allowedOrigins.has(normalized)) return origin;
-      if (!config.isProduction) return origin;
-      return config.publicWebUrl.replace(/\/$/, '');
+      return allowedOrigins.has(normalized) ? origin : null;
     },
     allowHeaders: ['Authorization', 'Content-Type', 'X-Device-Id'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -32,6 +31,7 @@ app.use(
   })
 );
 
+app.use('*', securityHeaders);
 app.use('*', rateLimit(120, 60_000));
 app.use('/auth/*', rateLimit(20, 60_000));
 

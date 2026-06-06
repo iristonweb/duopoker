@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { verifyAccessToken } from '../auth/jwt.js';
+import { authGuard } from '../middleware/auth.js';
 import { config } from '../config.js';
 import { createVoiceRoomToken, isLiveKitConfigured } from '../services/livekit.js';
+import { assertVoiceSessionAccess } from '../services/session-access.js';
 
 const tokenSchema = z.object({
   sessionId: z.string().min(1),
-  userId: z.string().min(1),
   displayName: z.string().min(1).max(64).optional()
 });
 
@@ -23,24 +23,17 @@ voiceRoutes.get('/status', (c) => {
   return c.json({ livekit: isLiveKitConfigured(cfg) ? 'configured' : 'missing' });
 });
 
-voiceRoutes.post('/token', async (c) => {
+voiceRoutes.post('/token', authGuard, async (c) => {
+  const userId = c.get('auth').userId;
   const body = await c.req.json().catch(() => null);
   const parsed = tokenSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
 
-  const authHeader = c.req.header('authorization') ?? '';
-  const bearer = authHeader.replace(/^Bearer /, '');
-  if (bearer) {
-    try {
-      const payload = verifyAccessToken(bearer);
-      if (payload.userId !== parsed.data.userId) {
-        return c.json({ error: 'userId mismatch' }, 403);
-      }
-    } catch {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
+  const access = await assertVoiceSessionAccess(parsed.data.sessionId, userId);
+  if (!access.ok) {
+    return c.json({ error: access.reason, code: access.reason }, 403);
   }
 
   const cfg = liveKitCfg();
@@ -53,7 +46,7 @@ voiceRoutes.post('/token', async (c) => {
     );
   }
 
-  const { sessionId, userId, displayName } = parsed.data;
+  const { sessionId, displayName } = parsed.data;
   const result = await createVoiceRoomToken(cfg, { sessionId, userId, displayName });
   return c.json(result);
 });

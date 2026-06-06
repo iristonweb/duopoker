@@ -22,15 +22,12 @@ import {
   OpponentSelector,
   PlayerCountSelector,
   SectionHeader,
-  SkinSelector,
   SubscriptionTierCard,
   TabGroup,
-  VoiceChatPanel,
-  type CosmeticItem
+  VoiceChatPanel
 } from '@duopoker/ui-kit';
 import { AppLogo } from '../components/AppLogo';
 import { LanguageSwitch } from '../components/LanguageSwitch';
-import { ProfileEditor } from '../components/ProfileEditor';
 import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
@@ -67,8 +64,8 @@ function AuthPanel() {
   const accessToken = useAppStore((s) => s.accessToken);
   const userId = useAppStore((s) => s.userId);
   const userRole = useAppStore((s) => s.userRole);
-  const email = useAppStore((s) => s.email);
   const displayName = useAppStore((s) => s.displayName);
+  const nickname = useAppStore((s) => s.nickname);
   const avatarUrl = useAppStore((s) => s.avatarUrl);
   const chips = useAppStore((s) => s.chips);
   const equipped = useAppStore((s) => s.equipped);
@@ -82,53 +79,61 @@ function AuthPanel() {
   const [emailIn, setEmailIn] = useState('');
   const [passwordIn, setPasswordIn] = useState('');
   const [nameIn, setNameIn] = useState('');
+  const [nicknameIn, setNicknameIn] = useState('');
   const [busy, setBusy] = useState(false);
 
   if (accessToken) {
+    const nickLabel = nickname ? `@${nickname}` : displayName ?? t('auth.player');
     return (
-      <GlassPanel glow="gold" className="w-full max-w-sm border-gold/20 p-4 sm:max-w-xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-3">
+      <GlassPanel glow="gold" className="w-full max-w-sm border-gold/20 p-4 sm:max-w-md">
+        <div className="flex items-start justify-between gap-3">
+          <Link to="/profile" className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl transition hover:bg-white/[0.03]">
             <PlayerAvatar
-              name={displayName ?? t('auth.player')}
+              name={nickLabel}
               avatarUrl={avatarUrl}
               frameId={equipped.frame}
               tier={subscriptionTier}
-              size="sm"
+              size="md"
               showTier
+              className="transition group-hover:scale-[1.03]"
             />
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/70">
-                  {t('auth.welcomeBack')}
-                </p>
-                {userRole === 'SUPERADMIN' ? (
-                  <Link
-                    to="/admin"
-                    className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-light"
-                  >
-                    {t('auth.adminBadge')}
-                  </Link>
-                ) : null}
-              </div>
-              <p className="truncate font-display text-lg font-semibold text-ivory" title={email ?? undefined}>
-                {displayName ?? t('auth.player')}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/70">
+                {t('auth.welcomeBack')}
               </p>
+              <p className="truncate font-display text-lg font-semibold text-gradient-gold" title={nickLabel}>
+                {nickLabel}
+              </p>
+              {displayName && nickname ? (
+                <p className="truncate text-xs text-muted">{displayName}</p>
+              ) : null}
               {chips != null ? (
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1.5 flex items-center gap-2">
                   <PokerChipVisual chipId={equipped.chip} size="sm" />
                   <p className="text-sm text-emerald">
                     <span className="font-mono font-medium">{chips.toLocaleString()}</span>
                   </p>
                 </div>
               ) : null}
+              <p className="mt-1 text-[10px] font-medium text-gold/60 group-hover:text-gold">
+                {t('profile.openProfile')} →
+              </p>
             </div>
+          </Link>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {userRole === 'SUPERADMIN' ? (
+              <Link
+                to="/admin"
+                className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-light"
+              >
+                {t('auth.adminBadge')}
+              </Link>
+            ) : null}
+            <Button variant="ghost" size="sm" onClick={() => logout()}>
+              {t('auth.signOut')}
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => logout()}>
-            {t('auth.signOut')}
-          </Button>
         </div>
-        <ProfileEditor />
       </GlassPanel>
     );
   }
@@ -166,7 +171,8 @@ function AuthPanel() {
           try {
             if (tab === 'register') {
               const name = nameIn.trim().length >= 2 ? nameIn.trim() : t('auth.player');
-              await register(emailIn, passwordIn, name);
+              const nick = nicknameIn.trim().replace(/^@/, '').toLowerCase();
+              await register(emailIn, passwordIn, name, nick);
             } else {
               await login(emailIn, passwordIn);
             }
@@ -178,13 +184,25 @@ function AuthPanel() {
         }}
       >
         {tab === 'register' ? (
-          <Input
-            label={t('auth.displayName')}
-            placeholder={t('auth.displayNamePlaceholder')}
-            minLength={2}
-            value={nameIn}
-            onChange={(e) => setNameIn(e.target.value)}
-          />
+          <>
+            <Input
+              label={t('auth.displayName')}
+              placeholder={t('auth.displayNamePlaceholder')}
+              minLength={2}
+              value={nameIn}
+              onChange={(e) => setNameIn(e.target.value)}
+            />
+            <Input
+              required
+              label={t('auth.nickname')}
+              placeholder={t('auth.nicknamePlaceholder')}
+              minLength={3}
+              maxLength={20}
+              value={nicknameIn}
+              onChange={(e) => setNicknameIn(e.target.value.replace(/^@/, '').toLowerCase())}
+            />
+            <p className="-mt-1 text-[11px] text-subtle">{t('auth.nicknameHint')}</p>
+          </>
         ) : null}
         <Input
           required
@@ -225,10 +243,7 @@ export const Lobby = () => {
   const sessionError = useAppStore((s) => s.sessionError);
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
   const equipped = useAppStore((s) => s.equipped);
-  const inventory = useAppStore((s) => s.inventory);
-  const equipCosmetic = useAppStore((s) => s.equipCosmetic);
   const socket = useAppStore((s) => s.socket);
-  const [cosmetics, setCosmetics] = useState<CosmeticItem[]>([]);
   const [catalogSubs, setCatalogSubs] = useState<CatalogSub[]>([]);
   const [gameModes, setGameModes] = useState<CatalogGameMode[]>(catalogGameModes);
   const [lobbyBannerUrl, setLobbyBannerUrl] = useState(lobbyHeroBanner);
@@ -337,14 +352,12 @@ export const Lobby = () => {
       .then((r) => r.json())
       .then(
         (d: {
-          cosmetics?: CosmeticItem[];
           subscriptions?: CatalogSub[];
           gameModes?: CatalogGameMode[];
           lobbyBannerUrl?: string;
           clubsBannerUrl?: string;
           mockCheckout?: boolean;
         }) => {
-          setCosmetics(d.cosmetics ?? []);
           setCatalogSubs(d.subscriptions ?? []);
           if (d.gameModes?.length) setGameModes(d.gameModes);
           if (d.lobbyBannerUrl) setLobbyBannerUrl(d.lobbyBannerUrl);
@@ -696,7 +709,7 @@ export const Lobby = () => {
             {checkoutMsg ? (
               <p className="rounded-xl border border-gold/25 bg-gold/10 px-4 py-3 text-sm text-gold-light">{checkoutMsg}</p>
             ) : null}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div id="subscriptions" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const).map((tier) => {
                 const active = subscriptionTier === tier;
                 const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}` as
@@ -771,30 +784,20 @@ export const Lobby = () => {
           variants={reduceMotion ? undefined : section}
           custom={3}
         >
-          <SkinSelector
-            catalog={cosmetics}
-            subscriptionTier={subscriptionTier}
-            inventory={inventory}
-            equipped={equipped}
-            eyebrow={t('cosmetics.eyebrow')}
-            title={t('cosmetics.title')}
-            description={t('cosmetics.desc')}
-            slotTabs={[
-              { id: 'deck' as const, label: t('cosmetics.tabs.deck') },
-              { id: 'chip' as const, label: t('cosmetics.tabs.chip') },
-              { id: 'frame' as const, label: t('cosmetics.tabs.frame') }
-            ]}
-            equipLabel={t('cosmetics.equip')}
-            equippedLabel={t('cosmetics.equipped')}
-            buyLabel={t('cosmetics.buy')}
-            onEquip={(itemId) => equipCosmetic(itemId)}
-            onBuy={(itemId) => {
-              void useAppStore
-                .getState()
-                .buyCosmetic(itemId)
-                .catch(() => setCheckoutMsg(t('lobby.checkoutFailed')));
-            }}
-          />
+          <GlassPanel glow="gold" className="flex flex-col justify-between border-gold/15 p-6">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
+                {t('cosmetics.eyebrow')}
+              </p>
+              <h2 className="mt-1 font-display text-xl font-semibold text-ivory">{t('cosmetics.title')}</h2>
+              <p className="mt-2 text-sm text-muted">{t('profile.cosmeticsOnProfile')}</p>
+            </div>
+            <Link to="/profile" className="mt-6">
+              <Button variant="secondary" size="md" className="w-full">
+                {t('profile.openProfile')}
+              </Button>
+            </Link>
+          </GlassPanel>
           <VoiceChatPanel
             eyebrow={t('voice.eyebrow')}
             title={t('voice.title')}

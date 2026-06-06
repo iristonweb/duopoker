@@ -11,7 +11,8 @@ import {
   shouldVerifyEmail,
   verificationExpiresAt
 } from '../services/email.js';
-import { resolveUniqueNickname } from '../lib/nickname.js';
+import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
+import { decryptProfileRow } from '../lib/profile-privacy.js';
 import { jsonError } from '../lib/http-error.js';
 
 const authSchema = z.object({
@@ -22,7 +23,8 @@ const authSchema = z.object({
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  displayName: z.string().min(2)
+  displayName: z.string().min(2).max(40),
+  nickname: z.string().min(3).max(20)
 });
 
 const issueSession = async (userId: string, email: string, deviceId: string) => {
@@ -49,6 +51,7 @@ authRoutes.post('/register', async (c) => {
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
       const first =
+        fieldErrors.nickname?.[0] ??
         fieldErrors.password?.[0] ??
         fieldErrors.email?.[0] ??
         fieldErrors.displayName?.[0] ??
@@ -62,8 +65,17 @@ authRoutes.post('/register', async (c) => {
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
     const verify = shouldVerifyEmail();
     const verificationToken = verify ? createVerificationToken() : null;
-    const tempId = `tmp_${Date.now()}`;
-    const nickname = await resolveUniqueNickname(prisma, parsed.data.displayName, tempId);
+    const nickname = normalizeNicknameInput(parsed.data.nickname);
+    if (!isValidNickname(nickname)) {
+      return c.json(
+        { error: 'Nickname must be 3-20 chars: lowercase letter first, then letters, numbers, underscore' },
+        400
+      );
+    }
+    const nicknameTaken = await prisma.user.findUnique({ where: { nickname } });
+    if (nicknameTaken) {
+      return c.json({ error: 'Nickname already taken' }, 409);
+    }
     const user = await prisma.user.create({
       data: {
         email: parsed.data.email,
@@ -134,6 +146,7 @@ authRoutes.post('/login', async (c) => {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
+        nickname: user.nickname,
         emailVerified: user.emailVerified,
         role: user.role
       }
@@ -245,7 +258,7 @@ authRoutes.get('/me', async (c) => {
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     const { subscriptions, inventory, ...profile } = user;
     return c.json({
-      user: profile,
+      user: decryptProfileRow(profile),
       subscription: subscriptions[0] ?? null,
       inventory
     });

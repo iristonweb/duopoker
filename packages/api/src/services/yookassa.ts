@@ -1,4 +1,4 @@
-import { config } from '../config.js';
+import { config, allowDevMockCheckout } from '../config.js';
 import { ORGANIZER_PLAN_PRICES_RUB } from './club-plans.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -25,7 +25,7 @@ export const createOrganizerPayment = async (opts: {
   const amountRub = ORGANIZER_PLAN_PRICES_RUB[opts.tier];
   const idempotenceKey = `${opts.clubId}-${opts.tier}-${Date.now()}`;
 
-  if (config.mockCheckout) {
+  if (allowDevMockCheckout()) {
     const paymentId = `mock_yk_${idempotenceKey}`;
     await activateOrganizerPlan({
       clubId: opts.clubId,
@@ -137,6 +137,21 @@ export const activateOrganizerPlan = async (opts: {
   });
 };
 
+const fetchPaymentFromYooKassa = async (paymentId: string) => {
+  const auth = yookassaAuth();
+  if (!auth) return null;
+  const res = await fetch(`https://api.yookassa.ru/v3/payments/${paymentId}`, {
+    headers: { Authorization: auth }
+  });
+  if (!res.ok) return null;
+  return (await res.json()) as {
+    id: string;
+    status: string;
+    amount?: { value?: string; currency?: string };
+    metadata?: Record<string, string>;
+  };
+};
+
 export const handleYooKassaWebhook = async (payload: {
   event: string;
   object: {
@@ -147,8 +162,13 @@ export const handleYooKassaWebhook = async (payload: {
   };
 }) => {
   if (payload.event !== 'payment.succeeded') return { handled: false as const };
-  const payment = payload.object;
-  if (payment.status !== 'succeeded') return { handled: false as const };
+
+  const verified = await fetchPaymentFromYooKassa(payload.object.id);
+  if (!verified || verified.status !== 'succeeded') {
+    return { handled: false as const, reason: 'PAYMENT_NOT_VERIFIED' };
+  }
+
+  const payment = verified;
 
   const meta = payment.metadata ?? {};
   if (meta.product !== 'organizer_plan') return { handled: false as const };

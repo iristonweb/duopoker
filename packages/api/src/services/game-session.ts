@@ -2,16 +2,21 @@ import {
   addPlayerToTable,
   applyTableAction,
   autoFoldActivePlayer,
+  buildAutoNextHand,
   createInitialTableState,
   createReplayTimeline,
+  enrichSessionMeta,
   isAutomatedPlayer,
   markReadyForNextHand,
   normalizeSessionState,
   pickBotAction,
+  shouldAutoStartNextHand,
+  shouldForceActionTimeout,
   startNewHand
 } from '@duopoker/game-engine/index';
 import type { MatchmakingTicket, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
+import { newSessionId } from './session-access.js';
 import { loadGameSnapshot, persistGameSnapshot } from './session-persistence.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -289,7 +294,7 @@ export const createMatchFromQueue = async (
   mode: SessionState['mode'],
   buyIn: number
 ) => {
-  const sessionId = `sess-${Date.now()}`;
+  const sessionId = newSessionId();
   await seatPlayersBatch(
     sessionId,
     ready.map((r) => r.userId),

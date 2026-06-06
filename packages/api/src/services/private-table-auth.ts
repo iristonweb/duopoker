@@ -4,6 +4,7 @@ import {
   type SubscriptionTier
 } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
+import { decryptField } from '../lib/field-crypto.js';
 import { BOT_PREFIX } from './game-session.js';
 
 export const getPrivateTableBySessionId = async (sessionId: string) =>
@@ -68,6 +69,7 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
       nickname: true,
       displayName: true,
       avatar: true,
+      tableStatus: true,
       subscriptions: {
         where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
         orderBy: { expiresAt: 'desc' },
@@ -110,8 +112,8 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
       userId: id,
       nickname: u?.nickname ?? null,
       displayName: u?.displayName ?? id.slice(0, 8),
-      avatar: u?.avatar ?? null,
-      tableStatus: u?.tableStatus ?? null,
+      avatar: decryptField(u?.avatar ?? null),
+      tableStatus: decryptField(u?.tableStatus ?? null),
       subscriptionTier: tier,
       equipped: resolveEquipped(equippedFromDb, tier, inventoryIds)
     };

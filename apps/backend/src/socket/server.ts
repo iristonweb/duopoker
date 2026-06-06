@@ -7,7 +7,7 @@ import type { SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
-import { canJoinPrivateSession } from '../services/private-table-auth.js';
+import { assertCanJoinSession, newSessionId } from '../services/session-access.js';
 import {
   autoStartNextHand,
   enqueueMatchmaking,
@@ -24,7 +24,7 @@ import {
   NEXT_HAND_DELAY_MS,
   playersWithChips
 } from '@duopoker/game-engine/index';
-import { attachOptionalSocketAuth } from './socket-auth.js';
+import { attachSocketAuth, resolveUserId } from './socket-auth.js';
 
 const joinSchema = z.object({
   sessionId: z.string().min(1),
@@ -170,7 +170,7 @@ export const createRealtimeServer = (app: Express) => {
       credentials: true
     }
   });
-  attachOptionalSocketAuth(io);
+  attachSocketAuth(io);
   const replayCollection = getMongoDb().collection('replays');
 
   io.on('connection', (socket) => {
@@ -190,9 +190,13 @@ export const createRealtimeServer = (app: Express) => {
       }
 
       const { sessionId, mode, buyIn } = joined.data;
-      const userId = socket.data.userId ?? joined.data.userId;
+      const userId = resolveUserId(socket, joined.data.userId);
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
 
-      const access = await canJoinPrivateSession(sessionId, userId);
+      const access = await assertCanJoinSession(sessionId, userId);
       if (!access.ok) {
         socket.emit('sessionError', { code: access.reason });
         return;
@@ -219,9 +223,15 @@ export const createRealtimeServer = (app: Express) => {
 
       clearActionTimer(parsed.data.sessionId);
 
+      const userId = resolveUserId(socket, parsed.data.userId);
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
+
       const result = await processPlayerAction({
         ...parsed.data,
-        userId: socket.data.userId ?? parsed.data.userId
+        userId
       });
       if (result.rejected) {
         socket.emit('sessionError', { code: result.reason });
@@ -260,12 +270,7 @@ export const createRealtimeServer = (app: Express) => {
 
     socket.on('readyNextHand', async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
       if (!sessionId || typeof sessionId !== 'string') return;
-      const userId =
-        typeof socket.data.userId === 'string'
-          ? socket.data.userId
-          : typeof payloadUserId === 'string'
-            ? payloadUserId
-            : undefined;
+      const userId = resolveUserId(socket, payloadUserId);
       if (!userId) {
         socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
         return;
@@ -290,7 +295,11 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: 'INVALID_MATCHMAKING_PAYLOAD' });
         return;
       }
-      const userId = socket.data.userId ?? parsed.data.userId;
+      const userId = resolveUserId(socket, parsed.data.userId);
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
       registerUserSocket(userId, socket.id);
       const { opponent, playerCount, ...ticketFields } = parsed.data;
       const ready = enqueueMatchmaking(
@@ -313,7 +322,7 @@ export const createRealtimeServer = (app: Express) => {
         return;
       }
       const match = {
-        sessionId: `sess-${Date.now()}`,
+        sessionId: newSessionId(),
         players: ready.map((r) => r.userId),
         mode: parsed.data.mode,
         buyIn: parsed.data.buyIn

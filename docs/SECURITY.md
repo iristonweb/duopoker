@@ -1,0 +1,81 @@
+# Безопасность DuoPoker
+
+Документ описывает меры защиты данных, закрытые уязвимости и обязательные переменные окружения для production (`https://duopoker.ru`).
+
+## Шифрование персональных данных
+
+Поля профиля **avatar** и **tableStatus** шифруются на сервере (AES-256-GCM) перед записью в БД.
+
+| Переменная | Описание |
+|---|---|
+| `DATA_ENCRYPTION_KEY` | 64 hex-символа (256 бит) или passphrase. **Обязательна в production.** |
+
+Без ключа данные хранятся как есть (режим миграции). После установки ключа новые записи шифруются; старые читаются в открытом виде до пересохранения профиля.
+
+Email и пароли: email в БД в открытом виде (нужен для входа), пароль — bcrypt hash.
+
+## Обязательные секреты (production)
+
+| Переменная | Назначение |
+|---|---|
+| `JWT_SECRET` | Access-токены (не dev-default) |
+| `JWT_REFRESH_SECRET` | Refresh-токены |
+| `DATA_ENCRYPTION_KEY` | Шифрование avatar/status |
+| `DATABASE_URL` | PostgreSQL |
+| `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` | Подписки и чип-паки |
+| `YOOKASSA_SHOP_ID` + `YOOKASSA_SECRET_KEY` | Клубные тарифы (РФ) |
+
+`MOCK_CHECKOUT=true` **отключён в production** — mock-подписки и произвольные покупки недоступны.
+
+## Закрытые уязвимости
+
+| Проблема | Исправление |
+|---|---|
+| Клиент задавал сумму daily bonus | Фиксированный бонус 500 фишек, 1 раз в день, idempotent `paymentEvent` |
+| LiveKit token без auth | `POST /voice/token` требует JWT + членство в сессии |
+| Join в чужую игру | `assertCanJoinSession`: match assignment, club seat или rejoin |
+| Предсказуемые session ID | UUID (`sess-{uuid}`, `club-{uuid}`) |
+| IDOR закрытия клубного стола | Проверка `tableId` + `clubId` перед close |
+| Email в публичном профиле | `GET /profile/:id` — без email (только `/me`) |
+| YooKassa webhook без проверки | Платёж верифицируется через API YooKassa перед активацией |
+| Mock Stripe/YooKassa в prod | `allowDevMockCheckout()` — только dev |
+| Socket impersonation | JWT обязателен в production; `userId` из payload игнорируется |
+| CORS reflect-any | Whitelist origins из `CORS_ORIGIN` + `PUBLIC_WEB_URL` |
+
+## HTTP-заголовки
+
+API (`security-headers` middleware) и статика (`vercel.json`):
+
+- `Strict-Transport-Security` (production)
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`
+
+## Аватары
+
+Только загруженные data-URL (`image/jpeg|png|webp|gif`), max ~320 KB. Внешние URL запрещены (SSRF/privacy).
+
+## JWT в localStorage
+
+Токены хранятся в `localStorage` на клиенте — стандартный риск XSS. Рекомендации:
+
+- Не вставлять сторонние скрипты на duopoker.ru
+- CSP можно усилить отдельно (требует аудита inline-стилей Vite)
+
+## Rate limiting
+
+API: 120 req/min глобально, 20 req/min на `/auth/*`.
+
+## Чеклист деплоя Vercel
+
+1. `DATA_ENCRYPTION_KEY` — сгенерировать: `openssl rand -hex 32`
+2. `JWT_SECRET`, `JWT_REFRESH_SECRET` — уникальные длинные строки
+3. `PUBLIC_WEB_URL=https://duopoker.ru`
+4. `CORS_ORIGIN=https://duopoker.ru,https://www.duopoker.ru`
+5. Stripe + YooKassa webhook URLs в dashboards провайдеров
+6. **Не** ставить `MOCK_CHECKOUT=true` в production
+
+## Сообщить об уязвимости
+
+Пишите на контакт из репозитория / Issues GitHub с пометкой **Security**.
