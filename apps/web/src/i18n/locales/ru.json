@@ -253,7 +253,9 @@
     "subscriptionsTitle": "Подписки",
     "subscriptionsDesc": "Выберите тариф — нажмите «Подробнее», чтобы увидеть набор косметики и привилегии.",
     "subscriptionViewDetails": "Подробнее",
-    "subscriptionHideDetails": "Свернуть"
+    "subscriptionModalClose": "Закрыть",
+    "subscriptionModalPerks": "Привилегии",
+    "subscriptionModalCosmetics": "Косметика в подписке"
   },
   "table": {
     "liveTable": "Живой стол",

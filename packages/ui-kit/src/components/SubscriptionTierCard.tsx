@@ -62,15 +62,10 @@ export function SubscriptionTierCard({
   bannerUrl,
   tierName,
   perkDescription,
-  featureBullets,
-  perks,
   active = false,
   featured = false,
-  expanded = false,
-  onToggleExpand,
-  expandLabel = 'View details',
-  collapseLabel = 'Hide details',
-  detailsContent,
+  onViewDetails,
+  viewDetailsLabel = 'View details',
   children,
   className
 }: {
@@ -79,15 +74,10 @@ export function SubscriptionTierCard({
   bannerUrl?: string;
   tierName?: string;
   perkDescription?: string;
-  featureBullets?: string[];
-  perks?: string[];
   active?: boolean;
   featured?: boolean;
-  expanded?: boolean;
-  onToggleExpand?: () => void;
-  expandLabel?: string;
-  collapseLabel?: string;
-  detailsContent?: ReactNode;
+  onViewDetails?: () => void;
+  viewDetailsLabel?: string;
   children?: ReactNode;
   className?: string;
 }) {
@@ -155,41 +145,14 @@ export function SubscriptionTierCard({
           <p className="shrink-0 text-base font-semibold text-gold sm:text-lg">{price}</p>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted">{summary}</p>
-        {expanded && featureBullets?.length ? (
-          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
-            {featureBullets.map((bullet) => (
-              <li key={bullet} className="flex items-start gap-2 text-xs text-ivory/90">
-                <span className="mt-0.5 text-emerald" aria-hidden>
-                  ✓
-                </span>
-                <span>{bullet}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {expanded && detailsContent ? (
-          <div className="mt-4 border-t border-white/10 pt-4">{detailsContent}</div>
-        ) : null}
-        {expanded && perks?.length && !detailsContent ? (
-          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
-            {perks.map((perk) => (
-              <li key={perk} className="flex items-start gap-2 text-xs text-ivory/85">
-                <span className="mt-0.5 text-gold" aria-hidden>
-                  ✦
-                </span>
-                <span>{perk}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {onToggleExpand ? (
+        {onViewDetails ? (
           <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
-            <Button variant="ghost" size="sm" type="button" onClick={onToggleExpand}>
-              {expanded ? collapseLabel : expandLabel}
+            <Button variant="ghost" size="sm" type="button" onClick={onViewDetails}>
+              {viewDetailsLabel}
             </Button>
           </div>
         ) : null}
-        {children ? <div className={cn('mt-4', !onToggleExpand && 'border-t border-white/10 pt-4')}>{children}</div> : null}
+        {children ? <div className={cn('mt-4', !onViewDetails && 'border-t border-white/10 pt-4')}>{children}</div> : null}
       </div>
     </GlassPanel>
   );

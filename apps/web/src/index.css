@@ -247,6 +247,32 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+
+  .premium-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232, 197, 71, 0.35) rgba(255, 255, 255, 0.04);
+  }
+
+  .premium-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .premium-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 999px;
+  }
+
+  .premium-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(232, 197, 71, 0.45), rgba(180, 130, 50, 0.35));
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .premium-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(245, 230, 168, 0.55), rgba(232, 197, 71, 0.45));
+    background-clip: padding-box;
+  }
 }
 
 @keyframes shimmer {

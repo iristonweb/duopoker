@@ -253,7 +253,9 @@
     "subscriptionsTitle": "Subscriptions",
     "subscriptionsDesc": "Pick a tier — tap View details to see the cosmetic bundle and perks.",
     "subscriptionViewDetails": "View details",
-    "subscriptionHideDetails": "Hide details"
+    "subscriptionModalClose": "Close",
+    "subscriptionModalPerks": "Perks",
+    "subscriptionModalCosmetics": "Included cosmetics"
   },
   "table": {
     "liveTable": "Live table",

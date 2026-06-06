@@ -32,7 +32,7 @@ import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { PokerTable3D } from '../components/PokerTable3D';
-import { SubscriptionCosmeticBundle } from '../components/subscriptions/SubscriptionCosmeticBundle';
+import { SubscriptionDetailModal } from '../components/subscriptions/SubscriptionDetailModal';
 import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { useAppStore } from '../store/useAppStore';
 import {
@@ -285,7 +285,7 @@ export const Lobby = () => {
   const [catalogYookassaConfigured, setCatalogYookassaConfigured] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
-  const [expandedSubTier, setExpandedSubTier] = useState<PaidSubscriptionTier | null>(null);
+  const [detailSubTier, setDetailSubTier] = useState<PaidSubscriptionTier | null>(null);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
   const [queueBusy, setQueueBusy] = useState(false);
   const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -792,27 +792,17 @@ export const Lobby = () => {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PAID_TIERS.map((tier) => {
                   const active = subscriptionTier === tier;
-                  const expanded = expandedSubTier === tier;
                   return (
                     <SubscriptionTierCard
                       key={tier}
                       tier={tier}
-                      className={expanded ? 'sm:col-span-2 lg:col-span-3' : undefined}
                       price={subscriptionPriceLabel(tier)}
                       tierName={t(`subscriptions.${tier.toLowerCase()}`)}
                       perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}`)}
-                      featureBullets={expanded ? tierPerkBullets(tier) : undefined}
                       active={active}
                       featured={tier === 'BLACK'}
-                      expanded={expanded}
-                      expandLabel={t('lobby.subscriptionViewDetails')}
-                      collapseLabel={t('lobby.subscriptionHideDetails')}
-                      onToggleExpand={() => setExpandedSubTier(expanded ? null : tier)}
-                      detailsContent={
-                        expanded ? (
-                          <SubscriptionCosmeticBundle tier={tier} labels={cosmeticSlotLabels} />
-                        ) : undefined
-                      }
+                      viewDetailsLabel={t('lobby.subscriptionViewDetails')}
+                      onViewDetails={() => setDetailSubTier(tier)}
                       bannerUrl={subBanner(tier)}
                     >
                       <Button
@@ -832,6 +822,22 @@ export const Lobby = () => {
                   );
                 })}
               </div>
+              {detailSubTier ? (
+                <SubscriptionDetailModal
+                  tier={detailSubTier}
+                  open={Boolean(detailSubTier)}
+                  onClose={() => setDetailSubTier(null)}
+                  tierName={t(`subscriptions.${detailSubTier.toLowerCase()}`)}
+                  price={subscriptionPriceLabel(detailSubTier)}
+                  perkDescription={t(`subscriptions.perkSummary.${detailSubTier.toLowerCase()}`)}
+                  featureBullets={tierPerkBullets(detailSubTier)}
+                  bannerUrl={subBanner(detailSubTier)}
+                  cosmeticSlotLabels={cosmeticSlotLabels}
+                  active={subscriptionTier === detailSubTier}
+                  subscribeBusy={checkoutBusy === detailSubTier}
+                  onSubscribe={() => void startSubscription(detailSubTier)}
+                />
+              ) : null}
             </div>
           </motion.div>
         </div>
