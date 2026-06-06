@@ -60,7 +60,9 @@ Project → **Settings → Environment Variables** (Production + Preview):
 | `LIVEKIT_API_SECRET` | из cloud.livekit.io |
 | `LIVEKIT_URL` | `wss://xxx.livekit.cloud` |
 
-**Не добавляй** `VITE_API_URL` — API на том же домене через rewrites.
+**Не добавляй** `VITE_API_URL` — API на том же домене через `/api/*` (см. `vercel.json`).
+
+**Маршруты SPA** (`/profile`, `/admin`, `/clubs`, `/lobby` и т.д.) отдаются как `index.html`. API только под префиксом `/api/…` — короткие rewrites вроде `/profile → /api/profile` ломают страницы.
 
 **Root Directory:** Settings → **Build and Deployment** → Root Directory должен быть **пустым** (корень репозитория). Handler — `api/index.ts`, конфиг — корневой `vercel.json`.
 

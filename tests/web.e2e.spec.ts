@@ -20,23 +20,44 @@ test('metrics endpoint is available', async ({ request }, testInfo) => {
 
 test('lobby defaults to Russian queue button', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
+  await page.getByRole('radio', { name: /С людьми/i }).click();
   await expect(page.getByRole('button', { name: /Играть Hold'em/i })).toBeVisible();
 });
 
 test('lobby language switch toggles queue button to English', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
   await page.getByRole('button', { name: 'EN' }).click();
+  await page.getByRole('radio', { name: /Vs players/i }).click();
   await expect(page.getByRole('button', { name: /Queue Hold'em/i })).toBeVisible();
 });
 
 test('lobby page renders title', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
-  await expect(page.getByRole('heading', { name: /DuoPoker/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /DP\s*CLUB/i })).toBeVisible();
 });
 
-test('lobby shows cosmetic preview images', async ({ page }) => {
+test('profile SPA route does not 404', async ({ page }) => {
+  const res = await page.goto('http://127.0.0.1:5180/profile');
+  expect(res?.status()).toBeLessThan(400);
+  await expect(page.locator('body')).not.toContainText('404: NOT_FOUND');
+});
+
+test('admin SPA route does not 404', async ({ page }) => {
+  const res = await page.goto('http://127.0.0.1:5180/admin');
+  expect(res?.status()).toBeLessThan(400);
+  await expect(page.locator('body')).not.toContainText('404: NOT_FOUND');
+});
+
+test('clubs SPA route does not 404', async ({ page }) => {
+  const res = await page.goto('http://127.0.0.1:5180/clubs');
+  expect(res?.status()).toBeLessThan(400);
+  await expect(page.locator('body')).not.toContainText('404: NOT_FOUND');
+});
+
+test('lobby shows cosmetics section', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
-  await expect(page.locator('img[src="/assets/cosmetics/deck_neon.svg"]').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Стиль за столом/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Открыть профиль/i })).toBeVisible();
 });
 
 test('legal terms route is reachable', async ({ page }) => {

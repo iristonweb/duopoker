@@ -50,15 +50,8 @@ export default defineConfig(({ mode }) => {
       port: 5180,
       strictPort: true,
       proxy: {
-        '/auth': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/profile': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/game': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/monetization': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/clubs': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/voice': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/admin': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/health': { ...apiProxy, rewrite: (p) => `/api${p}` },
-        '/api': apiProxy
+        '/api': apiProxy,
+        '/health': { ...apiProxy, rewrite: () => '/api/health' }
       }
     }
   };
