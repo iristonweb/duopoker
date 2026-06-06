@@ -73,6 +73,7 @@ export const startJokerHand = (
   const { playerCards, deck: afterDeal } = dealFromDeck(shuffled, state.players, cardsThisDeal);
   const { trumpCard, trumpSuit, deck } = revealTrump(afterDeal);
   const prevScores = state.joker?.scores;
+  const dealHistory = state.joker?.dealHistory ?? [];
   const joker: JokerHandState = {
     matchHandIndex,
     cardsThisDeal,
@@ -83,7 +84,8 @@ export const startJokerHand = (
     tricksWon: Object.fromEntries(state.players.map((p) => [p, 0])),
     currentTrick: [],
     trickNumber: 0,
-    scores: emptyJokerScores(state.players, prevScores)
+    scores: emptyJokerScores(state.players, prevScores),
+    dealHistory
   };
   const firstBidder = leftOfDealer({ ...state, dealerIndex });
   return {
@@ -161,6 +163,19 @@ const finishTrick = (state: SessionState): SessionState => {
   }
 
   const best = state.players.reduce((a, b) => ((scores[a] ?? 0) >= (scores[b] ?? 0) ? a : b));
+  const bids: Record<string, number> = {};
+  for (const p of state.players) {
+    bids[p] = j.bids[p] ?? 0;
+  }
+  const dealRecord = {
+    matchHandIndex: j.matchHandIndex,
+    pool: j.pool,
+    cardsThisDeal: j.cardsThisDeal,
+    bids,
+    tricksWon: { ...tricksWon },
+    handPoints: { ...handPoints }
+  };
+  const dealHistory = [...(j.dealHistory ?? []), dealRecord];
   return withHandComplete({
     ...state,
     street: 'COMPLETE',
@@ -169,7 +184,7 @@ const finishTrick = (state: SessionState): SessionState => {
     winnersShare: handPoints,
     activePlayerIndex: state.dealerIndex,
     activePlayerId: state.players[state.dealerIndex],
-    joker: { ...j, tricksWon, currentTrick: [], trickNumber, scores, handPoints }
+    joker: { ...j, tricksWon, currentTrick: [], trickNumber, scores, handPoints, dealHistory }
   });
 };
 

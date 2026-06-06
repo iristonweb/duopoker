@@ -130,6 +130,15 @@ export interface JokerTrickPlay {
   card: Card;
 }
 
+export interface JokerDealRecord {
+  matchHandIndex: number;
+  pool: 1 | 2 | 3 | 4;
+  cardsThisDeal: number;
+  bids: Record<string, number>;
+  tricksWon: Record<string, number>;
+  handPoints: Record<string, number>;
+}
+
 export interface JokerHandState {
   /** 0..23 index within the 24-hand match */
   matchHandIndex: number;
@@ -146,6 +155,8 @@ export interface JokerHandState {
   scores: Record<string, number>;
   /** Points earned this hand per player */
   handPoints?: Record<string, number>;
+  /** Completed deals in this match (for score notebook) */
+  dealHistory?: JokerDealRecord[];
 }
 
 export interface PlayerAction {

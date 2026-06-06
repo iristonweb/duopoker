@@ -12,7 +12,8 @@ import { TableActionDock } from '../components/table/TableActionDock';
 import { JokerActionDock } from '../components/table/JokerActionDock';
 import { HandResultOverlay } from '../components/table/HandResultOverlay';
 import { VoiceChatPill } from '../components/table/VoiceChatPill';
-import { GameEventFeed } from '../components/table/GameEventFeed';
+import { GameStoryPanel } from '../components/table/GameStoryPanel';
+import { JokerNotebookPanel } from '../components/table/JokerNotebookPanel';
 import { BustedPlayerOverlay } from '../components/table/BustedPlayerOverlay';
 import { useCommunityCardSounds, useTableGameFeed } from '../hooks/useTableGameFeed';
 import { useTableSessionTick } from '../hooks/useTableSessionTick';
@@ -48,6 +49,9 @@ export const Table = () => {
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
   const inventory = useAppStore((s) => s.inventory);
   const heroTableStatus = useAppStore((s) => s.tableStatus);
+  const avatarUrl = useAppStore((s) => s.avatarUrl);
+  const displayName = useAppStore((s) => s.displayName);
+  const nickname = useAppStore((s) => s.nickname);
 
   const [playerProfiles, setPlayerProfiles] = useState<
     Record<
@@ -61,6 +65,21 @@ export const Table = () => {
       }
     >
   >({});
+
+  useEffect(() => {
+    if (!userId) return;
+    const heroName = nickname ? `@${nickname}` : (displayName || userId.slice(0, 8));
+    setPlayerProfiles((prev) => ({
+      ...prev,
+      [userId]: {
+        name: heroName,
+        avatar: avatarUrl,
+        tableStatus: heroTableStatus,
+        subscriptionTier,
+        equipped
+      }
+    }));
+  }, [userId, nickname, displayName, avatarUrl, heroTableStatus, subscriptionTier, equipped]);
 
   useEffect(() => {
     if (!routeSessionId || !session?.players?.length) return;
@@ -137,7 +156,7 @@ export const Table = () => {
 
   const label = (uid: string) => playerProfiles[uid]?.name ?? uid.slice(0, 8);
 
-  const feedEvents = useTableGameFeed(session, label, t, soundOn);
+  const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(session, label, t, soundOn);
   useCommunityCardSounds(session?.communityCards?.length ?? 0, soundOn);
 
   const sid = session?.sessionId;
@@ -154,10 +173,13 @@ export const Table = () => {
       return {
         userId: uid,
         name: profile?.name ?? uid.slice(0, 8),
-        stack: session.stacks[uid] ?? 0,
+        stack:
+          session.mode === 'JOKER'
+            ? (session.joker?.scores[uid] ?? 0)
+            : (session.stacks[uid] ?? 0),
         roundBet: session.playerRoundBet[uid] ?? 0,
         isDealer: uid === dealerUid,
-        avatar: profile?.avatar,
+        avatar: hero ? (avatarUrl ?? profile?.avatar) : profile?.avatar,
         tableStatus: hero ? heroTableStatus : profile?.tableStatus,
         tier: hero ? subscriptionTier : (profile?.subscriptionTier ?? 'FREE'),
         equipped: hero ? equipped : profile?.equipped,
@@ -169,7 +191,17 @@ export const Table = () => {
       };
     });
     return rotatePlayersForHero(visuals, userId);
-  }, [session, playerProfiles, userId, subscriptionTier, equipped, inventory, heroTableStatus, activeId]);
+  }, [
+    session,
+    playerProfiles,
+    userId,
+    subscriptionTier,
+    equipped,
+    inventory,
+    heroTableStatus,
+    avatarUrl,
+    activeId
+  ]);
 
   useEffect(() => {
     connect();
@@ -351,7 +383,7 @@ export const Table = () => {
         />
       }
       table={
-        !waitingForPlayers && session.street ? (
+        session.street ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -394,26 +426,44 @@ export const Table = () => {
               onWatch={() => setBustedDismissed(true)}
               onLeave={() => void handleLeaveTable()}
             />
-            <div className="pointer-events-auto absolute left-3 top-16 z-20 sm:left-4 sm:top-[4.5rem]">
-              <GameEventFeed events={feedEvents} title={t('table.feedTitle')} />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 border-white/10 text-[10px] uppercase tracking-wider"
-                onClick={() => setSoundOn((v) => !v)}
-              >
-                {soundOn ? t('table.soundOn') : t('table.soundOff')}
-              </Button>
-            </div>
+            <GameStoryPanel
+              className="pointer-events-auto absolute left-3 top-16 z-20 sm:left-4 sm:top-[4.5rem]"
+              events={feedEvents}
+              pulseKey={feedPulseKey}
+              soundOn={soundOn}
+              onSoundToggle={() => setSoundOn((v) => !v)}
+              title={t('table.feedTitle')}
+              openLabel={t('table.feedOpenHistory')}
+              closeLabel={t('table.feedCloseHistory')}
+              emptyLabel={t('table.feedEmpty')}
+            />
+            {session.mode === 'JOKER' && session.joker ? (
+              <JokerNotebookPanel
+                className="pointer-events-auto absolute right-3 top-16 z-20 sm:right-4 sm:top-[4.5rem]"
+                joker={session.joker}
+                players={session.players}
+                label={label}
+                title={t('table.notebookTitle')}
+                openLabel={t('table.notebookOpen')}
+                closeLabel={t('table.notebookClose')}
+                dealLabel={t('table.notebookDeal')}
+                bidLabel={t('table.notebookBid')}
+                tricksLabel={t('table.notebookTricks')}
+                pointsLabel={t('table.notebookPoints')}
+                totalLabel={t('table.notebookTotal')}
+                liveLabel={t('table.notebookLive')}
+              />
+            ) : null}
             <VoiceChatPill />
+            {waitingForPlayers ? (
+              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/45 px-6 backdrop-blur-[2px]">
+                <GlassPanel glow="gold" className="pointer-events-auto max-w-md border-gold/15 p-6 text-center">
+                  <p className="font-display text-lg text-ivory">{t('table.waitingOpponent')}</p>
+                </GlassPanel>
+              </div>
+            ) : null}
           </motion.div>
-        ) : (
-          <div className="flex h-full items-center justify-center px-6">
-            <GlassPanel glow="gold" className="max-w-md border-gold/15 p-6 text-center">
-              <p className="font-display text-lg text-ivory">{t('table.waitingOpponent')}</p>
-            </GlassPanel>
-          </div>
-        )
+        ) : null
       }
       dock={
         session.mode === 'JOKER' && session.joker ? (

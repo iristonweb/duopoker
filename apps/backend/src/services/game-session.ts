@@ -10,6 +10,8 @@ import {
   markReadyForNextHand,
   normalizeSessionState,
   pickBotAction,
+  pickBotJokerAction,
+  jokerTimeoutAction,
   removePlayerFromTable,
   shouldAutoStartNextHand,
   shouldForceActionTimeout,
@@ -184,8 +186,12 @@ export const advanceBotTurns = async (sessionId: string): Promise<SessionState |
     if (!activeId || !isAutomatedPlayer(activeId)) break;
     if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') break;
 
-    const primary = pickBotAction(state, activeId);
+    const primary =
+      state.mode === 'JOKER' ? pickBotJokerAction(state, activeId) : pickBotAction(state, activeId);
     let r = await processPlayerAction(primary);
+    if (r.rejected && state.mode === 'JOKER') {
+      r = await processPlayerAction(jokerTimeoutAction(state, activeId));
+    }
     if (r.rejected) {
       r = await processPlayerAction({ ...primary, type: 'call', at: Date.now() });
     }

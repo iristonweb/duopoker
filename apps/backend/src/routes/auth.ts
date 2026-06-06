@@ -7,6 +7,9 @@ import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { prisma } from '../services/prisma.js';
 import { resolveUniqueNickname } from '../lib/nickname.js';
+import { decryptProfileRow } from '../lib/profile-privacy.js';
+import { fetchUserGameStats } from '../services/game-stats.js';
+import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
 import {
   createVerificationToken,
   sendVerificationEmail,
@@ -213,13 +216,32 @@ authRouter.get('/me', async (req, res, next) => {
         displayName: true,
         nickname: true,
         avatar: true,
+        tableStatus: true,
         chips: true,
         level: true,
         xp: true,
-        emailVerified: true
+        emailVerified: true,
+        role: true,
+        subscriptions: {
+          where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
+          select: { tier: true, expiresAt: true, status: true }
+        },
+        inventory: {
+          select: { itemId: true, equipped: true, rarity: true }
+        }
       }
     });
-    return res.json({ user });
+    if (!user) return next(new AppError('Unauthorized', 401));
+    const { subscriptions, inventory, ...profile } = user;
+    const effectiveTier = await resolveUserSubscriptionTier(user.id);
+    const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
+    const stats = await fetchUserGameStats(user.id);
+    return res.json({
+      user: decryptProfileRow(profile),
+      subscription: topSub,
+      inventory,
+      stats
+    });
   } catch {
     return next(new AppError('Unauthorized', 401));
   }

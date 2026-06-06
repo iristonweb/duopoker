@@ -20,6 +20,30 @@ export type GameFeedEvent = {
 const kettle = (s: SessionState) =>
   s.pot + Object.values(s.playerRoundBet ?? {}).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
 
+const suitLabel = (s: string, t: (key: string) => string): string => {
+  const map: Record<string, string> = {
+    S: t('table.suitSpades'),
+    H: t('table.suitHearts'),
+    D: t('table.suitDiamonds'),
+    C: t('table.suitClubs')
+  };
+  return map[s] ?? s;
+};
+
+const formatCard = (card: string): string => {
+  const rank = card.slice(0, -1);
+  const suit = card.slice(-1);
+  const rankNames: Record<string, string> = {
+    T: '10',
+    J: 'J',
+    Q: 'Q',
+    K: 'K',
+    A: 'A'
+  };
+  const suitSymbols: Record<string, string> = { S: '♠', H: '♥', D: '♦', C: '♣' };
+  return `${rankNames[rank] ?? rank}${suitSymbols[suit] ?? suit}`;
+};
+
 const formatAction = (
   action: PlayerAction,
   label: (uid: string) => string,
@@ -37,15 +61,41 @@ const formatAction = (
       return t('table.feedBet', { name, amount: action.amount ?? 0 });
     case 'raise':
       return t('table.feedRaise', { name, amount: action.amount ?? 0 });
+    case 'bid':
+      return t('table.feedJokerBid', { name, amount: action.amount ?? 0 });
+    case 'playCard':
+      return t('table.feedJokerPlay', { name, card: action.card ? formatCard(action.card) : '?' });
     default:
       return `${name}: ${action.type}`;
   }
 };
 
-const playForAction = (action: PlayerAction) => {
+const playForAction = (action: PlayerAction, mode: SessionState['mode']) => {
+  if (action.type === 'playCard' || (mode === 'JOKER' && action.type === 'bid')) {
+    playCardSound();
+    return;
+  }
   if (action.type === 'fold') playFoldSound();
   else if (action.type === 'check') playCheckSound();
   else playChipSound();
+};
+
+const streetFeedText = (
+  street: string,
+  mode: SessionState['mode'],
+  t: (key: string, opts?: Record<string, unknown>) => string
+): string => {
+  if (mode === 'JOKER') {
+    if (street === 'BIDDING') return t('table.feedJokerBidding');
+    if (street === 'TRICKS') return t('table.feedJokerTricks');
+  }
+  return t('table.feedStreet', { street });
+};
+
+type JokerSnap = {
+  trickNumber: number;
+  trickLen: number;
+  cardsThisDeal: number;
 };
 
 export function useTableGameFeed(
@@ -55,11 +105,13 @@ export function useTableGameFeed(
   soundEnabled = true
 ) {
   const [events, setEvents] = useState<GameFeedEvent[]>([]);
+  const [pulseKey, setPulseKey] = useState(0);
   const prevRef = useRef<{
     handNumber: number;
     street: string;
     logLen: number;
     pot: number;
+    joker?: JokerSnap;
   } | null>(null);
 
   useEffect(() => {
@@ -69,11 +121,20 @@ export function useTableGameFeed(
       return;
     }
 
+    const jokerSnap: JokerSnap | undefined = session.joker
+      ? {
+          trickNumber: session.joker.trickNumber,
+          trickLen: session.joker.currentTrick.length,
+          cardsThisDeal: session.joker.cardsThisDeal
+        }
+      : undefined;
+
     const snap = {
       handNumber: session.handNumber,
       street: session.street,
       logLen: session.actionLog?.length ?? 0,
-      pot: kettle(session)
+      pot: kettle(session),
+      joker: jokerSnap
     };
 
     const prev = prevRef.current;
@@ -84,47 +145,89 @@ export function useTableGameFeed(
 
     const next: GameFeedEvent[] = [];
     const push = (kind: GameFeedEvent['kind'], text: string) => {
-      next.push({ id: `${Date.now()}-${Math.random()}`, kind, text, at: Date.now() });
+      next.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, kind, text, at: Date.now() });
     };
 
     if (session.handNumber > prev.handNumber && session.street !== 'LOBBY') {
-      push('hand', t('table.feedNewHand', { num: session.handNumber }));
-      push(
-        'blinds',
-        t('table.feedBlinds', { sb: session.smallBlind, bb: session.bigBlind })
-      );
-      if (soundEnabled) playBlindSound();
+      if (session.mode === 'JOKER' && session.joker) {
+        push(
+          'hand',
+          t('table.feedJokerHand', {
+            num: session.handNumber,
+            cards: session.joker.cardsThisDeal,
+            pool: session.joker.pool
+          })
+        );
+        if (session.joker.trumpSuit) {
+          push('system', t('table.feedJokerTrump', { suit: suitLabel(session.joker.trumpSuit, t) }));
+        } else if (session.joker.trumpCard) {
+          push('system', t('table.feedJokerNoTrumpDeal'));
+        }
+      } else {
+        push('hand', t('table.feedNewHand', { num: session.handNumber }));
+        push('blinds', t('table.feedBlinds', { sb: session.smallBlind, bb: session.bigBlind }));
+        if (soundEnabled) playBlindSound();
+      }
     }
 
     if (session.street !== prev.street && session.street !== 'LOBBY' && session.street !== 'COMPLETE') {
-      push('street', t('table.feedStreet', { street: session.street }));
+      push('street', streetFeedText(session.street, session.mode, t));
       if (soundEnabled) playStreetSound();
     }
 
     const newActions = (session.actionLog ?? []).slice(prev.logLen);
     for (const action of newActions) {
       push('action', formatAction(action, label, t));
-      if (soundEnabled) playForAction(action);
+      if (soundEnabled) playForAction(action, session.mode);
     }
 
-    if (snap.pot > prev.pot + 0 && newActions.some((a) => a.type !== 'check' && a.type !== 'fold')) {
+    if (
+      session.mode === 'JOKER' &&
+      session.joker &&
+      prev.joker &&
+      session.joker.trickNumber > prev.joker.trickNumber
+    ) {
+      push(
+        'system',
+        t('table.feedJokerTrickDone', {
+          n: session.joker.trickNumber,
+          total: session.joker.cardsThisDeal
+        })
+      );
       if (soundEnabled) playChipSound();
     }
 
+    if (snap.pot > prev.pot + 0 && newActions.some((a) => a.type !== 'check' && a.type !== 'fold')) {
+      if (soundEnabled && session.mode !== 'JOKER') playChipSound();
+    }
+
     if (session.street === 'COMPLETE' && prev.street !== 'COMPLETE') {
-      const winners = (session.winners ?? []).map(label).join(', ') || '—';
-      push('winner', t('table.feedWinner', { names: winners }));
+      if (session.mode === 'JOKER' && session.joker?.handPoints) {
+        const lines = session.players
+          .map((p) => {
+            const pts = session.joker!.handPoints![p];
+            if (pts === undefined) return null;
+            return t('table.feedJokerScoreLine', { name: label(p), pts });
+          })
+          .filter(Boolean)
+          .join(' · ');
+        push('winner', t('table.feedJokerHandDone', { summary: lines || '—' }));
+      } else {
+        const winners = (session.winners ?? []).map(label).join(', ') || '—';
+        push('winner', t('table.feedWinner', { names: winners }));
+      }
       if (soundEnabled) playWinSound();
     }
 
     prevRef.current = snap;
 
     if (next.length) {
-      setEvents((existing) => [...next, ...existing].slice(0, 40));
+      setEvents((existing) => [...next, ...existing].slice(0, 120));
+      setPulseKey((k) => k + 1);
     }
   }, [session, label, t, soundEnabled]);
 
-  return events;
+  return { events, pulseKey };
 }
 
 /** Play deal sound when community cards increase. */

@@ -12,6 +12,7 @@ import { oauthRouter } from './routes/oauth.js';
 import { profileRouter } from './routes/profile.js';
 import { stripeWebhookHandler } from './routes/stripe-webhook.js';
 import { usersRouter } from './routes/users.js';
+import { gameRouter } from './routes/game.js';
 import { voiceRouter } from './routes/voice.js';
 import { createRealtimeServer } from './socket/server.js';
 import { renderMetrics } from './services/metrics.js';
@@ -42,6 +43,7 @@ app.use('/clubs', clubsRouter);
 app.use('/monetization', monetizationRouter);
 app.use('/oauth', oauthRouter);
 app.use('/users', usersRouter);
+app.use('/game', gameRouter);
 app.use('/voice', voiceRouter);
 app.use(errorHandler);
 

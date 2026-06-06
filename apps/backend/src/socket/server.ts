@@ -61,6 +61,8 @@ const BOT_PREFIX = 'duopoker-bot';
 const userToSockets = new Map<string, Set<string>>();
 const actionTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const nextHandTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const botTickTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const botTickRetries = new Map<string, number>();
 
 const registerUserSocket = (userId: string, socketId: string) => {
   let set = userToSockets.get(userId);
@@ -90,6 +92,42 @@ const clearActionTimer = (sessionId: string) => {
   const t = actionTimers.get(sessionId);
   if (t) clearTimeout(t);
   actionTimers.delete(sessionId);
+};
+
+const clearBotTickTimer = (sessionId: string) => {
+  const t = botTickTimers.get(sessionId);
+  if (t) clearTimeout(t);
+  botTickTimers.delete(sessionId);
+  botTickRetries.delete(sessionId);
+};
+
+const scheduleBotTickRetry = (io: Server, sessionId: string, state: SessionState) => {
+  clearBotTickTimer(sessionId);
+  const activeId = state.players[state.activePlayerIndex];
+  if (!activeId?.startsWith(BOT_PREFIX)) return;
+  if (state.street !== 'BIDDING' && state.street !== 'TRICKS') return;
+
+  botTickRetries.set(sessionId, 0);
+  const run = async () => {
+    const next = await tickSession(sessionId);
+    if (!next) return;
+    await emitStateToSession(io, sessionId, next);
+    scheduleActionTimer(io, sessionId, next);
+    scheduleNextHandTimer(io, sessionId, next);
+
+    const stillBot = next.players[next.activePlayerIndex]?.startsWith(BOT_PREFIX);
+    const stillActive =
+      stillBot && (next.street === 'BIDDING' || next.street === 'TRICKS');
+    const retries = (botTickRetries.get(sessionId) ?? 0) + 1;
+    if (stillActive && retries < 3) {
+      botTickRetries.set(sessionId, retries);
+      botTickTimers.set(sessionId, setTimeout(() => void run(), 500));
+    } else {
+      clearBotTickTimer(sessionId);
+    }
+  };
+
+  botTickTimers.set(sessionId, setTimeout(() => void run(), 500));
 };
 
 const emitStateToSession = async (io: Server, sessionId: string, state: SessionState) => {
@@ -153,6 +191,7 @@ const broadcastSessionState = async (io: Server, sessionId: string, state: Sessi
   await emitStateToSession(io, sessionId, out);
   scheduleActionTimer(io, sessionId, out);
   scheduleNextHandTimer(io, sessionId, out);
+  scheduleBotTickRetry(io, sessionId, out);
 };
 
 const emitMatchFoundToPlayers = (

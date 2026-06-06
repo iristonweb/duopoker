@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Environment } from '@react-three/drei';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { Card, EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types/index';
 import { resolveEquipped, gameChipId } from '@duopoker/shared-types';
 import { cn } from '@duopoker/ui-kit';
@@ -112,25 +112,29 @@ export function PokerTable3D({
       <div className="pointer-events-none absolute inset-0 z-10">
         <div className="absolute left-1/2 top-[36%] flex -translate-x-1/2 gap-1.5 sm:gap-2.5">
           {boardCards.length ? (
-            boardCards.map((c, i) => (
-              <motion.div
-                key={`${c}-${i}`}
-                initial={{ opacity: 0, y: -16, rotateY: 90 }}
-                animate={{ opacity: showGhostBoard ? 0.72 : 1, y: 0, rotateY: 0 }}
-                transition={{ delay: i * 0.07, duration: 0.35 }}
-              >
-                <PlayingCard
-                  card={c}
-                  faceUp
-                  size="sm"
-                  deckId={heroDeckId}
-                  className={cn(
-                    'shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:scale-110',
-                    showGhostBoard && 'ring-1 ring-violet-400/40 saturate-[0.85]'
-                  )}
-                />
-              </motion.div>
-            ))
+            <AnimatePresence mode="popLayout">
+              {boardCards.map((c, i) => (
+                <motion.div
+                  key={`board-${c}-${i}`}
+                  layout
+                  initial={{ opacity: 0, y: -20, scale: 0.75, rotateY: 90 }}
+                  animate={{ opacity: showGhostBoard ? 0.72 : 1, y: 0, scale: 1, rotateY: 0 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.85, transition: { duration: 0.22 } }}
+                  transition={{ delay: i * 0.06, duration: 0.32, ease: 'easeOut' }}
+                >
+                  <PlayingCard
+                    card={c}
+                    faceUp
+                    size="sm"
+                    deckId={heroDeckId}
+                    className={cn(
+                      'shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:scale-110',
+                      showGhostBoard && 'ring-1 ring-violet-400/40 saturate-[0.85]'
+                    )}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           ) : (
             Array.from({ length: 5 }).map((_, i) => (
               <PlayingCard
@@ -219,20 +223,30 @@ export function PokerTable3D({
 
               {cards.length ? (
                 <div className="relative z-[1] flex gap-0.5 sm:gap-1">
-                  {cards.map((c, ci) => (
-                    <PlayingCard
-                      key={`${player.userId}-${ci}`}
-                      card={c}
-                      faceUp={Boolean(player.revealCards)}
-                      deckId={deckId}
-                      size={isHeroSeat ? 'md' : 'sm'}
-                      className={cn(
-                        'shadow-[0_8px_24px_rgba(0,0,0,0.5)]',
-                        isHeroSeat && ci === 0 && '-rotate-[8deg]',
-                        isHeroSeat && ci === 1 && 'rotate-[8deg]'
-                      )}
-                    />
-                  ))}
+                  <AnimatePresence mode="popLayout">
+                    {cards.map((c, ci) => (
+                      <motion.div
+                        key={`${player.userId}-${c}`}
+                        layout
+                        initial={{ opacity: 0, y: 14, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -18, scale: 0.7, transition: { duration: 0.25 } }}
+                        transition={{ delay: ci * 0.05, duration: 0.28 }}
+                        className={cn(
+                          isHeroSeat && ci === 0 && '-rotate-[8deg]',
+                          isHeroSeat && ci === 1 && 'rotate-[8deg]'
+                        )}
+                      >
+                        <PlayingCard
+                          card={c}
+                          faceUp={Boolean(player.revealCards)}
+                          deckId={deckId}
+                          size={isHeroSeat ? 'md' : 'sm'}
+                          className="shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               ) : null}
             </div>

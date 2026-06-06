@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Button, cn } from '@duopoker/ui-kit';
 import type { Card } from '@duopoker/shared-types/index';
 import { PlayingCard } from '../cosmetics/PlayingCard';
@@ -79,16 +79,26 @@ export function TableActionDock({
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {showActions && holeCards.length ? (
               <div className="flex shrink-0 gap-0.5">
-                {holeCards.map((c, i) => (
-                  <PlayingCard
-                    key={`dock-${c}-${i}`}
-                    card={c}
-                    faceUp
-                    deckId={deckId}
-                    size="sm"
-                    className={cn('scale-90 shadow-lg sm:scale-100', i === 0 && '-rotate-6', i === 1 && 'rotate-6')}
-                  />
-                ))}
+                <AnimatePresence mode="popLayout">
+                  {holeCards.map((c, i) => (
+                    <motion.div
+                      key={c}
+                      layout
+                      initial={{ opacity: 0, y: 8, scale: 0.92 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.2 } }}
+                      className={cn(i === 0 && '-rotate-6', i === 1 && 'rotate-6')}
+                    >
+                      <PlayingCard
+                        card={c}
+                        faceUp
+                        deckId={deckId}
+                        size="sm"
+                        className="scale-90 shadow-lg sm:scale-100"
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             ) : null}
             <div className="min-w-0">
