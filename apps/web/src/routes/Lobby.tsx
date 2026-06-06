@@ -293,6 +293,10 @@ export const Lobby = () => {
   const showDevPanel = import.meta.env.DEV;
 
   useEffect(() => {
+    useAppStore.getState().resetTableJoin();
+  }, []);
+
+  useEffect(() => {
     connect();
   }, [connect]);
 
@@ -515,8 +519,8 @@ export const Lobby = () => {
 
       <motion.div
         className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8"
-        initial={reduceMotion ? false : 'hidden'}
-        animate="show"
+        initial={false}
+        animate={reduceMotion ? undefined : 'show'}
         variants={reduceMotion ? undefined : container}
       >
         <motion.header

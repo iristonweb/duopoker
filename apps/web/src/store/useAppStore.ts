@@ -254,16 +254,21 @@ export const useAppStore = create<AppStore>((set, get) => {
         reconnectionDelayMax: 10_000,
         transports: ['websocket', 'polling']
       });
+      const shouldAcceptTableState = () => {
+        if (get().tableVoluntaryLeave) return false;
+        if (typeof window === 'undefined') return true;
+        return window.location.pathname.startsWith('/table/');
+      };
       socket.on('stateUpdate', (session: SessionState) => {
-        if (get().tableVoluntaryLeave) return;
+        if (!shouldAcceptTableState()) return;
         set({ session, sessionError: undefined });
       });
       socket.on('sessionEvent', (evt: { state?: SessionState }) => {
-        if (get().tableVoluntaryLeave) return;
+        if (!shouldAcceptTableState()) return;
         if (evt.state) set({ session: evt.state, sessionError: undefined });
       });
       socket.on('sessionReconnected', (payload: { snapshot?: SessionState | null }) => {
-        if (get().tableVoluntaryLeave) return;
+        if (!shouldAcceptTableState()) return;
         if (payload.snapshot) set({ session: payload.snapshot, sessionError: undefined });
       });
       socket.on('sessionError', (err: { code?: string }) => {
@@ -272,6 +277,9 @@ export const useAppStore = create<AppStore>((set, get) => {
       socket.on('leftTable', () => {
         get().stopPolling();
         set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/table/')) {
+          window.location.replace('/lobby');
+        }
       });
       socket.on('connect', () => {
         const sid = get().session?.sessionId;

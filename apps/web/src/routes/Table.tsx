@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
@@ -236,6 +236,11 @@ export const Table = () => {
     navigate('/lobby', { replace: true });
   };
 
+  useEffect(() => {
+    if (!tableVoluntaryLeave) return;
+    navigate('/lobby', { replace: true });
+  }, [tableVoluntaryLeave, navigate]);
+
   const handleLeaveTable = () => {
     const id = session?.sessionId ?? routeSessionId;
     if (leaving) return;
@@ -281,7 +286,7 @@ export const Table = () => {
   }
 
   if (tableVoluntaryLeave) {
-    return <Navigate to="/lobby" replace />;
+    return null;
   }
 
   if (!matchRoute || !session) {
