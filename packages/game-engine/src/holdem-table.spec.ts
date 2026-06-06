@@ -139,16 +139,16 @@ describe('applyTableAction — split pot', () => {
   });
 });
 
-describe('Raspisnoy flow', () => {
-  it('deals five cards and completes after one betting round', () => {
-    let s = createInitialTableState('sr', 'RASPISNOY', 100, 7);
+describe('Joker flow', () => {
+  it('deals per schedule and completes after one betting round', () => {
+    let s = createInitialTableState('sr', 'JOKER', 100, 7);
     s = startNewHand({
       ...s,
       players: ['a', 'b'],
       stacks: { a: 100, b: 100 }
     });
-    expect(s.playerCards.a?.length).toBe(5);
-    expect(s.playerCards.b?.length).toBe(5);
+    expect(s.playerCards.a?.length).toBe(1);
+    expect(s.playerCards.b?.length).toBe(1);
     expect(s.pot).toBeGreaterThan(0);
 
     const first = s.players[s.activePlayerIndex]!;
@@ -161,7 +161,7 @@ describe('Raspisnoy flow', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.street).toBe('COMPLETE');
-    expect(r.state.mode).toBe('RASPISNOY');
+    expect(r.state.mode).toBe('JOKER');
   });
 });
 

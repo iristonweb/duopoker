@@ -30,7 +30,7 @@ const connectClient = (): Socket =>
     transports: ['websocket']
   });
 
-async function playHandToComplete(mode: 'HOLDEM' | 'RASPISNOY') {
+async function playHandToComplete(mode: 'HOLDEM' | 'JOKER') {
   const sessionId = `e2e-${mode}-${Date.now()}`;
   const uid1 = `e2e-p1-${Date.now()}`;
   const uid2 = `e2e-p2-${Date.now()}`;
@@ -90,13 +90,13 @@ test('socket gameplay — Hold\'em hand through showdown and next hand', async (
   await playHandToComplete('HOLDEM');
 });
 
-test('socket gameplay — Raspisnoy hand through showdown and next hand', async ({ request }, testInfo) => {
+test('socket gameplay — Joker hand through showdown and next hand', async ({ request }, testInfo) => {
   const health = await request.get(`${API}/health`).catch(() => null);
   if (!health?.ok()) {
     testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
     return;
   }
-  await playHandToComplete('RASPISNOY');
+  await playHandToComplete('JOKER');
 });
 
 test('stateUpdate hides opponent hole cards', async ({ request }, testInfo) => {

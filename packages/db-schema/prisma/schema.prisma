@@ -33,7 +33,7 @@ enum Status {
 
 enum Mode {
   HOLDEM
-  RASPISNOY
+  JOKER
 }
 
 enum Rarity {

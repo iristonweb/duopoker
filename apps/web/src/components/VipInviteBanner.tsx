@@ -44,7 +44,7 @@ export function VipInviteBanner() {
             useAppStore.getState().resetTableJoin();
             void joinSession(
               vipLiveSession.sessionId,
-              vipLiveSession.mode as 'HOLDEM' | 'RASPISNOY',
+              vipLiveSession.mode as 'HOLDEM' | 'JOKER',
               vipLiveSession.buyIn
             ).then(() => navigate(`/table/${vipLiveSession.sessionId}`));
           }}

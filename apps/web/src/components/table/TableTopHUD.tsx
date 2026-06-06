@@ -12,7 +12,7 @@ const streetBadgeVariant = (street: string): 'gold' | 'emerald' | 'default' | 'r
 };
 
 type Props = {
-  mode: 'HOLDEM' | 'RASPISNOY';
+  mode: 'HOLDEM' | 'JOKER';
   pot: number;
   street?: string;
   seatCount: number;
@@ -80,7 +80,7 @@ export function TableTopHUD({
           ) : null}
           <span className="hidden h-4 w-px bg-white/10 sm:block" aria-hidden />
           <h1 className="truncate font-display text-sm font-semibold text-ivory sm:text-base">
-            {mode === 'HOLDEM' ? t('table.holdem') : t('table.raspisnoy')}
+            {mode === 'HOLDEM' ? t('table.holdem') : t('table.joker')}
           </h1>
           {handNumber > 0 ? (
             <span className="hidden font-mono text-[10px] text-subtle sm:inline">#{handNumber}</span>

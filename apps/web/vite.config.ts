@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: 'DP CLUB — Duo Poker Club',
           short_name: 'DP CLUB',
-          description: 'Premium play-money poker — Texas Hold\'em & Raspisnoy.',
+          description: 'Premium play-money poker — Texas Hold\'em & Joker.',
           theme_color: '#050508',
           background_color: '#050508',
           display: 'standalone',

@@ -43,7 +43,7 @@ type AppStore = {
   gamesLost: number;
   accessToken?: string;
   refreshToken?: string;
-  mode: 'HOLDEM' | 'RASPISNOY';
+  mode: 'HOLDEM' | 'JOKER';
   session?: SessionState;
   /** User left the table intentionally — block auto-rejoin until a new match starts. */
   tableVoluntaryLeave: boolean;
@@ -54,7 +54,7 @@ type AppStore = {
   opponentType: 'HUMAN' | 'BOT';
   botPlayerCount: number;
   pollTimer?: ReturnType<typeof setInterval>;
-  setMode: (mode: 'HOLDEM' | 'RASPISNOY') => void;
+  setMode: (mode: 'HOLDEM' | 'JOKER') => void;
   setOpponentType: (opponentType: 'HUMAN' | 'BOT') => void;
   setBotPlayerCount: (count: number) => void;
   setTokens: (access: string, refresh: string, userId: string) => void;
@@ -69,7 +69,7 @@ type AppStore = {
     message?: string;
   }>;
   leaveQueue: () => Promise<void>;
-  joinSession: (sessionId: string, mode?: 'HOLDEM' | 'RASPISNOY', buyIn?: number) => Promise<void>;
+  joinSession: (sessionId: string, mode?: 'HOLDEM' | 'JOKER', buyIn?: number) => Promise<void>;
   pollSession: (sessionId: string) => void;
   stopPolling: () => void;
   playerAction: (payload: {
@@ -103,7 +103,7 @@ type AppStore = {
   addClubMember: (clubId: string, query: string) => Promise<void>;
   createPrivateTable: (
     clubId: string,
-    data: { name: string; mode: 'HOLDEM' | 'RASPISNOY'; maxPlayers?: number; virtualBuyIn?: number }
+    data: { name: string; mode: 'HOLDEM' | 'JOKER'; maxPlayers?: number; virtualBuyIn?: number }
   ) => Promise<{ table: { id: string } }>;
   inviteToTable: (clubId: string, tableId: string, query: string) => Promise<void>;
   startPrivateTable: (clubId: string, tableId: string) => Promise<string>;
@@ -185,7 +185,11 @@ export const useAppStore = create<AppStore>((set, get) => {
     botPlayerCount: 2,
     vipInvites: [],
     vipLiveSession: null,
-    setMode: (mode) => set({ mode }),
+    setMode: (mode) =>
+      set({
+        mode,
+        ...(mode === 'JOKER' ? { botPlayerCount: 4 } : {})
+      }),
     setOpponentType: (opponentType) => set({ opponentType }),
     setBotPlayerCount: (botPlayerCount) => set({ botPlayerCount }),
     setTokens: (access, refresh, userId) => {
@@ -334,7 +338,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       const data = (await res.json()) as {
         status: 'waiting' | 'matched' | 'idle';
         sessionId?: string;
-        mode?: 'HOLDEM' | 'RASPISNOY';
+        mode?: 'HOLDEM' | 'JOKER';
         buyIn?: number;
       };
       if (data.status === 'matched' && data.sessionId) {
@@ -358,7 +362,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       const data = (await res.json()) as {
         status: 'idle' | 'waiting' | 'matched';
         sessionId?: string;
-        mode?: 'HOLDEM' | 'RASPISNOY';
+        mode?: 'HOLDEM' | 'JOKER';
         buyIn?: number;
       };
       if (data.status === 'matched' && data.sessionId) {

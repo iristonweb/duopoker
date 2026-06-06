@@ -17,7 +17,7 @@ export function MatchRedirect() {
       socket.emit('joinSession', {
         sessionId: match.sessionId,
         userId,
-        mode: (match.mode as 'HOLDEM' | 'RASPISNOY') ?? mode,
+        mode: (match.mode as 'HOLDEM' | 'JOKER') ?? mode,
         buyIn: match.buyIn ?? 100
       });
       navigate(`/table/${match.sessionId}`);

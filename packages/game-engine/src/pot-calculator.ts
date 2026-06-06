@@ -2,6 +2,7 @@ import type { Card, GameMode } from '@duopoker/shared-types/index';
 import {
   bestStrengthFromSeven,
   compareStrength,
+  parseCard,
   strengthFiveFromHand,
   type HandStrength
 } from './poker-eval';
@@ -47,8 +48,9 @@ const strengthForPlayer = (
     if (h.length < 2) return undefined;
     return bestStrengthFromSeven(h, board);
   }
-  if (h.length < 5) return undefined;
-  return strengthFiveFromHand(h);
+  if (h.length >= 5) return strengthFiveFromHand(h);
+  const ranks = h.map((c) => parseCard(c).rank).sort((a, b) => b - a);
+  return [0, ...ranks] as HandStrength;
 };
 
 export const winnersAmongEligible = (

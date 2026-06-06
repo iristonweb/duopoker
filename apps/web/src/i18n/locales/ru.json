@@ -12,7 +12,7 @@
     "eyebrow": "DP CLUB · Duo Poker Club",
     "title": "DP ",
     "titleGold": "CLUB",
-    "tagline": "Premium play-money покер — Texas Hold'em и Расписной, виртуальные фишки, косметика DP CLUB, без реальных денег."
+    "tagline": "Premium play-money покер — Texas Hold'em и Джокер, виртуальные фишки, косметика DP CLUB, без реальных денег."
   },
   "auth": {
     "welcomeBack": "С возвращением",
@@ -100,9 +100,9 @@
     "waitingSocket": "Ожидание соперника в очереди…",
     "failed": "Не удалось войти в очередь. Попробуйте снова.",
     "buttonHoldem": "Играть Hold'em",
-    "buttonRaspisnoy": "Играть Расписной",
+    "buttonJoker": "Играть Джокер",
     "buttonHoldemBot": "Тренировка Hold'em с ботом",
-    "buttonRaspisnoyBot": "Тренировка Расписной с ботом",
+    "buttonJokerBot": "Тренировка Джокер с ботом",
     "openTable": "Открыть стол",
     "errors": {
       "sign_in": "Войдите в аккаунт, чтобы присоединиться к очереди.",
@@ -119,9 +119,9 @@
       "title": "Texas Hold'em",
       "desc": "Классический безлимитный Hold'em — общие карты и напряжение на вскрытии."
     },
-    "RASPISNOY": {
-      "title": "Расписной покер",
-      "desc": "Пять карт, одна улица ставок — быстрые раздачи без общего борда."
+    "JOKER": {
+      "title": "Джокер",
+      "desc": "Классический расписной: 4 игрока, 24 сдачи, взятки, козырь и джокеры 6♠/6♣."
     }
   },
   "subscriptions": {
@@ -260,7 +260,7 @@
   "table": {
     "liveTable": "Живой стол",
     "holdem": "Texas Hold'em",
-    "raspisnoy": "Расписной",
+    "joker": "Джокер",
     "connecting": "Подключение",
     "joiningTitle": "Подключение к столу",
     "connectingTo": "Подключение к {{id}}…",

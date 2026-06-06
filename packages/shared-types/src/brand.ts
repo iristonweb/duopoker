@@ -6,7 +6,7 @@ export const brandFullName = 'Duo Poker Club';
 export const siteUrl = 'https://duopoker.ru';
 
 export const siteDescriptionRu =
-  'DP CLUB (Duo Poker Club) — premium онлайн-покер Texas Hold\'em и Расписной. Виртуальные фишки, косметика DP CLUB, без реальных денег.';
+  'DP CLUB (Duo Poker Club) — premium онлайн-покер Texas Hold\'em и Джокер. Виртуальные фишки, косметика DP CLUB, без реальных денег.';
 
 export const siteDescriptionEn =
-  'DP CLUB (Duo Poker Club) — premium play-money poker: Texas Hold\'em and Raspisnoy. Virtual chips only, no real-money payouts.';
+  'DP CLUB (Duo Poker Club) — premium play-money poker: Texas Hold\'em and Joker. Virtual chips only, no real-money payouts.';

@@ -6,7 +6,7 @@
 - `packages/api` — Hono serverless API (Vercel `api/[[...path]].ts`), Prisma → PostgreSQL, stateless game sessions.
 - `apps/backend` — **Legacy** Express + Socket.IO stack for local Docker dev (not used on Vercel).
 - `apps/mobile` — Expo shell.
-- `packages/game-engine` — Hold'em / Raspisnoy rules, hand evaluation, table state machine, side pots, per-viewer state sanitization. See [RASPISNOY.md](./RASPISNOY.md).
+- `packages/game-engine` — Hold'em / Joker rules, hand evaluation, table state machine, side pots, per-viewer state sanitization. See [JOKER.md](./JOKER.md).
 - `packages/shared-types` — Shared TS types (sessions, cards, theme tokens).
 - `packages/ui-kit` — Glass-morphism UI primitives.
 - `packages/db-schema` — Prisma schema and migrations.

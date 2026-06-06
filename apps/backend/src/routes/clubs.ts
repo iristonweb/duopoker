@@ -37,7 +37,7 @@ const inviteSchema = z
 
 const createTableSchema = z.object({
   name: z.string().trim().min(3).max(50),
-  mode: z.enum(['HOLDEM', 'RASPISNOY']),
+  mode: z.enum(['HOLDEM', 'JOKER']),
   maxPlayers: z.number().int().min(2).max(9).default(6),
   virtualBuyIn: z.number().int().min(100).max(100000).default(1000)
 });

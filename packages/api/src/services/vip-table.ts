@@ -19,7 +19,7 @@ export const createVipTableInvite = async (
   hostId: string,
   opts: {
     nicknames: string[];
-    mode: 'HOLDEM' | 'RASPISNOY';
+    mode: 'HOLDEM' | 'JOKER';
     buyIn: number;
     message?: string;
   }

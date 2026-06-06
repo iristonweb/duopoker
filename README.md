@@ -1,6 +1,6 @@
 # DuoPoker
 
-Local-first monorepo for cross-platform poker platform with dual modes (Hold'em and Raspisnoy), realtime multiplayer and premium UI.
+Local-first monorepo for cross-platform poker platform with dual modes (Hold'em and Joker), realtime multiplayer and premium UI.
 
 ## Stack
 - Web: React + Vite + R3F

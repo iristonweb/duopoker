@@ -92,7 +92,15 @@ export {
   type ReferralRewardKind
 } from './referrals';
 
-export type GameMode = 'HOLDEM' | 'RASPISNOY';
+export type GameMode = 'HOLDEM' | 'JOKER';
+
+export {
+  JOKER_RECOMMENDED_PLAYERS,
+  JOKER_TOTAL_HANDS,
+  jokerCardsPerHand,
+  jokerPoolLabel
+} from './joker-schedule';
+
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type GameStreet =
   | 'LOBBY'

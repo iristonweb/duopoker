@@ -49,7 +49,7 @@ const tierCosmeticsSchema = z.object({
 
 const vipTableSchema = z.object({
   nicknames: z.array(z.string().min(1)).min(1).max(5),
-  mode: z.enum(['HOLDEM', 'RASPISNOY']).default('HOLDEM'),
+  mode: z.enum(['HOLDEM', 'JOKER']).default('HOLDEM'),
   buyIn: z.number().int().min(100).max(100_000).default(1000),
   message: z.string().max(120).optional()
 });

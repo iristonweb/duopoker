@@ -1,6 +1,8 @@
 import type { Card, GameStreet, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { isAutomatedPlayer } from './bot-actions';
 import { createDeck, shuffle } from './cards';
+import { createJokerDeck } from './joker-deck';
+import { jokerCardsPerHand } from './joker-schedule';
 import { peekGhostCommunityFromDeck } from './ghost-board';
 import {
   computeSidePots,
@@ -302,7 +304,7 @@ const resolveShowdownHoldem = (state: SessionState): SessionState => {
   return finalizeShowdown(state);
 };
 
-const resolveShowdownRaspisnoy = (state: SessionState): SessionState => {
+const resolveShowdownJoker = (state: SessionState): SessionState => {
   const folded = new Set(state.foldedPlayerIds);
   const alive = state.players.filter((p) => !folded.has(p));
   if (alive.length === 1) {
@@ -399,7 +401,6 @@ const dealHoleCards = (
 export const startNewHand = (state: SessionState): SessionState => {
   if (state.players.length < 2) return state;
   const rng = new SeededRng(state.seed + state.handNumber + 1);
-  const shuffled = shuffle(createDeck(), rng);
   const dealerIndex = state.handNumber === 0 ? 0 : (state.dealerIndex + 1) % state.players.length;
   const actedThisRound = emptyActed(state.players);
   const handContributions: Record<string, number> = Object.fromEntries(
@@ -407,6 +408,7 @@ export const startNewHand = (state: SessionState): SessionState => {
   );
 
   if (state.mode === 'HOLDEM') {
+    const shuffled = shuffle(createDeck(), rng);
     const { sb, bb } = sbBbIndices(state.players.length, dealerIndex);
     const hole = dealHoleCards({ ...state, dealerIndex }, shuffled, 2);
     const stacks = { ...state.stacks };
@@ -453,7 +455,9 @@ export const startNewHand = (state: SessionState): SessionState => {
     };
   }
 
-  const hole = dealHoleCards({ ...state, dealerIndex }, shuffled, 5);
+  const cardsPerPlayer = jokerCardsPerHand(state.handNumber);
+  const shuffled = shuffle(createJokerDeck(), rng);
+  const hole = dealHoleCards({ ...state, dealerIndex }, shuffled, cardsPerPlayer);
   const stacks = { ...state.stacks };
   const ante = Math.max(1, Math.min(state.smallBlind, state.bigBlind));
   let pot = 0;
@@ -668,9 +672,9 @@ export const applyTableAction = (
     return { ok: true, state: rotateTurn(ns) };
   }
 
-  if (ns.mode === 'RASPISNOY') {
+  if (ns.mode === 'JOKER') {
     const committed = commitRoundToPot(ns);
-    return { ok: true, state: resolveShowdownRaspisnoy(committed) };
+    return { ok: true, state: resolveShowdownJoker(committed) };
   }
 
   let hold = commitRoundToPot(ns);

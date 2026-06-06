@@ -31,7 +31,7 @@ import { attachSocketAuth, resolveUserId } from './socket-auth.js';
 const joinSchema = z.object({
   sessionId: z.string().min(1),
   userId: z.string().min(1),
-  mode: z.enum(['HOLDEM', 'RASPISNOY']).default('HOLDEM'),
+  mode: z.enum(['HOLDEM', 'JOKER']).default('HOLDEM'),
   buyIn: z.number().int().positive().default(100)
 });
 
@@ -45,7 +45,7 @@ const actionSchema = z.object({
 
 const matchmakingSchema = z.object({
   userId: z.string().min(1),
-  mode: z.enum(['HOLDEM', 'RASPISNOY']),
+  mode: z.enum(['HOLDEM', 'JOKER']),
   buyIn: z.number().int().positive(),
   opponent: z.enum(['human', 'bot']).optional().default('human'),
   playerCount: z.number().int().min(2).max(6).optional().default(2)
@@ -357,7 +357,7 @@ export const createRealtimeServer = (app: Express) => {
       seatPlayersBatch(
         match.sessionId,
         match.players,
-        match.mode as 'HOLDEM' | 'RASPISNOY',
+        match.mode as 'HOLDEM' | 'JOKER',
         match.buyIn
       );
       const initial = await getSessionSnapshot(match.sessionId);

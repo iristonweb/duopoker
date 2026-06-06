@@ -10,7 +10,7 @@ export type CatalogCosmetic = {
 };
 
 export type CatalogGameMode = {
-  id: 'HOLDEM' | 'RASPISNOY';
+  id: 'HOLDEM' | 'JOKER';
   title: string;
   description: string;
   imageUrl: string;
@@ -52,10 +52,10 @@ export const catalogGameModes: CatalogGameMode[] = [
     imageUrl: '/assets/modes/holdem.png'
   },
   {
-    id: 'RASPISNOY',
-    title: 'Расписной покер',
+    id: 'JOKER',
+    title: 'Джокер',
     description:
-      'Five-card duel: antes, one betting round, best hand wins — fast reads, no community board.',
+      'Классический расписной: 4 игрока, 24 сдачи, взятки, козырь и джокеры 6♠/6♣.',
     imageUrl: '/assets/modes/raspisnoy.png'
   }
 ];

@@ -67,7 +67,7 @@ type CatalogSub = {
   stripePriceId?: string;
   imageUrl?: string;
 };
-type CatalogGameMode = { id: 'HOLDEM' | 'RASPISNOY'; title: string; description: string; imageUrl: string };
+type CatalogGameMode = { id: 'HOLDEM' | 'JOKER'; title: string; description: string; imageUrl: string };
 
 function AuthPanel() {
   const { t } = useTranslation();
@@ -503,9 +503,9 @@ export const Lobby = () => {
   const tableHref = session?.sessionId ? `/table/${session.sessionId}` : null;
 
   const holdemMode = gameModes.find((m) => m.id === 'HOLDEM') ?? catalogGameModes[0];
-  const raspisnoyMode = gameModes.find((m) => m.id === 'RASPISNOY') ?? catalogGameModes[1];
-  const modeTitle = (id: 'HOLDEM' | 'RASPISNOY', fallback: string) => t(`modes.${id}.title`, { defaultValue: fallback });
-  const modeDesc = (id: 'HOLDEM' | 'RASPISNOY', fallback: string) => t(`modes.${id}.desc`, { defaultValue: fallback });
+  const jokerMode = gameModes.find((m) => m.id === 'JOKER') ?? catalogGameModes[1];
+  const modeTitle = (id: 'HOLDEM' | 'JOKER', fallback: string) => t(`modes.${id}.title`, { defaultValue: fallback });
+  const modeDesc = (id: 'HOLDEM' | 'JOKER', fallback: string) => t(`modes.${id}.desc`, { defaultValue: fallback });
   const subBanner = (tier: keyof typeof subscriptionBannerImages) =>
     catalogSubs.find((s) => s.tier === tier)?.imageUrl ?? subscriptionBannerImages[tier];
 
@@ -606,13 +606,13 @@ export const Lobby = () => {
                 onClick={() => setMode('HOLDEM')}
               />
               <ModeCard
-                title={modeTitle('RASPISNOY', raspisnoyMode.title)}
-                description={modeDesc('RASPISNOY', raspisnoyMode.description)}
-                bannerUrl={raspisnoyMode.imageUrl}
+                title={modeTitle('JOKER', jokerMode.title)}
+                description={modeDesc('JOKER', jokerMode.description)}
+                bannerUrl={jokerMode.imageUrl}
                 icon={<span aria-hidden>♦</span>}
-                selected={mode === 'RASPISNOY'}
+                selected={mode === 'JOKER'}
                 selectedLabel={t('modes.selected')}
-                onClick={() => setMode('RASPISNOY')}
+                onClick={() => setMode('JOKER')}
               />
             </div>
             <GlassPanel
@@ -688,10 +688,10 @@ export const Lobby = () => {
                 {opponentType === 'BOT'
                   ? mode === 'HOLDEM'
                     ? t('queue.buttonHoldemBot')
-                    : t('queue.buttonRaspisnoyBot')
+                    : t('queue.buttonJokerBot')
                   : mode === 'HOLDEM'
                     ? t('queue.buttonHoldem')
-                    : t('queue.buttonRaspisnoy')}
+                    : t('queue.buttonJoker')}
               </Button>
               {queueBanner ? (
                 <p

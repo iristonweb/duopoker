@@ -12,7 +12,7 @@
     "eyebrow": "DP CLUB · Duo Poker Club",
     "title": "DP ",
     "titleGold": "CLUB",
-    "tagline": "Premium play-money poker — Texas Hold'em & Raspisnoy, DP CLUB cosmetics, virtual chips only."
+    "tagline": "Premium play-money poker — Texas Hold'em & Joker, DP CLUB cosmetics, virtual chips only."
   },
   "auth": {
     "welcomeBack": "Welcome back",
@@ -100,9 +100,9 @@
     "waitingSocket": "Waiting for another player in the queue…",
     "failed": "Could not join the queue. Please try again.",
     "buttonHoldem": "Queue Hold'em",
-    "buttonRaspisnoy": "Queue Raspisnoy",
+    "buttonJoker": "Queue Joker",
     "buttonHoldemBot": "Practice Hold'em vs bot",
-    "buttonRaspisnoyBot": "Practice Raspisnoy vs bot",
+    "buttonJokerBot": "Practice Joker vs bot",
     "openTable": "Open table view",
     "errors": {
       "sign_in": "Sign in to join the queue.",
@@ -119,9 +119,9 @@
       "title": "Texas Hold'em",
       "desc": "No-limit cadence, community cards, and classic showdown tension."
     },
-    "RASPISNOY": {
-      "title": "Raspisnoy",
-      "desc": "Five-card duel: one betting round, best hand wins — no community board."
+    "JOKER": {
+      "title": "Joker",
+      "desc": "Classic trick-taking Joker: 4 players, 24 deals, trump, wild 6♠/6♣ jokers."
     }
   },
   "subscriptions": {
@@ -260,7 +260,7 @@
   "table": {
     "liveTable": "Live table",
     "holdem": "Texas Hold'em",
-    "raspisnoy": "Raspisnoy",
+    "joker": "Joker",
     "connecting": "Connecting",
     "joiningTitle": "Joining table",
     "connectingTo": "Connecting to {{id}}…",
