@@ -1,4 +1,5 @@
 import {
+  catalogPreviewUrl,
   cosmeticById,
   cosmeticImageUrl,
   defaultEquipped,
@@ -109,13 +110,8 @@ export const tableFeltVisual = (tableId: string): TableFeltVisual => {
 export const titleImageUrl = (titleId: string): string | undefined =>
   titleId ? cosmeticImageUrl(titleId) : undefined;
 
-/** Catalog / profile preview — rich still for decks, transparent cutout for chips & frames */
-export const cosmeticPreviewUrl = (id: string): string | undefined => {
-  const def = cosmeticById(id);
-  if (!def) return undefined;
-  if (def.slot === 'deck' || def.slot === 'table') return def.imageUrl;
-  return def.gameImageUrl ?? def.imageUrl;
-};
+/** @deprecated Use catalogPreviewUrl from @duopoker/shared-types */
+export const cosmeticPreviewUrl = (id: string): string | undefined => catalogPreviewUrl(id);
 
 export const titleDisplayLabel = (titleId: string): string | undefined =>
   titleBadgeLabel(titleId) ?? cosmeticById(titleId)?.name;

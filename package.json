@@ -22,7 +22,8 @@
     "db:generate": "pnpm --filter @duopoker/db-schema build",
     "grant:founder": "node scripts/grant-founder.mjs",
     "build:vercel-api": "node scripts/bundle-vercel-api.mjs",
-    "crop:decks": "node scripts/crop-deck-backs.mjs"
+    "crop:decks": "node scripts/crop-deck-backs.mjs",
+    "fix:game-alpha": "node scripts/fix-game-asset-alpha.mjs"
   },
   "dependencies": {
     "@duopoker/db-schema": "workspace:*",

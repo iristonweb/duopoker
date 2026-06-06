@@ -312,11 +312,12 @@ export const allCosmetics: CosmeticDefinition[] = [...subscriptionCosmetics, ...
 export const cosmeticById = (id: string): CosmeticDefinition | undefined =>
   allCosmetics.find((c) => c.id === id);
 
-/** Profile / shop catalog preview — rich still assets, not in-game cutouts. */
+/** Profile / shop catalog preview — full card art for decks; transparent game cutouts for HUD items. */
 export const catalogPreviewUrl = (id: string): string | undefined => {
   const def = cosmeticById(id);
   if (!def) return undefined;
-  return def.imageUrl;
+  if (def.slot === 'deck' || def.slot === 'table') return def.imageUrl;
+  return def.gameImageUrl ?? def.imageUrl;
 };
 
 /** Prefer transparent game cutout when available (table, HUD, live preview). */
