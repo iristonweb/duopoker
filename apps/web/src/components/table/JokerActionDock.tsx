@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button, cn } from '@duopoker/ui-kit';
 import type { Card, JokerHandState } from '@duopoker/shared-types/index';
+import { jokerLegalPlays, leadSuitFromTrick } from '@duopoker/shared-types/index';
 import { PlayingCard } from '../cosmetics/PlayingCard';
 import { TurnTimer } from './TurnTimer';
 
@@ -39,8 +41,25 @@ export function JokerActionDock({
   onPlayCard
 }: Props) {
   const { t } = useTranslation();
+  const [pendingCard, setPendingCard] = useState<string | null>(null);
   const showActions = myTurn && street !== 'COMPLETE' && street !== 'LOBBY';
   const bidding = street === 'BIDDING';
+
+  const legalCards = useMemo(() => {
+    if (bidding || !showActions) return new Set<string>();
+    const lead = leadSuitFromTrick(joker.currentTrick);
+    return new Set(jokerLegalPlays(holeCards, lead, joker.trumpSuit));
+  }, [bidding, showActions, holeCards, joker.currentTrick, joker.trumpSuit]);
+
+  useEffect(() => {
+    setPendingCard(null);
+  }, [holeCards.length, joker.trickNumber, sessionError]);
+
+  const handlePlay = (card: Card) => {
+    if (pendingCard || !legalCards.has(card)) return;
+    setPendingCard(card);
+    onPlayCard(card);
+  };
 
   return (
     <motion.footer
@@ -69,6 +88,11 @@ export function JokerActionDock({
               defaultValue: joker.trumpSuit ? `Trump: ${joker.trumpSuit}` : 'No trump'
             })}
           </span>
+          {joker.currentTrick.length > 0 ? (
+            <span className="text-gold-light/90">
+              {t('table.jokerTrick', { n: joker.trickNumber + 1, defaultValue: `Trick ${joker.trickNumber + 1}` })}
+            </span>
+          ) : null}
         </div>
 
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -111,16 +135,23 @@ export function JokerActionDock({
 
         {showActions && !bidding ? (
           <div className="flex flex-wrap gap-2">
-            {holeCards.map((c, i) => (
-              <button
-                key={`${c}-${i}`}
-                type="button"
-                className="rounded-lg transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gold/50"
-                onClick={() => onPlayCard(c)}
-              >
-                <PlayingCard card={c} faceUp deckId={deckId} size="md" className="shadow-lg" />
-              </button>
-            ))}
+            {holeCards.map((c, i) => {
+              const playable = legalCards.has(c);
+              return (
+                <button
+                  key={`${c}-${i}`}
+                  type="button"
+                  disabled={!playable || pendingCard === c}
+                  className={cn(
+                    'rounded-lg transition focus:outline-none focus:ring-2 focus:ring-gold/50',
+                    playable && !pendingCard ? 'hover:scale-105' : 'cursor-not-allowed opacity-40 grayscale'
+                  )}
+                  onClick={() => handlePlay(c)}
+                >
+                  <PlayingCard card={c} faceUp deckId={deckId} size="md" className="shadow-lg" />
+                </button>
+              );
+            })}
           </div>
         ) : null}
 

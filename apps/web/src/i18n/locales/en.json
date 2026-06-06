@@ -267,6 +267,7 @@
     "jokerBidPrompt": "Bid your tricks",
     "jokerPlayPrompt": "Choose a card to play",
     "jokerBid": "Bid {{amount}}",
+    "jokerTrick": "Trick {{n}}",
     "connecting": "Connecting",
     "joiningTitle": "Joining table",
     "connectingTo": "Connecting to {{id}}…",

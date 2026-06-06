@@ -267,6 +267,7 @@
     "jokerBidPrompt": "Сделайте заявку на взятки",
     "jokerPlayPrompt": "Выберите карту для хода",
     "jokerBid": "Заявка: {{amount}}",
+    "jokerTrick": "Взятка {{n}}",
     "connecting": "Подключение",
     "joiningTitle": "Подключение к столу",
     "connectingTo": "Подключение к {{id}}…",

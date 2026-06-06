@@ -150,6 +150,7 @@ export const Table = () => {
     const visuals = session.players.map((uid) => {
       const profile = playerProfiles[uid];
       const hero = uid === userId;
+      const rawCards = session.playerCards[uid] ?? [];
       return {
         userId: uid,
         name: profile?.name ?? uid.slice(0, 8),
@@ -161,8 +162,8 @@ export const Table = () => {
         tier: hero ? subscriptionTier : (profile?.subscriptionTier ?? 'FREE'),
         equipped: hero ? equipped : profile?.equipped,
         inventory: hero ? inventory : undefined,
-        holeCards: session.playerCards[uid] ?? [],
-        revealCards: hero,
+        holeCards: session.mode === 'JOKER' && hero ? [] : rawCards,
+        revealCards: session.mode === 'JOKER' ? false : hero,
         isActive: uid === activeId,
         isFolded: session.foldedPlayerIds.includes(uid)
       };
@@ -359,8 +360,11 @@ export const Table = () => {
           >
             <PokerTable3D
               communityCards={
-                session.mode === 'HOLDEM'
-                  ? (session.communityCards ?? [])
+                session.mode === 'JOKER'
+                  ? [
+                      ...(session.communityCards ?? []),
+                      ...(session.joker?.currentTrick.map((p) => p.card) ?? [])
+                    ]
                   : (session.communityCards ?? [])
               }
               ghostCommunityCards={

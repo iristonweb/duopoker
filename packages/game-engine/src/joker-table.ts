@@ -1,8 +1,15 @@
 import type { Card, JokerHandState, PlayerAction, SessionState, Suit } from '@duopoker/shared-types/index';
 import { jokerCardsPerHand, jokerPoolLabel } from './joker-schedule';
-import { createJokerDeck, JOKER_WILD_IDS } from './joker-deck';
+import { createJokerDeck } from './joker-deck';
 import { jokerPointsForHand } from './joker-scoring';
-import { cardSuit, isJokerCard, legalPlays, trickWinnerIndex } from './joker-trick';
+import {
+  cardSuit,
+  isJokerCard,
+  jokerLegalPlays,
+  leadSuitFromTrick,
+  normalizeJokerCard,
+  trickWinnerIndex
+} from './joker-trick';
 import { shuffle } from './cards';
 import type { SeededRng } from './rng';
 
@@ -166,11 +173,38 @@ const finishTrick = (state: SessionState): SessionState => {
   });
 };
 
+const fixBidSum = (
+  bids: Record<string, number | undefined>,
+  players: string[],
+  dealerIndex: number,
+  cardsThisDeal: number
+): Record<string, number | undefined> => {
+  const max = Math.min(9, cardsThisDeal);
+  const sum = () => players.reduce((s, p) => s + (bids[p] ?? 0), 0);
+  if (sum() !== cardsThisDeal) return bids;
+
+  const dealerId = players[dealerIndex]!;
+  const dealerBid = bids[dealerId] ?? 0;
+
+  if (dealerBid < max) {
+    return { ...bids, [dealerId]: dealerBid + 1 };
+  }
+  if (dealerBid > 0) {
+    return { ...bids, [dealerId]: dealerBid - 1 };
+  }
+
+  const other = players.find((p) => p !== dealerId && (bids[p] ?? 0) > 0);
+  if (other) {
+    return { ...bids, [other]: (bids[other] ?? 0) - 1 };
+  }
+  return bids;
+};
+
 const applyBid = (state: SessionState, userId: string, amount: number, action: PlayerAction): SessionState => {
   const j = state.joker!;
   const max = maxBid(j.cardsThisDeal);
   const bid = Math.max(0, Math.min(max, Math.floor(amount)));
-  const bids = { ...j.bids, [userId]: bid };
+  let bids = { ...j.bids, [userId]: bid };
   let ns: SessionState = {
     ...state,
     actionLog: [...state.actionLog, action],
@@ -181,41 +215,29 @@ const applyBid = (state: SessionState, userId: string, amount: number, action: P
     return rotateActive(ns);
   }
 
-  const dealerId = state.players[state.dealerIndex]!;
-  const others = state.players.filter((p) => p !== dealerId);
-  const dealerBid = bids[dealerId];
-  const othersSum = others.reduce((s, p) => s + (bids[p] ?? 0), 0);
-  if (dealerBid !== undefined && dealerBid + othersSum === j.cardsThisDeal) {
-    const adjusted = Math.min(max, dealerBid + 1);
-    ns = {
-      ...ns,
-      joker: { ...ns.joker!, bids: { ...bids, [dealerId]: adjusted } }
-    };
-  }
+  bids = fixBidSum(bids, state.players, state.dealerIndex, j.cardsThisDeal);
+  ns = { ...ns, joker: { ...ns.joker!, bids } };
 
   return beginTricks(ns);
 };
 
-const applyPlayCard = (state: SessionState, userId: string, card: Card, action: PlayerAction): SessionState => {
+const applyPlayCard = (state: SessionState, userId: string, cardRaw: Card, action: PlayerAction): SessionState => {
+  const card = normalizeJokerCard(cardRaw) ?? cardRaw;
   const j = state.joker!;
   const hand = state.playerCards[userId] ?? [];
-  if (!hand.includes(card)) {
+  const idx = hand.indexOf(card);
+  if (idx < 0) {
     throw new Error('CARD_NOT_IN_HAND');
   }
-  const leadSuit =
-    j.currentTrick.length === 0
-      ? null
-      : isJokerCard(j.currentTrick[0]!.card)
-        ? null
-        : cardSuit(j.currentTrick[0]!.card);
-  const allowed = legalPlays(hand, leadSuit, j.trumpSuit);
+  const leadSuit = leadSuitFromTrick(j.currentTrick);
+  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit);
   if (!allowed.includes(card)) {
     throw new Error('ILLEGAL_CARD');
   }
 
   const playerCards = {
     ...state.playerCards,
-    [userId]: hand.filter((c) => c !== card)
+    [userId]: [...hand.slice(0, idx), ...hand.slice(idx + 1)]
   };
   const currentTrick = [...j.currentTrick, { userId, card }];
   const ns: SessionState = {
@@ -251,7 +273,8 @@ export const applyJokerAction = (
     if (action.type !== 'playCard' || !action.card) {
       return { ok: false, reason: 'INVALID_ACTION' };
     }
-    return { ok: true, state: applyPlayCard(state, action.userId, action.card, action) };
+    const card = normalizeJokerCard(action.card) ?? action.card;
+    return { ok: true, state: applyPlayCard(state, action.userId, card, action) };
   } catch (e) {
     const reason = e instanceof Error ? e.message : 'INVALID_ACTION';
     return { ok: false, reason };
@@ -270,13 +293,8 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
   }
 
   const hand = state.playerCards[userId] ?? [];
-  const leadSuit =
-    j.currentTrick.length === 0
-      ? null
-      : isJokerCard(j.currentTrick[0]!.card)
-        ? null
-        : cardSuit(j.currentTrick[0]!.card);
-  const allowed = legalPlays(hand, leadSuit, j.trumpSuit);
+  const leadSuit = leadSuitFromTrick(j.currentTrick);
+  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit);
   const card = allowed[0] ?? hand[0]!;
   return { ...base, type: 'playCard', card };
 };
@@ -285,5 +303,3 @@ export const jokerTimeoutAction = (state: SessionState, userId: string): PlayerA
   state.street === 'BIDDING'
     ? { sessionId: state.sessionId, userId, type: 'bid', amount: 0, at: Date.now() }
     : pickBotJokerAction(state, userId);
-
-export { JOKER_WILD_IDS };

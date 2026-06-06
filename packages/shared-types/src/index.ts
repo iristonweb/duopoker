@@ -101,6 +101,15 @@ export {
   jokerPoolLabel
 } from './joker-schedule';
 
+export {
+  JOKER_WILD_IDS,
+  cardSuit,
+  isJokerCard,
+  jokerLegalPlays,
+  leadSuitFromTrick,
+  normalizeJokerCard
+} from './joker-legality';
+
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type GameStreet =
   | 'LOBBY'

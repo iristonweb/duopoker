@@ -14,19 +14,38 @@ export const cardRankIndex = (c: Card): number => {
   return i >= 0 ? i : 0;
 };
 
-export const legalPlays = (
+export const leadSuitFromTrick = (trick: readonly { card: Card }[]): Suit | null => {
+  for (const { card } of trick) {
+    if (!isJokerCard(card)) return cardSuit(card);
+  }
+  return null;
+};
+
+export const jokerLegalPlays = (
   hand: Card[],
   leadSuit: Suit | null,
   trumpSuit: Suit | null
 ): Card[] => {
+  if (!hand.length) return [];
+  const jokers = hand.filter(isJokerCard);
   if (!leadSuit) return [...hand];
+
   const follow = hand.filter((c) => !isJokerCard(c) && cardSuit(c) === leadSuit);
-  if (follow.length > 0) return follow;
+  if (follow.length > 0) return [...follow, ...jokers];
+
   if (trumpSuit) {
-    const trumps = hand.filter((c) => isJokerCard(c) || cardSuit(c) === trumpSuit);
-    if (trumps.length > 0) return trumps;
+    const trumps = hand.filter((c) => !isJokerCard(c) && cardSuit(c) === trumpSuit);
+    if (trumps.length > 0) return [...trumps, ...jokers];
+    if (jokers.length > 0) return [...jokers];
   }
+
   return [...hand];
+};
+
+export const normalizeJokerCard = (raw: string): Card | null => {
+  const c = raw.trim().toUpperCase();
+  if (!/^[6-9TJQKA][SHDC]$/.test(c)) return null;
+  return c as Card;
 };
 
 /** Last joker in trick wins; else highest trump; else highest card of lead suit. */
@@ -36,7 +55,7 @@ export const trickWinnerIndex = (
   trumpSuit: Suit | null
 ): number => {
   if (plays.length === 0) return 0;
-  const leadSuit = isJokerCard(plays[0]!.card) ? null : cardSuit(plays[0]!.card);
+  const leadSuit = leadSuitFromTrick(plays);
 
   let winnerIdx = 0;
   let winnerJokerPos = -1;

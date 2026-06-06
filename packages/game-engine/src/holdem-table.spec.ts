@@ -181,6 +181,40 @@ describe('Joker flow', () => {
     expect(r.state.mode).toBe('JOKER');
     expect(r.state.joker?.handPoints).toBeDefined();
   });
+
+  it('allows joker when holding suit cards', () => {
+    let s = createInitialTableState('sr', 'JOKER', 100, 99);
+    s = startNewHand({
+      ...s,
+      players: ['a', 'b'],
+      stacks: { a: 100, b: 100 },
+      handNumber: 7
+    });
+    s = {
+      ...s,
+      street: 'TRICKS',
+      playerCards: { a: ['7S', '6S'], b: ['8H'] },
+      joker: {
+        ...s.joker!,
+        bids: { a: 0, b: 0 },
+        trumpSuit: 'H',
+        currentTrick: [{ userId: 'b', card: 'TH' }],
+        cardsThisDeal: 2
+      },
+      activePlayerIndex: 0,
+      activePlayerId: 'a'
+    };
+    const r = applyTableAction(s, {
+      sessionId: 'sr',
+      userId: 'a',
+      type: 'playCard',
+      card: '6S',
+      at: 1
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.playerCards.a).toEqual(['7S']);
+  });
 });
 
 describe('markReadyForNextHand', () => {
