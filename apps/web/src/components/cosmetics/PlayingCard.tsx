@@ -109,11 +109,11 @@ export function PlayingCard({
         <img
           src={deckBackUrl(deckId)}
           alt=""
-          className="h-full w-full object-cover object-center"
+          className="h-full w-full object-fill"
           draggable={false}
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-black/15" />
-        <div className="pointer-events-none absolute inset-[2px] rounded-[inherit] border border-white/10" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-black/10" />
+        <div className="pointer-events-none absolute inset-[1px] rounded-[inherit] border border-white/[0.08]" />
       </div>
     );
   }

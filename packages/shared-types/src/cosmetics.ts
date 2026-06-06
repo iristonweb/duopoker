@@ -200,7 +200,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       slot: 'deck',
       requiredTier: tier,
       imageUrl: asset(`backs/deck_${t}.png`),
-      gameImageUrl: asset(`backs/deck_${t}_game.png`),
+      gameImageUrl: asset(`backs/deck_${t}.png`),
       rarity: deck.rarity,
       description: deck.description
     },
@@ -245,7 +245,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     slot: 'deck',
     requiredTier: 'FREE',
     imageUrl: asset('backs/deck_classic.png'),
-    gameImageUrl: asset('backs/deck_classic_game.png'),
+    gameImageUrl: asset('backs/deck_classic.png'),
     rarity: 'COMMON',
     description: 'Signature DP CLUB midnight deck with gold filigree.'
   },
