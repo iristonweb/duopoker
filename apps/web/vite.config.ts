@@ -1,6 +1,10 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -12,6 +16,12 @@ export default defineConfig(({ mode }) => {
   };
 
   return {
+    resolve: {
+      alias: {
+        '@duopoker/shared-types/index': path.join(repoRoot, 'packages/shared-types/src/index.ts'),
+        '@duopoker/shared-types': path.join(repoRoot, 'packages/shared-types/src/index.ts')
+      }
+    },
     plugins: [
       react(),
       VitePWA({

@@ -3,7 +3,7 @@ import type { Express } from 'express';
 import { Server } from 'socket.io';
 import { z } from 'zod';
 import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
-import type { SessionState } from '@duopoker/shared-types/index';
+import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
@@ -280,10 +280,15 @@ export const createRealtimeServer = (app: Express) => {
         return;
       }
 
-      const result = await processPlayerAction({
-        ...parsed.data,
-        userId
-      });
+      const action: PlayerAction = {
+        sessionId: parsed.data.sessionId,
+        userId,
+        type: parsed.data.type,
+        amount: parsed.data.amount,
+        at: parsed.data.at,
+        ...(parsed.data.card ? { card: parsed.data.card as Card } : {})
+      };
+      const result = await processPlayerAction(action);
       if (result.rejected) {
         socket.emit('sessionError', { code: result.reason });
         return;
