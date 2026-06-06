@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
@@ -205,11 +205,13 @@ export const Table = () => {
     const id = session?.sessionId ?? routeSessionId;
     if (leaving) return;
     setLeaving(true);
+    clearTableSession();
     navigate('/lobby', { replace: true });
     if (id) {
-      void leaveTable(id).finally(() => setLeaving(false));
+      void leaveTable(id)
+        .catch(() => undefined)
+        .finally(() => setLeaving(false));
     } else {
-      clearTableSession();
       setLeaving(false);
     }
   };
@@ -244,7 +246,7 @@ export const Table = () => {
   }
 
   if (tableVoluntaryLeave) {
-    return null;
+    return <Navigate to="/lobby" replace />;
   }
 
   if (!matchRoute || !session) {
@@ -289,8 +291,9 @@ export const Table = () => {
   const gameOver = session.street === 'COMPLETE' && playersWithStack.length < 2;
   const heroStack = session.stacks[userId] ?? 0;
   const heroBusted = session.players.includes(userId) && heroStack <= 0;
-  const heroSpectating = heroBusted && !gameOver;
-  const showBustedOverlay = heroBusted && !bustedDismissed && !gameOver;
+  const heroSpectating = heroBusted && playersWithStack.length >= 2;
+  const showBustedOverlay = heroBusted && !bustedDismissed;
+  const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay;
 
   const kettle =
     session.pot +
@@ -345,12 +348,12 @@ export const Table = () => {
         />
       }
       table={
-        session.street && session.street !== 'LOBBY' ? (
+        !waitingForPlayers && session.street ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.35 }}
-            className="h-full min-h-0"
+            className="relative h-full min-h-0"
           >
             <PokerTable3D
               communityCards={session.mode === 'HOLDEM' ? (session.communityCards ?? []) : []}
@@ -358,7 +361,7 @@ export const Table = () => {
                 ghostBoardVisible && canPeekGhostBoard ? (session.ghostCommunityCards ?? []) : []
               }
               pot={kettle}
-              street={session.street}
+              street={session.street === 'LOBBY' ? 'COMPLETE' : session.street}
               players={tablePlayers}
               heroDeckId={equipped.deck}
               heroChipId={equipped.chip}

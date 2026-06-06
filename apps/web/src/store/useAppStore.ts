@@ -260,7 +260,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       socket.on('leftTable', () => {
         get().stopPolling();
-        set({ session: undefined, sessionError: undefined });
+        set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
       });
       socket.on('connect', () => {
         const sid = get().session?.sessionId;
