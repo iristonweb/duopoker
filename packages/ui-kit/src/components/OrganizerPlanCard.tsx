@@ -17,12 +17,14 @@ const tierLabel: Record<'BASIC' | 'PRO' | 'NETWORK', string> = {
 export function OrganizerPlanCard({
   tier,
   price,
+  description,
   bannerUrl,
   children,
   className
 }: {
   tier: 'BASIC' | 'PRO' | 'NETWORK';
   price: string;
+  description?: string;
   bannerUrl?: string;
   children?: ReactNode;
   className?: string;
@@ -53,7 +55,7 @@ export function OrganizerPlanCard({
           <p className="text-lg font-semibold text-gold">{price}</p>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Private club hosting — member limits, invites, moderation tools. Play-money only.
+          {description ?? 'Private club hosting — member limits, invites, moderation. Play-money only.'}
         </p>
         {children ? <div className="mt-4 border-t border-white/10 pt-4">{children}</div> : null}
       </div>

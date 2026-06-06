@@ -108,16 +108,38 @@
     "gold": "Gold",
     "platinum": "Platinum",
     "royal": "Royal",
-    "priceSilver": "$4.99/mo",
-    "priceGold": "$9.99/mo",
-    "pricePlatinum": "$19.99/mo",
-    "priceRoyal": "$49.99/mo",
-    "perks": "Exclusive cosmetics & perks — no real-money gambling.",
+    "priceSilver": "490 ₽/mo",
+    "priceGold": "990 ₽/mo",
+    "pricePlatinum": "1,990 ₽/mo",
+    "priceRoyal": "4,990 ₽/mo",
+    "perks": "DP CLUB cosmetics and table perks. Play-money only — chips cannot be cashed out.",
     "perkSummary": {
-      "silver": "Silver DP CLUB deck, chips & frame — your first premium identity.",
-      "gold": "Gold tier cosmetics + voice chat at live tables.",
-      "platinum": "Platinum visuals + AI coach hints (coming soon).",
-      "royal": "Full Royal DP CLUB set — the ultimate table presence."
+      "silver": "Entry premium: Silver table identity plus ghost board peek when everyone folds preflop.",
+      "gold": "Everything in Silver plus Gold cosmetics and LiveKit voice at live tables.",
+      "platinum": "Everything in Gold plus Platinum visuals and AI coach hints (coming soon).",
+      "royal": "Full DP CLUB Royal set — maximum presence and status at the table."
+    },
+    "perkBullets": {
+      "silver": [
+        "Silver deck, chips, and avatar frame",
+        "Peek the board that would have run out (preflop muck-win)",
+        "+50% daily chip bonus"
+      ],
+      "gold": [
+        "All Silver perks",
+        "Gold deck, chips, and frame",
+        "LiveKit voice chat at the table"
+      ],
+      "platinum": [
+        "All Gold perks",
+        "Platinum deck, chips, and frame",
+        "AI coach hints (coming soon)"
+      ],
+      "royal": [
+        "All Platinum perks",
+        "Royal deck, chips, and frame — full premium set",
+        "Maximum table status and visibility"
+      ]
     }
   },
   "cosmetics": {
@@ -175,11 +197,12 @@
     "sessionStatus": "Table {{id}} — {{street}}",
     "nextHand": "Next hand",
     "subscribe": "Subscribe",
-    "stripeNotConfigured": "Stripe price is not configured on the server.",
+    "stripeNotConfigured": "Payments not configured — set YOOKASSA_* on the server.",
+    "yookassaNotConfigured": "YooKassa is not configured. Set YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY on Vercel.",
     "networkError": "Network error",
     "clubsEyebrow": "Organizer SaaS",
     "clubsTitle": "Private clubs",
-    "clubsDesc": "Company tables · YooMoney · @nickname invites",
+    "clubsDesc": "Private tables for your crew: play-money only, @nickname invites, member moderation. PRO and NETWORK plans billed via YooMoney (YooKassa).",
     "myClubs": "My clubs",
     "checkoutFailed": "Purchase failed — sign in and check chip balance.",
     "signInToSubscribe": "Sign in to subscribe.",
@@ -224,6 +247,11 @@
     "actionError": "Action failed: {{code}}",
     "nextHandAuto": "Next hand in {{seconds}}s…",
     "dealingNext": "Dealing next hand…",
+    "peekGhostBoard": "What would the board have been?",
+    "hideGhostBoard": "Hide ghost board",
+    "ghostBoardHint": "Ghost preview — cards that would have been dealt if everyone played.",
+    "ghostBoardUpsell": "Everyone folded preflop. Subscribers can peek the board that would have run out.",
+    "ghostBoardSubscribe": "View plans",
     "gameOver": "Game over — not enough players with chips.",
     "leaveTable": "Leave table",
     "leaving": "Leaving…",
@@ -249,7 +277,7 @@
   "clubs": {
     "title": "Private clubs",
     "eyebrow": "Private clubs",
-    "desc": "Host tables for friends — play-money only.",
+    "desc": "Create a closed space for friends or your team: private tables, moderator roles, play-money only with no cashout.",
     "create": "Create club",
     "back": "← Clubs",
     "signInTitle": "Sign in required",
@@ -268,7 +296,25 @@
     "descPlaceholder": "Optional",
     "createBtn": "Create club",
     "creating": "Creating…",
-    "createError": "Could not create club"
+    "createError": "Could not create club",
+    "disclaimer": "DuoPoker clubs are play-money only. No cashout, rake, or peer-to-peer money transfers.",
+    "plansTitle": "Organizer plans",
+    "plansDesc": "BASIC is free to start. PRO and NETWORK expand member and active table limits.",
+    "planBasic": {
+      "title": "BASIC — free",
+      "desc": "Up to 30 members and 2 active tables. @nickname invites, private tables, virtual chips."
+    },
+    "planPro": {
+      "title": "PRO",
+      "desc": "Up to 150 members and 8 active tables. For regular home games and small leagues."
+    },
+    "planNetwork": {
+      "title": "NETWORK",
+      "desc": "Up to 600 members and 20 tables. For large communities and tournament series."
+    },
+    "payPro": "Pay for PRO (YooMoney)",
+    "payNetwork": "Pay for NETWORK (YooMoney)",
+    "currentPlan": "Current plan"
   },
   "admin": {
     "eyebrow": "Superadmin",

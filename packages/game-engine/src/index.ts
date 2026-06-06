@@ -92,7 +92,8 @@ export {
   totalInKettle,
   sbBbIndices
 } from './holdem-table';
-export { sanitizeStateForViewer } from './viewer-state';
+export { sanitizeStateForViewer, type SanitizeViewerOptions } from './viewer-state';
+export { peekGhostCommunityFromDeck } from './ghost-board';
 export { normalizeSessionState } from './normalize-state';
 export { computeSidePots, distributeSidePots } from './pot-calculator';
 export { bestStrengthFromSeven, strengthFiveCards, compareStrength, describeStrength } from './poker-eval';

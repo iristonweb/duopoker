@@ -57,7 +57,12 @@ const container = {
   }
 };
 
-type CatalogSub = { tier: string; stripePriceId?: string; priceUsd?: number; imageUrl?: string };
+type CatalogSub = {
+  tier: string;
+  priceRubMonthly?: number;
+  stripePriceId?: string;
+  imageUrl?: string;
+};
 type CatalogGameMode = { id: 'HOLDEM' | 'RASPISNOY'; title: string; description: string; imageUrl: string };
 
 function AuthPanel() {
@@ -250,6 +255,7 @@ export const Lobby = () => {
   const [lobbyBannerUrl, setLobbyBannerUrl] = useState(lobbyHeroBanner);
   const [clubsBannerUrl, setClubsBannerUrl] = useState(clubsHeroBanner);
   const [catalogMockCheckout, setCatalogMockCheckout] = useState(false);
+  const [catalogYookassaConfigured, setCatalogYookassaConfigured] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
@@ -269,7 +275,7 @@ export const Lobby = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkout = params.get('checkout');
-    if (checkout === 'success' || (checkout === 'mock' && params.get('success'))) {
+    if (checkout === 'success' || checkout === 'mock') {
       void fetchProfile().then(() => {
         setCheckoutMsg(t('lobby.subscriptionActivated'));
       });
@@ -358,70 +364,99 @@ export const Lobby = () => {
           lobbyBannerUrl?: string;
           clubsBannerUrl?: string;
           mockCheckout?: boolean;
+          yookassaConfigured?: boolean;
         }) => {
           setCatalogSubs(d.subscriptions ?? []);
           if (d.gameModes?.length) setGameModes(d.gameModes);
           if (d.lobbyBannerUrl) setLobbyBannerUrl(d.lobbyBannerUrl);
           if (d.clubsBannerUrl) setClubsBannerUrl(d.clubsBannerUrl);
           setCatalogMockCheckout(Boolean(d.mockCheckout));
+          setCatalogYookassaConfigured(Boolean(d.yookassaConfigured));
         }
       )
       .catch(() => undefined);
   }, []);
 
   const startSubscription = async (tier: string) => {
-    const sub = catalogSubs.find((s) => s.tier === tier);
     const token = useAppStore.getState().accessToken;
     if (!token) {
       setCheckoutMsg(t('lobby.signInToSubscribe'));
       return;
     }
-    const useStripe = Boolean(sub?.stripePriceId && !catalogMockCheckout);
     setCheckoutMsg(null);
     setCheckoutBusy(tier);
     try {
-      if (useStripe && sub?.stripePriceId) {
-        const res = await fetch(resolveApiUrl('/monetization/checkout-session'), {
+      const useYookassa = catalogYookassaConfigured && !catalogMockCheckout;
+      if (useYookassa) {
+        const res = await fetch(resolveApiUrl('/monetization/subscription/checkout'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ priceId: sub.stripePriceId, mode: 'subscription' })
+          body: JSON.stringify({ tier })
         });
-        const data = (await res.json()) as { url?: string; error?: string };
+        const data = (await res.json()) as { confirmationUrl?: string; error?: string };
+        if (!res.ok) {
+          setCheckoutMsg(data.error ?? t('lobby.checkoutFailed'));
+          return;
+        }
+        if (data.confirmationUrl) window.location.href = data.confirmationUrl;
+        return;
+      }
+
+      if (catalogMockCheckout) {
+        const res = await fetch(resolveApiUrl('/monetization/mock-subscribe'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ tier })
+        });
+        const data = (await res.json()) as { ok?: boolean; error?: string; tier?: string };
         if (!res.ok) {
           setCheckoutMsg(data.error ?? t('queue.failed'));
           return;
         }
-        if (data.url) window.location.href = data.url;
+        await fetchProfile();
+        setCheckoutMsg(
+          t('lobby.subscriptionActivatedTier', {
+            tier: t(`subscriptions.${tier.toLowerCase()}` as 'subscriptions.silver')
+          })
+        );
         return;
       }
 
-      const res = await fetch(resolveApiUrl('/monetization/mock-subscribe'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ tier })
-      });
-      const data = (await res.json()) as { ok?: boolean; error?: string; tier?: string };
-      if (!res.ok) {
-        setCheckoutMsg(data.error ?? t('queue.failed'));
-        return;
-      }
-      await fetchProfile();
-      setCheckoutMsg(
-        t('lobby.subscriptionActivatedTier', {
-          tier: t(`subscriptions.${tier.toLowerCase()}` as 'subscriptions.silver')
-        })
-      );
+      setCheckoutMsg(t('lobby.yookassaNotConfigured'));
     } catch {
       setCheckoutMsg(t('lobby.networkError'));
     } finally {
       setCheckoutBusy(null);
     }
+  };
+
+  const tierPerkBullets = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') => {
+    const key = `subscriptions.perkBullets.${tier.toLowerCase()}` as
+      | 'subscriptions.perkBullets.silver'
+      | 'subscriptions.perkBullets.gold'
+      | 'subscriptions.perkBullets.platinum'
+      | 'subscriptions.perkBullets.royal';
+    const bullets = t(key, { returnObjects: true });
+    return Array.isArray(bullets) ? (bullets as string[]) : [];
+  };
+
+  const subscriptionPriceLabel = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') => {
+    const fromCatalog = catalogSubs.find((s) => s.tier === tier)?.priceRubMonthly;
+    if (typeof fromCatalog === 'number') {
+      return `${fromCatalog.toLocaleString('ru-RU')} ₽/мес`;
+    }
+    const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}` as
+      | 'subscriptions.priceSilver'
+      | 'subscriptions.priceGold'
+      | 'subscriptions.pricePlatinum'
+      | 'subscriptions.priceRoyal';
+    return t(priceKey);
   };
 
   const tierPerks = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') =>
@@ -719,18 +754,14 @@ export const Lobby = () => {
             <div id="subscriptions" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const).map((tier) => {
                 const active = subscriptionTier === tier;
-                const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}` as
-                  | 'subscriptions.priceSilver'
-                  | 'subscriptions.priceGold'
-                  | 'subscriptions.pricePlatinum'
-                  | 'subscriptions.priceRoyal';
                 return (
                   <SubscriptionTierCard
                     key={tier}
                     tier={tier}
-                    price={t(priceKey)}
+                    price={subscriptionPriceLabel(tier)}
                     tierName={t(`subscriptions.${tier.toLowerCase()}` as 'subscriptions.silver')}
                     perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}` as 'subscriptions.perkSummary.silver')}
+                    featureBullets={tierPerkBullets(tier)}
                     perks={tierPerks(tier)}
                     active={active}
                     featured={tier === 'ROYAL'}

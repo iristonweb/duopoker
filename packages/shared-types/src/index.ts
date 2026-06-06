@@ -56,6 +56,15 @@ export {
   type SubscriptionTier
 } from './cosmetics';
 
+export {
+  SUBSCRIPTION_PRICES_RUB,
+  CHIP_PACK_PRICES_RUB,
+  ORGANIZER_PLAN_PRICES_RUB,
+  formatRubMonthly,
+  formatRubOnce,
+  type PaidSubscriptionTier
+} from './pricing';
+
 export type GameMode = 'HOLDEM' | 'RASPISNOY';
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type GameStreet =
@@ -116,9 +125,14 @@ export interface SessionState {
   actionDeadlineAt?: number;
   winners?: string[];
   winnersShare?: Record<string, number>;
+  /** Board that would have run out after a preflop fold-win (subscription perk). */
+  ghostCommunityCards?: Card[];
   /** @deprecated still populated for older clients — use activePlayerIndex */
   activePlayerId?: string;
 }
+
+/** Minimum subscription tier to reveal ghost board after a preflop muck-win. */
+export const GHOST_BOARD_MIN_TIER = 'SILVER' as const;
 
 export interface ReplayFrame {
   at: number;

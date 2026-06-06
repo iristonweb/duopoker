@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
+import { sanitizeSessionForUser } from '../services/sanitize-session.js';
 import { authGuard } from '../middleware/auth.js';
 import { getSessionPlayerProfiles } from '../services/private-table-auth.js';
 import { assertCanJoinSession } from '../services/session-access.js';
@@ -130,7 +130,7 @@ gameRoutes.post('/leave', async (c) => {
 
   const ticked = await tickSession(parsed.data.sessionId);
   const outState = ticked ?? result.state;
-  return c.json({ session: sanitizeStateForViewer(outState, userId), left: true });
+  return c.json({ session: await sanitizeSessionForUser(outState, userId), left: true });
 });
 
 gameRoutes.post('/join', async (c) => {
@@ -153,7 +153,7 @@ gameRoutes.post('/join', async (c) => {
   if (ticked) state = ticked;
 
   return c.json({
-    session: sanitizeStateForViewer(state, userId)
+    session: await sanitizeSessionForUser(state, userId)
   });
 });
 
@@ -175,7 +175,7 @@ gameRoutes.post('/action', async (c) => {
   if (ticked) outState = ticked;
 
   return c.json({
-    session: sanitizeStateForViewer(outState, userId),
+    session: await sanitizeSessionForUser(outState, userId),
     replay: result.replay
   });
 });
@@ -200,7 +200,7 @@ gameRoutes.post('/ready-next-hand', async (c) => {
   }
 
   return c.json({
-    session: sanitizeStateForViewer(out, userId),
+    session: await sanitizeSessionForUser(out, userId),
     started: result.started
   });
 });
@@ -218,7 +218,7 @@ gameRoutes.get('/session/:sessionId', async (c) => {
   const ticked = await tickSession(sessionId);
   if (ticked) snapshot = ticked;
   return c.json({
-    session: sanitizeStateForViewer(snapshot, userId)
+    session: await sanitizeSessionForUser(snapshot, userId)
   });
 });
 

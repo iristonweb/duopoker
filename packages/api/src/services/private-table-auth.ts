@@ -7,6 +7,44 @@ import { prisma } from '../lib/prisma.js';
 import { decryptField } from '../lib/field-crypto.js';
 import { BOT_PREFIX } from './game-session.js';
 
+export const getUserSubscriptionTier = async (userId: string): Promise<SubscriptionTier> => {
+  if (userId.startsWith(BOT_PREFIX)) return 'FREE';
+  const sub = await prisma.subscription.findFirst({
+    where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
+    orderBy: { expiresAt: 'desc' },
+    select: { tier: true }
+  });
+  return (sub?.tier as SubscriptionTier | undefined) ?? 'FREE';
+};
+
+export const getSubscriptionTiersBatch = async (
+  userIds: string[]
+): Promise<Map<string, SubscriptionTier>> => {
+  const unique = [...new Set(userIds.filter((id) => id && !id.startsWith(BOT_PREFIX)))];
+  const map = new Map<string, SubscriptionTier>();
+  for (const id of userIds) {
+    if (id.startsWith(BOT_PREFIX)) map.set(id, 'FREE');
+  }
+  if (!unique.length) return map;
+
+  const subs = await prisma.subscription.findMany({
+    where: {
+      userId: { in: unique },
+      status: 'ACTIVE',
+      expiresAt: { gt: new Date() }
+    },
+    orderBy: { expiresAt: 'desc' },
+    select: { userId: true, tier: true }
+  });
+  for (const id of unique) map.set(id, 'FREE');
+  for (const sub of subs) {
+    if (!map.has(sub.userId) || map.get(sub.userId) === 'FREE') {
+      map.set(sub.userId, sub.tier as SubscriptionTier);
+    }
+  }
+  return map;
+};
+
 export const getPrivateTableBySessionId = async (sessionId: string) =>
   prisma.privateTable.findUnique({
     where: { sessionId },

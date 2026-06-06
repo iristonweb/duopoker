@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Badge,
   Button,
@@ -10,10 +11,14 @@ import {
   PageShell,
   SectionHeader
 } from '@duopoker/ui-kit';
-import { organizerPlanBanners } from '@duopoker/shared-types';
+import { ORGANIZER_PLAN_PRICES_RUB, organizerPlanBanners } from '@duopoker/shared-types';
 import { useAppStore, type ClubDetail } from '../store/useAppStore';
 
+const formatPlanPrice = (rub: number) =>
+  rub === 0 ? '0 ₽' : `${rub.toLocaleString('ru-RU')} ₽/мес`;
+
 export const ClubDashboard = () => {
+  const { t } = useTranslation();
   const { clubId } = useParams<{ clubId: string }>();
   const fetchClub = useAppStore((s) => s.fetchClub);
   const addClubMember = useAppStore((s) => s.addClubMember);
@@ -46,7 +51,7 @@ export const ClubDashboard = () => {
       maxWidth="4xl"
       back={
         <Link to="/clubs" className="premium-link text-sm">
-          ← Клубы
+          {t('clubs.back')}
         </Link>
       }
     >
@@ -57,43 +62,64 @@ export const ClubDashboard = () => {
       ) : club ? (
         <>
           <div className="mb-8">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">Club dashboard</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{t('clubs.eyebrow')}</p>
             <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ivory">{club.name}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Badge variant="gold">{tier}</Badge>
               <Badge>
-                {club.usage?.members ?? 0}/{limits.maxMembers} members
+                {club.usage?.members ?? 0}/{limits.maxMembers} {t('clubs.members')}
               </Badge>
               <Badge variant="emerald">
                 {club.usage?.activeTables ?? 0}/{limits.maxActiveTables} tables
               </Badge>
             </div>
+            <p className="mt-3 text-sm text-muted">{t('clubs.disclaimer')}</p>
           </div>
 
           {tier === 'BASIC' ? (
             <section className="mb-10">
               <SectionHeader
                 eyebrow="Upgrade"
-                title="Organizer plans"
-                description="Расширьте лимиты участников и активных столов."
+                title={t('clubs.plansTitle')}
+                description={t('clubs.plansDesc')}
               />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <OrganizerPlanCard tier="PRO" price="2 990 ₽/мес" bannerUrl={organizerPlanBanners.PRO}>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <OrganizerPlanCard
+                  tier="BASIC"
+                  price={formatPlanPrice(0)}
+                  description={t('clubs.planBasic.desc')}
+                  bannerUrl={organizerPlanBanners.BASIC}
+                />
+                <OrganizerPlanCard
+                  tier="PRO"
+                  price={formatPlanPrice(ORGANIZER_PLAN_PRICES_RUB.PRO)}
+                  description={t('clubs.planPro.desc')}
+                  bannerUrl={organizerPlanBanners.PRO}
+                >
                   <Button variant="secondary" size="sm" className="w-full" onClick={() => void upgradeClubPlan(clubId, 'PRO')}>
-                    Оплатить PRO (ЮMoney)
+                    {t('clubs.payPro')}
                   </Button>
                 </OrganizerPlanCard>
-                <OrganizerPlanCard tier="NETWORK" price="7 990 ₽/мес" bannerUrl={organizerPlanBanners.NETWORK}>
+                <OrganizerPlanCard
+                  tier="NETWORK"
+                  price={formatPlanPrice(ORGANIZER_PLAN_PRICES_RUB.NETWORK)}
+                  description={t('clubs.planNetwork.desc')}
+                  bannerUrl={organizerPlanBanners.NETWORK}
+                >
                   <Button variant="secondary" size="sm" className="w-full" onClick={() => void upgradeClubPlan(clubId, 'NETWORK')}>
-                    Оплатить NETWORK
+                    {t('clubs.payNetwork')}
                   </Button>
                 </OrganizerPlanCard>
               </div>
             </section>
-          ) : null}
+          ) : (
+            <GlassPanel className="mb-6 border-white/10 p-4 text-sm text-muted">
+              {t('clubs.currentPlan')}: <span className="font-semibold text-ivory">{tier}</span>
+            </GlassPanel>
+          )}
 
           <GlassPanel className="mb-6 border-white/10 p-5">
-            <SectionHeader eyebrow="People" title="Участники" className="mb-4" />
+            <SectionHeader eyebrow="People" title={t('clubs.members')} className="mb-4" />
             <ul className="space-y-2">
               {club.members?.map((m) => (
                 <li
@@ -109,7 +135,7 @@ export const ClubDashboard = () => {
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <Input
                   className="flex-1"
-                  placeholder="@nickname или user id"
+                  placeholder="@nickname"
                   value={memberQuery}
                   onChange={(e) => setMemberQuery(e.target.value)}
                 />
@@ -121,23 +147,23 @@ export const ClubDashboard = () => {
                     void addClubMember(clubId, memberQuery).then(() => {
                       setMemberQuery('');
                       reload();
-                      setMsg('Участник добавлен');
+                      setMsg(t('clubs.memberAdded', { defaultValue: 'Member added' }));
                     });
                   }}
                 >
-                  Добавить
+                  {t('clubs.addMember', { defaultValue: 'Add' })}
                 </Button>
               </div>
             )}
           </GlassPanel>
 
           <GlassPanel className="border-white/10 p-5">
-            <SectionHeader eyebrow="Tables" title="Приватные столы" className="mb-4" />
+            <SectionHeader eyebrow="Tables" title={t('clubs.privateTables', { defaultValue: 'Private tables' })} className="mb-4" />
             {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') && (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   className="flex-1"
-                  placeholder="Название стола"
+                  placeholder={t('clubs.namePlaceholder')}
                   value={tableName}
                   onChange={(e) => setTableName(e.target.value)}
                 />
@@ -151,7 +177,7 @@ export const ClubDashboard = () => {
                     });
                   }}
                 >
-                  Создать
+                  {t('clubs.createBtn')}
                 </Button>
               </div>
             )}
@@ -164,7 +190,7 @@ export const ClubDashboard = () => {
           ) : null}
         </>
       ) : (
-        <GlassPanel className="border-white/10 p-6 text-muted">Клуб не найден.</GlassPanel>
+        <GlassPanel className="border-white/10 p-6 text-muted">{t('clubs.loadError')}</GlassPanel>
       )}
     </PageShell>
   );

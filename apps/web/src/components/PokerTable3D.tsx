@@ -33,6 +33,8 @@ type Props = {
   players?: TablePlayerVisual[];
   heroDeckId?: string;
   heroChipId?: string;
+  /** Semi-transparent preview of cards that would have been dealt (subscription perk). */
+  ghostCommunityCards?: Card[];
   className?: string;
 };
 
@@ -43,8 +45,11 @@ export function PokerTable3D({
   players = [],
   heroDeckId = 'deck_classic',
   heroChipId = 'chip_classic',
+  ghostCommunityCards = [],
   className
 }: Props) {
+  const showGhostBoard = ghostCommunityCards.length === 5;
+  const boardCards = showGhostBoard ? ghostCommunityCards : communityCards;
   return (
     <div className={cn('relative h-full min-h-0 w-full overflow-hidden', className)}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_50%,_#000_100%)]" />
@@ -95,12 +100,12 @@ export function PokerTable3D({
 
       <div className="pointer-events-none absolute inset-0 z-10">
         <div className="absolute left-1/2 top-[36%] flex -translate-x-1/2 gap-1.5 sm:gap-2.5">
-          {communityCards.length ? (
-            communityCards.map((c, i) => (
+          {boardCards.length ? (
+            boardCards.map((c, i) => (
               <motion.div
                 key={`${c}-${i}`}
                 initial={{ opacity: 0, y: -16, rotateY: 90 }}
-                animate={{ opacity: 1, y: 0, rotateY: 0 }}
+                animate={{ opacity: showGhostBoard ? 0.72 : 1, y: 0, rotateY: 0 }}
                 transition={{ delay: i * 0.07, duration: 0.35 }}
               >
                 <PlayingCard
@@ -108,7 +113,10 @@ export function PokerTable3D({
                   faceUp
                   size="sm"
                   deckId={heroDeckId}
-                  className="shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:scale-110"
+                  className={cn(
+                    'shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:scale-110',
+                    showGhostBoard && 'ring-1 ring-violet-400/40 saturate-[0.85]'
+                  )}
                 />
               </motion.div>
             ))

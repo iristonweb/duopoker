@@ -1,6 +1,7 @@
 import type { Card, GameStreet, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { isAutomatedPlayer } from './bot-actions';
 import { createDeck, shuffle } from './cards';
+import { peekGhostCommunityFromDeck } from './ghost-board';
 import {
   computeSidePots,
   distributeSidePots,
@@ -447,7 +448,8 @@ export const startNewHand = (state: SessionState): SessionState => {
       activePlayerIndex: first,
       actionLog: [],
       winners: undefined,
-      winnersShare: undefined
+      winnersShare: undefined,
+      ghostCommunityCards: undefined
     };
   }
 
@@ -488,7 +490,8 @@ export const startNewHand = (state: SessionState): SessionState => {
     activePlayerIndex: first,
     actionLog: [],
     winners: undefined,
-    winnersShare: undefined
+    winnersShare: undefined,
+    ghostCommunityCards: undefined
   };
 };
 
@@ -637,6 +640,10 @@ export const applyTableAction = (
     const won = totalInKettle(awarded);
     const stacks = { ...awarded.stacks };
     stacks[w] = (stacks[w] ?? 0) + won;
+    const ghostCommunityCards =
+      ns.mode === 'HOLDEM' && ns.communityCards.length === 0
+        ? peekGhostCommunityFromDeck(awarded.deck)
+        : undefined;
     return {
       ok: true,
       state: withHandComplete({
@@ -651,7 +658,8 @@ export const applyTableAction = (
         winnersShare: { [w]: won },
         readyForNextHand: [],
         activePlayerIndex: ns.players.indexOf(w),
-        activePlayerId: w
+        activePlayerId: w,
+        ghostCommunityCards
       })
     };
   }

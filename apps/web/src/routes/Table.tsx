@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
 import type { EquippedCosmetics, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
-import { NEXT_HAND_DELAY_MS, defaultEquipped } from '@duopoker/shared-types';
+import { GHOST_BOARD_MIN_TIER, NEXT_HAND_DELAY_MS, defaultEquipped, tierMeetsRequirement } from '@duopoker/shared-types';
 import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
 import { GameTableShell } from '../components/table/GameTableShell';
 import { TableTopHUD } from '../components/table/TableTopHUD';
@@ -99,6 +99,7 @@ export const Table = () => {
   const [leaving, setLeaving] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [bustedDismissed, setBustedDismissed] = useState(false);
+  const [ghostBoardVisible, setGhostBoardVisible] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
@@ -187,6 +188,10 @@ export const Table = () => {
     if ((session?.stacks[userId] ?? 0) > 0) setBustedDismissed(false);
   }, [session?.stacks, userId, session?.handNumber]);
 
+  useEffect(() => {
+    setGhostBoardVisible(false);
+  }, [session?.handNumber]);
+
   const handleLeaveTable = async () => {
     const id = session?.sessionId ?? routeSessionId;
     if (!id || leaving) return;
@@ -268,6 +273,15 @@ export const Table = () => {
     ? `${label(activeId)}${activeId === userId ? ` ${t('table.you')}` : ''}`
     : '—';
   const winnerNames = (session.winners ?? []).map(label).join(', ') || '—';
+  const isPreflopMuckWin =
+    session.street === 'COMPLETE' &&
+    session.mode === 'HOLDEM' &&
+    (session.communityCards?.length ?? 0) === 0;
+  const hasGhostBoard = (session.ghostCommunityCards?.length ?? 0) === 5;
+  const canPeekGhostBoard =
+    isPreflopMuckWin && hasGhostBoard && tierMeetsRequirement(subscriptionTier, GHOST_BOARD_MIN_TIER);
+  const showGhostUpsell =
+    isPreflopMuckWin && !tierMeetsRequirement(subscriptionTier, GHOST_BOARD_MIN_TIER);
 
   const handleRaise = () => {
     const amount = Math.min(maxRaise, Math.max(minRaise, raiseAmount || minRaise));
@@ -304,6 +318,9 @@ export const Table = () => {
           >
             <PokerTable3D
               communityCards={session.mode === 'HOLDEM' ? (session.communityCards ?? []) : []}
+              ghostCommunityCards={
+                ghostBoardVisible && canPeekGhostBoard ? (session.ghostCommunityCards ?? []) : []
+              }
               pot={kettle}
               street={session.street}
               players={tablePlayers}
@@ -316,6 +333,10 @@ export const Table = () => {
               winners={winnerNames}
               gameOver={gameOver}
               nextHandSeconds={nextHandSeconds}
+              canPeekGhostBoard={canPeekGhostBoard}
+              ghostBoardVisible={ghostBoardVisible}
+              onToggleGhostBoard={() => setGhostBoardVisible((v) => !v)}
+              showGhostUpsell={showGhostUpsell}
             />
             <BustedPlayerOverlay
               visible={showBustedOverlay}
