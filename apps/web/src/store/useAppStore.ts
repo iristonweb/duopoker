@@ -74,8 +74,9 @@ type AppStore = {
   stopPolling: () => void;
   playerAction: (payload: {
     sessionId: string;
-    type: 'bet' | 'check' | 'fold' | 'call' | 'raise';
+    type: 'bet' | 'check' | 'fold' | 'call' | 'raise' | 'bid' | 'playCard';
     amount?: number;
+    card?: string;
   }) => Promise<void>;
   readyNextHand: () => Promise<void>;
   leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
@@ -433,13 +434,14 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (t) clearInterval(t);
       set({ pollTimer: undefined });
     },
-    playerAction: async ({ sessionId, type, amount }) => {
+    playerAction: async ({ sessionId, type, amount, card }) => {
       if (usesRealtimeSocket()) {
         get().socket?.emit('playerAction', {
           sessionId,
           userId: get().userId,
           type,
           amount,
+          card,
           at: Date.now()
         });
         return;
@@ -450,6 +452,7 @@ export const useAppStore = create<AppStore>((set, get) => {
           sessionId,
           type,
           amount,
+          card,
           at: Date.now()
         })
       });

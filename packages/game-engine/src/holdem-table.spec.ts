@@ -140,28 +140,46 @@ describe('applyTableAction — split pot', () => {
 });
 
 describe('Joker flow', () => {
-  it('deals per schedule and completes after one betting round', () => {
+  it('runs bidding and one trick then completes', () => {
     let s = createInitialTableState('sr', 'JOKER', 100, 7);
     s = startNewHand({
       ...s,
       players: ['a', 'b'],
       stacks: { a: 100, b: 100 }
     });
+    expect(s.street).toBe('BIDDING');
     expect(s.playerCards.a?.length).toBe(1);
-    expect(s.playerCards.b?.length).toBe(1);
-    expect(s.pot).toBeGreaterThan(0);
+    expect(s.joker?.cardsThisDeal).toBe(1);
 
-    const first = s.players[s.activePlayerIndex]!;
-    let r = applyTableAction(s, { sessionId: 'sr', userId: first, type: 'check', at: 1 });
+    const bidA = s.players[s.activePlayerIndex]!;
+    let r = applyTableAction(s, { sessionId: 'sr', userId: bidA, type: 'bid', amount: 0, at: 1 });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     s = r.state;
-    const second = s.players[s.activePlayerIndex]!;
-    r = applyTableAction(s, { sessionId: 'sr', userId: second, type: 'check', at: 2 });
+    expect(s.street).toBe('BIDDING');
+
+    const bidB = s.players[s.activePlayerIndex]!;
+    r = applyTableAction(s, { sessionId: 'sr', userId: bidB, type: 'bid', amount: 0, at: 2 });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    s = r.state;
+    expect(s.street).toBe('TRICKS');
+
+    const play1 = s.players[s.activePlayerIndex]!;
+    const card1 = s.playerCards[play1]![0]!;
+    r = applyTableAction(s, { sessionId: 'sr', userId: play1, type: 'playCard', card: card1, at: 3 });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    s = r.state;
+
+    const play2 = s.players[s.activePlayerIndex]!;
+    const card2 = s.playerCards[play2]![0]!;
+    r = applyTableAction(s, { sessionId: 'sr', userId: play2, type: 'playCard', card: card2, at: 4 });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.street).toBe('COMPLETE');
     expect(r.state.mode).toBe('JOKER');
+    expect(r.state.joker?.handPoints).toBeDefined();
   });
 });
 

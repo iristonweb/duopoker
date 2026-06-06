@@ -60,7 +60,7 @@ export const buildAutoNextHand = (state: SessionState): SessionState => {
     winnersShare: undefined
   });
 
-  if (hand.street !== 'PREFLOP') {
+  if (hand.street !== 'PREFLOP' && !(hand.mode === 'JOKER' && hand.street === 'BIDDING')) {
     return resetToLobbyAfterGame(state);
   }
 

@@ -1,8 +1,7 @@
 import type { Card, GameStreet, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { isAutomatedPlayer } from './bot-actions';
 import { createDeck, shuffle } from './cards';
-import { createJokerDeck } from './joker-deck';
-import { jokerCardsPerHand } from './joker-schedule';
+import { applyJokerAction, jokerTimeoutAction, startJokerHand } from './joker-table';
 import { peekGhostCommunityFromDeck } from './ghost-board';
 import {
   computeSidePots,
@@ -304,31 +303,6 @@ const resolveShowdownHoldem = (state: SessionState): SessionState => {
   return finalizeShowdown(state);
 };
 
-const resolveShowdownJoker = (state: SessionState): SessionState => {
-  const folded = new Set(state.foldedPlayerIds);
-  const alive = state.players.filter((p) => !folded.has(p));
-  if (alive.length === 1) {
-    const w = alive[0]!;
-    const ns = applyUncalledReturn(state);
-    const won = totalInKettle(ns);
-    const stacks = { ...ns.stacks };
-    stacks[w] = (stacks[w] ?? 0) + won;
-    return withHandComplete({
-      ...ns,
-      street: 'COMPLETE',
-      phase: 'SHOWDOWN',
-      pot: 0,
-      playerRoundBet: Object.fromEntries(ns.players.map((p) => [p, 0])),
-      stacks,
-      winners: [w],
-      winnersShare: { [w]: won },
-      readyForNextHand: [],
-      activePlayerIndex: ns.dealerIndex
-    });
-  }
-  return finalizeShowdown(state);
-};
-
 export { resetToLobbyAfterGame };
 
 export const createInitialTableState = (
@@ -455,48 +429,11 @@ export const startNewHand = (state: SessionState): SessionState => {
     };
   }
 
-  const cardsPerPlayer = jokerCardsPerHand(state.handNumber);
-  const shuffled = shuffle(createJokerDeck(), rng);
-  const hole = dealHoleCards({ ...state, dealerIndex }, shuffled, cardsPerPlayer);
-  const stacks = { ...state.stacks };
-  const ante = Math.max(1, Math.min(state.smallBlind, state.bigBlind));
-  let pot = 0;
-  const playerRoundBet: Record<string, number> = {};
-  const allInPlayerIds: string[] = [];
-  state.players.forEach((p) => {
-    const q = Math.min(ante, stacks[p] ?? 0);
-    stacks[p] = (stacks[p] ?? 0) - q;
-    pot += q;
-    handContributions[p] = q;
-    playerRoundBet[p] = 0;
-    if ((stacks[p] ?? 0) === 0 && q > 0) allInPlayerIds.push(p);
-  });
-  const first = firstPreflopActor(state.players.length, dealerIndex);
-  return {
-    ...state,
-    dealerIndex,
-    handNumber: state.handNumber + 1,
-    street: 'PREFLOP',
-    phase: 'PRE_FLOP',
-    communityCards: [],
-    foldedPlayerIds: [],
-    playerCards: hole.playerCards,
-    deck: hole.deck,
-    stacks,
-    pot,
-    currentBet: 0,
-    playerRoundBet,
-    lastAggressor: null,
-    allInPlayerIds,
-    actedThisRound,
-    handContributions,
-    readyForNextHand: [],
-    activePlayerIndex: first,
-    actionLog: [],
-    winners: undefined,
-    winnersShare: undefined,
-    ghostCommunityCards: undefined
-  };
+  if (state.mode === 'JOKER') {
+    return startJokerHand({ ...state, dealerIndex }, dealerIndex, rng);
+  }
+
+  return state;
 };
 
 const nextActiveIndex = (state: SessionState, from: number): number => {
@@ -520,6 +457,10 @@ export const applyTableAction = (
   state: SessionState,
   action: PlayerAction
 ): { ok: true; state: SessionState } | { ok: false; reason: string } => {
+  if (state.mode === 'JOKER') {
+    return applyJokerAction(state, action);
+  }
+
   if (state.street === 'LOBBY' || state.street === 'COMPLETE') {
     return { ok: false, reason: 'NO_ACTIVE_HAND' };
   }
@@ -672,11 +613,6 @@ export const applyTableAction = (
     return { ok: true, state: rotateTurn(ns) };
   }
 
-  if (ns.mode === 'JOKER') {
-    const committed = commitRoundToPot(ns);
-    return { ok: true, state: resolveShowdownJoker(committed) };
-  }
-
   let hold = commitRoundToPot(ns);
   if (shouldRunOutBoard(hold)) {
     hold = runOutToRiver(hold);
@@ -713,13 +649,16 @@ export const markReadyForNextHand = (
   return { ok: true, started: true, state: startNewHand({ ...state, readyForNextHand: [] }) };
 };
 
-/** Auto-fold the active player (disconnect / action timeout). */
+/** Auto-act on timeout (fold in Hold'em; pass/play in Joker). */
 export const autoFoldActivePlayer = (
   state: SessionState,
   userId: string
 ): { ok: true; state: SessionState } | { ok: false; reason: string } => {
   const cur = state.players[state.activePlayerIndex];
   if (cur !== userId) return { ok: false, reason: 'WRONG_TURN' };
+  if (state.mode === 'JOKER') {
+    return applyTableAction(state, jokerTimeoutAction(state, userId));
+  }
   return applyTableAction(state, {
     sessionId: state.sessionId,
     userId,

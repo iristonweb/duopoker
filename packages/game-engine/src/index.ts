@@ -108,6 +108,13 @@ export { SeededRng } from './rng';
 export { evaluateHoldem, evaluateJoker, evaluateRaspisnoy } from './evaluator';
 export { createJokerDeck, JOKER_WILD_IDS } from './joker-deck';
 export {
+  applyJokerAction,
+  jokerTimeoutAction,
+  pickBotJokerAction,
+  startJokerHand
+} from './joker-table';
+export { jokerPointsForHand } from './joker-scoring';
+export {
   amountToCall,
   BOT_USER_PREFIX,
   isAutomatedPlayer,

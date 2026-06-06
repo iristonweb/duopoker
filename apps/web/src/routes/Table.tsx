@@ -9,6 +9,7 @@ import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D
 import { GameTableShell } from '../components/table/GameTableShell';
 import { TableTopHUD } from '../components/table/TableTopHUD';
 import { TableActionDock } from '../components/table/TableActionDock';
+import { JokerActionDock } from '../components/table/JokerActionDock';
 import { HandResultOverlay } from '../components/table/HandResultOverlay';
 import { VoiceChatPill } from '../components/table/VoiceChatPill';
 import { GameEventFeed } from '../components/table/GameEventFeed';
@@ -98,6 +99,7 @@ export const Table = () => {
   }, [routeSessionId, session?.players?.length, session?.handNumber]);
 
   const [raiseAmount, setRaiseAmount] = useState(0);
+  const [jokerBid, setJokerBid] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [leaving, setLeaving] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
@@ -356,7 +358,11 @@ export const Table = () => {
             className="relative h-full min-h-0"
           >
             <PokerTable3D
-              communityCards={session.mode === 'HOLDEM' ? (session.communityCards ?? []) : []}
+              communityCards={
+                session.mode === 'HOLDEM'
+                  ? (session.communityCards ?? [])
+                  : (session.communityCards ?? [])
+              }
               ghostCommunityCards={
                 ghostBoardVisible && canPeekGhostBoard ? (session.ghostCommunityCards ?? []) : []
               }
@@ -406,30 +412,49 @@ export const Table = () => {
         )
       }
       dock={
-        <TableActionDock
-          myTurn={myTurn}
-          need={need}
-          currentBet={session.currentBet}
-          minRaise={minRaise}
-          maxRaise={maxRaise}
-          raiseAmount={raiseAmount}
-          onRaiseAmountChange={setRaiseAmount}
-          halfPotRaise={halfPotRaise}
-          potRaise={potRaise}
-          kettle={kettle}
-          secondsLeft={secondsLeft}
-          holeCards={holeCards}
-          deckId={equipped.deck}
-          activeLabel={activeLabel}
-          isHeroActive={activeId === userId}
-          heroSpectating={heroSpectating}
-          street={session.street}
-          sessionError={sessionError}
-          onFold={() => playerAction({ sessionId: sid, type: 'fold' })}
-          onCheck={() => playerAction({ sessionId: sid, type: 'check' })}
-          onCall={() => playerAction({ sessionId: sid, type: 'call' })}
-          onRaise={handleRaise}
-        />
+        session.mode === 'JOKER' && session.joker ? (
+          <JokerActionDock
+            myTurn={myTurn}
+            street={session.street}
+            holeCards={holeCards}
+            deckId={equipped.deck}
+            joker={session.joker}
+            bidAmount={jokerBid}
+            maxBid={Math.min(9, session.joker.cardsThisDeal)}
+            onBidAmountChange={setJokerBid}
+            secondsLeft={secondsLeft}
+            activeLabel={activeLabel}
+            isHeroActive={activeId === userId}
+            sessionError={sessionError}
+            onBid={() => playerAction({ sessionId: sid, type: 'bid', amount: jokerBid })}
+            onPlayCard={(card) => playerAction({ sessionId: sid, type: 'playCard', card })}
+          />
+        ) : (
+          <TableActionDock
+            myTurn={myTurn}
+            need={need}
+            currentBet={session.currentBet}
+            minRaise={minRaise}
+            maxRaise={maxRaise}
+            raiseAmount={raiseAmount}
+            onRaiseAmountChange={setRaiseAmount}
+            halfPotRaise={halfPotRaise}
+            potRaise={potRaise}
+            kettle={kettle}
+            secondsLeft={secondsLeft}
+            holeCards={holeCards}
+            deckId={equipped.deck}
+            activeLabel={activeLabel}
+            isHeroActive={activeId === userId}
+            heroSpectating={heroSpectating}
+            street={session.street}
+            sessionError={sessionError}
+            onFold={() => playerAction({ sessionId: sid, type: 'fold' })}
+            onCheck={() => playerAction({ sessionId: sid, type: 'check' })}
+            onCall={() => playerAction({ sessionId: sid, type: 'call' })}
+            onRaise={handleRaise}
+          />
+        )
       }
     />
   );

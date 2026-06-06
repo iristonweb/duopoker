@@ -36,8 +36,12 @@ const joinSchema = z.object({
 
 const actionSchema = z.object({
   sessionId: z.string().min(1),
-  type: z.enum(['bet', 'check', 'fold', 'call', 'raise']),
+  type: z.enum(['bet', 'check', 'fold', 'call', 'raise', 'bid', 'playCard']),
   amount: z.number().int().nonnegative().optional(),
+  card: z
+    .string()
+    .regex(/^[6-9TJQKA][SHDC]$/)
+    .optional(),
   at: z.number().default(() => Date.now())
 });
 

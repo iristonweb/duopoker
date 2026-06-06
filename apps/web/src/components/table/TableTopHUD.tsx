@@ -5,8 +5,8 @@ import { LanguageSwitch } from '../LanguageSwitch';
 import { PokerChipVisual } from '../cosmetics/PokerChipVisual';
 
 const streetBadgeVariant = (street: string): 'gold' | 'emerald' | 'default' | 'rose' => {
-  if (street === 'PREFLOP' || street === 'FLOP') return 'gold';
-  if (street === 'TURN' || street === 'RIVER') return 'emerald';
+  if (street === 'PREFLOP' || street === 'FLOP' || street === 'BIDDING') return 'gold';
+  if (street === 'TURN' || street === 'RIVER' || street === 'TRICKS') return 'emerald';
   if (street === 'SHOWDOWN' || street === 'COMPLETE') return 'rose';
   return 'default';
 };

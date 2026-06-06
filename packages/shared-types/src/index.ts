@@ -109,16 +109,42 @@ export type GameStreet =
   | 'TURN'
   | 'RIVER'
   | 'SHOWDOWN'
+  | 'BIDDING'
+  | 'TRICKS'
   | 'COMPLETE';
 export type Suit = 'S' | 'H' | 'D' | 'C';
 export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'T' | 'J' | 'Q' | 'K' | 'A';
 export type Card = `${Rank}${Suit}`;
 
+export interface JokerTrickPlay {
+  userId: string;
+  card: Card;
+}
+
+export interface JokerHandState {
+  /** 0..23 index within the 24-hand match */
+  matchHandIndex: number;
+  cardsThisDeal: number;
+  pool: 1 | 2 | 3 | 4;
+  trumpSuit: Suit | null;
+  trumpCard?: Card;
+  /** Undefined = not yet bid */
+  bids: Record<string, number | undefined>;
+  tricksWon: Record<string, number>;
+  currentTrick: JokerTrickPlay[];
+  trickNumber: number;
+  /** Cumulative match score (points) */
+  scores: Record<string, number>;
+  /** Points earned this hand per player */
+  handPoints?: Record<string, number>;
+}
+
 export interface PlayerAction {
   sessionId: string;
   userId: string;
-  type: 'bet' | 'check' | 'fold' | 'call' | 'raise';
+  type: 'bet' | 'check' | 'fold' | 'call' | 'raise' | 'bid' | 'playCard';
   amount?: number;
+  card?: Card;
   at: number;
 }
 
@@ -162,6 +188,8 @@ export interface SessionState {
   winnersShare?: Record<string, number>;
   /** Board that would have run out after a preflop fold-win (subscription perk). */
   ghostCommunityCards?: Card[];
+  /** Trick-taking state for Joker mode */
+  joker?: JokerHandState;
   /** @deprecated still populated for older clients — use activePlayerIndex */
   activePlayerId?: string;
 }

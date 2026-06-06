@@ -12,5 +12,14 @@ export const normalizeSessionState = (state: SessionState): SessionState => ({
   handContributions: state.handContributions ?? {},
   readyForNextHand: state.readyForNextHand ?? [],
   handCompletedAt: state.handCompletedAt,
-  actionDeadlineAt: state.actionDeadlineAt
+  actionDeadlineAt: state.actionDeadlineAt,
+  joker: state.joker
+    ? {
+        ...state.joker,
+        bids: state.joker.bids ?? {},
+        tricksWon: state.joker.tricksWon ?? {},
+        scores: state.joker.scores ?? {},
+        currentTrick: state.joker.currentTrick ?? []
+      }
+    : undefined
 });
