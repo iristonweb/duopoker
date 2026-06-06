@@ -19,10 +19,9 @@ export function PokerChipVisual({
         <img
           src={chipImageUrl(chipId)}
           alt=""
-          className="h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
+          className="h-full w-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]"
           draggable={false}
         />
-        <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/15 to-transparent" />
       </div>
       {amount != null ? (
         <span className="mt-0.5 font-mono text-[10px] font-semibold text-gold-light">{amount.toLocaleString()}</span>

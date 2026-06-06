@@ -106,13 +106,14 @@ export function PlayingCard({
           className
         )}
       >
-        <img src={deckBackUrl(deckId)} alt="" className="h-full w-full object-cover" draggable={false} />
-        {premium ? (
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20" />
-        ) : (
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/25" />
-        )}
-        <div className="pointer-events-none absolute inset-[3px] rounded-[inherit] border border-gold/20" />
+        <img
+          src={deckBackUrl(deckId)}
+          alt=""
+          className="h-full w-full object-cover object-center"
+          draggable={false}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-black/15" />
+        <div className="pointer-events-none absolute inset-[2px] rounded-[inherit] border border-white/10" />
       </div>
     );
   }

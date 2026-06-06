@@ -41,6 +41,7 @@ export {
   bestCosmeticForTier,
   canEquipCosmetic,
   cosmeticById,
+  cosmeticImageUrl,
   cosmeticsBySlot,
   defaultCosmeticForSlot,
   defaultEquipped,

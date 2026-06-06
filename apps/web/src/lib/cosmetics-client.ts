@@ -1,5 +1,6 @@
 import {
   cosmeticById,
+  cosmeticImageUrl,
   defaultEquipped,
   resolveEquipped,
   titleBadgeLabel,
@@ -34,17 +35,28 @@ export const loadResolvedEquipped = (
   inventory: string[] = []
 ): EquippedCosmetics => resolveEquipped(readEquipped(userId), tier, inventory);
 
+const resolveUrl = (id: string, fallbackId: string): string =>
+  cosmeticImageUrl(id) ?? cosmeticImageUrl(fallbackId) ?? cosmeticById(fallbackId)!.imageUrl;
+
 export const deckBackUrl = (deckId: string): string =>
-  cosmeticById(deckId)?.imageUrl ?? cosmeticById(defaultEquipped().deck)!.imageUrl;
+  resolveUrl(deckId, defaultEquipped().deck);
 
 export const chipImageUrl = (chipId: string): string =>
-  cosmeticById(chipId)?.imageUrl ?? cosmeticById(defaultEquipped().chip)!.imageUrl;
+  resolveUrl(chipId, defaultEquipped().chip);
 
 export const frameImageUrl = (frameId: string): string =>
-  cosmeticById(frameId)?.imageUrl ?? cosmeticById(defaultEquipped().frame)!.imageUrl;
+  resolveUrl(frameId, defaultEquipped().frame);
 
 export const titleImageUrl = (titleId: string): string | undefined =>
-  titleId ? cosmeticById(titleId)?.imageUrl : undefined;
+  titleId ? cosmeticImageUrl(titleId) : undefined;
+
+/** Catalog / profile preview — rich still for decks, transparent cutout for chips & frames */
+export const cosmeticPreviewUrl = (id: string): string | undefined => {
+  const def = cosmeticById(id);
+  if (!def) return undefined;
+  if (def.slot === 'deck') return def.imageUrl;
+  return def.gameImageUrl ?? def.imageUrl;
+};
 
 export const titleDisplayLabel = (titleId: string): string | undefined =>
   titleBadgeLabel(titleId) ?? cosmeticById(titleId)?.name;

@@ -24,7 +24,10 @@ export type CosmeticDefinition = {
   name: string;
   slot: CosmeticSlot;
   requiredTier: SubscriptionTier;
+  /** Catalog / subscription matrix preview */
   imageUrl: string;
+  /** In-game asset — transparent cutout for chips, frames, titles */
+  gameImageUrl?: string;
   rarity: 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
   chipCost?: number;
   description: string;
@@ -197,6 +200,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       slot: 'deck',
       requiredTier: tier,
       imageUrl: asset(`backs/deck_${t}.png`),
+      gameImageUrl: asset(`backs/deck_${t}_game.png`),
       rarity: deck.rarity,
       description: deck.description
     },
@@ -205,7 +209,8 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: chip.name,
       slot: 'chip',
       requiredTier: tier,
-      imageUrl: asset(`chips/chip_${t}.png`),
+      imageUrl: asset(`chips/chip_${t}_game.png`),
+      gameImageUrl: asset(`chips/chip_${t}_game.png`),
       rarity: chip.rarity,
       description: chip.description
     },
@@ -214,7 +219,8 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: frame.name,
       slot: 'frame',
       requiredTier: tier,
-      imageUrl: asset(`frames/frame_${t}.png`),
+      imageUrl: asset(`frames/frame_${t}_game.png`),
+      gameImageUrl: asset(`frames/frame_${t}_game.png`),
       rarity: frame.rarity,
       description: frame.description
     },
@@ -223,7 +229,8 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: title.name,
       slot: 'title',
       requiredTier: tier,
-      imageUrl: asset(`titles/title_${t}.png`),
+      imageUrl: asset(`titles/title_${t}_game.png`),
+      gameImageUrl: asset(`titles/title_${t}_game.png`),
       rarity: title.rarity,
       description: title.description
     }
@@ -238,6 +245,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     slot: 'deck',
     requiredTier: 'FREE',
     imageUrl: asset('backs/deck_classic.png'),
+    gameImageUrl: asset('backs/deck_classic_game.png'),
     rarity: 'COMMON',
     description: 'Signature DP CLUB midnight deck with gold filigree.'
   },
@@ -246,7 +254,8 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     name: 'DP CLUB House',
     slot: 'chip',
     requiredTier: 'FREE',
-    imageUrl: asset('chips/chip_classic.png'),
+    imageUrl: asset('chips/chip_classic_game.png'),
+    gameImageUrl: asset('chips/chip_classic_game.png'),
     rarity: 'COMMON',
     description: 'Official DP CLUB house chips — emerald edge stripes.'
   },
@@ -290,6 +299,17 @@ export const allCosmetics: CosmeticDefinition[] = [...subscriptionCosmetics, ...
 
 export const cosmeticById = (id: string): CosmeticDefinition | undefined =>
   allCosmetics.find((c) => c.id === id);
+
+/** Prefer transparent game cutout when available (table, HUD, live preview). */
+export const cosmeticImageUrl = (
+  id: string,
+  preferGame = true
+): string | undefined => {
+  const def = cosmeticById(id);
+  if (!def) return undefined;
+  if (preferGame && def.gameImageUrl) return def.gameImageUrl;
+  return def.imageUrl;
+};
 
 export const cosmeticsBySlot = (slot: CosmeticSlot): CosmeticDefinition[] =>
   allCosmetics.filter((c) => c.slot === slot);
