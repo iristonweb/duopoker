@@ -8,5 +8,7 @@
     </linearGradient>
   </defs>
   <circle cx="60" cy="60" r="54" fill="none" stroke="url(#fG)" stroke-width="4"/>
-  <circle cx="60" cy="60" r="47" fill="none" stroke="#e8c547" stroke-opacity="0.25" stroke-width="1"/>
+  <circle cx="60" cy="60" r="47" fill="none" stroke="#e8c547" stroke-opacity="0.28" stroke-width="1"/>
+  <path d="M48 104 Q60 98 72 104" stroke="url(#fG)" stroke-opacity="0.6" stroke-width="1" fill="none"/>
+  <text x="60" y="108" text-anchor="middle" fill="#e8c547" font-family="system-ui,sans-serif" font-size="6" font-weight="700" letter-spacing="0.22em">DP CLUB</text>
 </svg>

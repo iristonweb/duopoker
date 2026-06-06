@@ -6,5 +6,7 @@ export const normalizeSessionState = (state: SessionState): SessionState => ({
   allInPlayerIds: state.allInPlayerIds ?? [],
   actedThisRound: state.actedThisRound ?? {},
   handContributions: state.handContributions ?? {},
-  readyForNextHand: state.readyForNextHand ?? []
+  readyForNextHand: state.readyForNextHand ?? [],
+  handCompletedAt: state.handCompletedAt,
+  actionDeadlineAt: state.actionDeadlineAt
 });

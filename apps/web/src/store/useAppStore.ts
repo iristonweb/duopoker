@@ -184,17 +184,33 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!usesRealtimeSocket()) return;
       const base = getApiBase();
       if (!base) return;
-      if (get().socket?.connected) return;
-      get().socket?.disconnect();
+      const existing = get().socket;
+      if (existing?.connected) return;
+      if (existing) {
+        existing.connect();
+        return;
+      }
       const token = get().accessToken;
       const socket = io(base, {
         auth: token ? { token } : undefined,
         reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelayMax: 10_000,
         transports: ['websocket', 'polling']
       });
-      socket.on('stateUpdate', (session: SessionState) => set({ session }));
+      socket.on('stateUpdate', (session: SessionState) => set({ session, sessionError: undefined }));
+      socket.on('sessionEvent', (evt: { state?: SessionState }) => {
+        if (evt.state) set({ session: evt.state, sessionError: undefined });
+      });
+      socket.on('sessionReconnected', (payload: { snapshot?: SessionState | null }) => {
+        if (payload.snapshot) set({ session: payload.snapshot, sessionError: undefined });
+      });
       socket.on('sessionError', (err: { code?: string }) => {
         set({ sessionError: err.code ?? 'session_error' });
+      });
+      socket.on('connect', () => {
+        const sid = get().session?.sessionId;
+        if (sid) socket.emit('reconnectSession', { sessionId: sid });
       });
       set({ socket });
     },
@@ -334,7 +350,7 @@ export const useAppStore = create<AppStore>((set, get) => {
         }
       };
       void tick();
-      const pollTimer = setInterval(tick, 1500);
+      const pollTimer = setInterval(tick, 900);
       set({ pollTimer });
     },
     stopPolling: () => {

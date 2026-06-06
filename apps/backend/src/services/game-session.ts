@@ -2,10 +2,16 @@ import {
   addPlayerToTable,
   applyTableAction,
   autoFoldActivePlayer,
+  buildAutoNextHand,
   createInitialTableState,
   createReplayTimeline,
+  enrichSessionMeta,
+  isAutomatedPlayer,
   markReadyForNextHand,
   normalizeSessionState,
+  pickBotAction,
+  shouldAutoStartNextHand,
+  shouldForceActionTimeout,
   startNewHand
 } from '@duopoker/game-engine/index';
 import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
@@ -20,7 +26,10 @@ const queue: import('@duopoker/shared-types/index').MatchmakingTicket[] = [];
 const RATE_LIMIT_PER_SECOND = 20;
 
 const save = (state: SessionState) => {
-  void persistGameSnapshot(state).catch(() => undefined);
+  const enriched = enrichSessionMeta(state);
+  sessions.set(enriched.sessionId, enriched);
+  void persistGameSnapshot(enriched).catch(() => undefined);
+  return enriched;
 };
 
 const canAcceptAction = (userId: string): boolean => {
@@ -65,8 +74,7 @@ export const seatPlayersBatch = (
     state = startNewHand(state);
   }
   sessions.set(sessionId, state);
-  save(state);
-  return state;
+  return save(state);
 };
 
 /** Add player; auto-start hand when 2+ seated in LOBBY. */
@@ -76,9 +84,7 @@ export const joinTable = (sessionId: string, userId: string, mode: SessionState[
   if (state.players.length >= 2 && state.street === 'LOBBY') {
     state = startNewHand(state);
   }
-  sessions.set(sessionId, state);
-  save(state);
-  return state;
+  return save(state);
 };
 
 export const processPlayerAction = async (action: PlayerAction) => {
@@ -103,9 +109,8 @@ export const processPlayerAction = async (action: PlayerAction) => {
     return { rejected: true as const, reason: result.reason };
   }
 
-  sessions.set(action.sessionId, result.state);
-  save(result.state);
-  return { rejected: false as const, state: result.state, replay: createReplayTimeline(result.state) };
+  const saved = save(result.state);
+  return { rejected: false as const, state: saved, replay: createReplayTimeline(saved) };
 };
 
 export const requestNextHand = (sessionId: string, userId: string) => {
@@ -168,24 +173,63 @@ export const enqueueMatchmaking = (
   return null;
 };
 
-/** Advances through consecutive bot turns (check → call → fold). Returns last state if any bot action ran. */
+/** Advances through consecutive bot turns until a human acts or the hand ends. */
 export const advanceBotTurns = async (sessionId: string): Promise<SessionState | null> => {
   let last: SessionState | null = null;
-  for (let i = 0; i < 48; i += 1) {
-    const state = sessions.get(sessionId);
+  for (let i = 0; i < 96; i += 1) {
+    const state = sessions.get(sessionId) ?? (await getSessionSnapshot(sessionId));
     if (!state) break;
     const activeId = state.players[state.activePlayerIndex];
-    if (!activeId || !activeId.startsWith(BOT_PREFIX)) break;
+    if (!activeId || !isAutomatedPlayer(activeId)) break;
     if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') break;
 
-    const at = Date.now();
-    let r = await processPlayerAction({ sessionId, userId: activeId, type: 'check', at });
-    if (r.rejected) r = await processPlayerAction({ sessionId, userId: activeId, type: 'call', at });
-    if (r.rejected) r = await processPlayerAction({ sessionId, userId: activeId, type: 'fold', at });
+    const primary = pickBotAction(state, activeId);
+    let r = await processPlayerAction(primary);
+    if (r.rejected) {
+      r = await processPlayerAction({ ...primary, type: 'call', at: Date.now() });
+    }
+    if (r.rejected) {
+      r = await processPlayerAction({ ...primary, type: 'fold', at: Date.now() });
+    }
     if (r.rejected) break;
     last = r.state;
   }
   return last;
+};
+
+export const autoStartNextHand = async (sessionId: string): Promise<SessionState | null> => {
+  const state = sessions.get(sessionId) ?? (await getSessionSnapshot(sessionId));
+  if (!state || !shouldAutoStartNextHand(state)) return state;
+  const next = save(buildAutoNextHand(state));
+  const botState = await advanceBotTurns(sessionId);
+  return botState ?? next;
+};
+
+export const enforceActionTimeout = async (sessionId: string): Promise<SessionState | null> => {
+  const state = sessions.get(sessionId) ?? (await getSessionSnapshot(sessionId));
+  if (!state || !shouldForceActionTimeout(state)) return null;
+  const activeId = state.players[state.activePlayerIndex];
+  if (!activeId) return null;
+  return foldActivePlayerOnTimeout(sessionId, activeId);
+};
+
+export const tickSession = async (sessionId: string): Promise<SessionState | null> => {
+  let state = sessions.get(sessionId) ?? (await getSessionSnapshot(sessionId));
+  if (!state) return null;
+
+  const timedOut = await enforceActionTimeout(sessionId);
+  if (timedOut) state = timedOut;
+
+  let botState = await advanceBotTurns(sessionId);
+  if (botState) state = botState;
+
+  const nextHand = await autoStartNextHand(sessionId);
+  if (nextHand && nextHand.street !== 'COMPLETE') state = nextHand;
+
+  botState = await advanceBotTurns(sessionId);
+  if (botState) state = botState;
+
+  return state;
 };
 
 export const getSessionSnapshot = async (sessionId: string): Promise<SessionState | null> => {
@@ -200,12 +244,12 @@ export const getSessionSnapshot = async (sessionId: string): Promise<SessionStat
   return null;
 };
 
-/** Fold the active player on disconnect or action timeout. */
+/** Fold the active player when their action timer expires. */
 export const foldActivePlayerOnTimeout = async (
   sessionId: string,
   userId: string
 ): Promise<SessionState | null> => {
-  const state = sessions.get(sessionId);
+  const state = sessions.get(sessionId) ?? (await getSessionSnapshot(sessionId));
   if (!state) return null;
   const activeId = state.players[state.activePlayerIndex];
   if (activeId !== userId) return null;
@@ -214,10 +258,10 @@ export const foldActivePlayerOnTimeout = async (
   }
   const result = autoFoldActivePlayer(state, userId);
   if (!result.ok) return null;
-  sessions.set(sessionId, result.state);
   save(result.state);
   const botState = await advanceBotTurns(sessionId);
-  return botState ?? result.state;
+  const after = botState ?? save(result.state);
+  return (await autoStartNextHand(sessionId)) ?? after;
 };
 
 export const listSessionIdsForUser = (userId: string): string[] => {

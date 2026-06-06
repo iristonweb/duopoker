@@ -7,6 +7,8 @@ export {
   type BrandColors
 } from './theme';
 
+export { ACTION_TIMEOUT_MS, NEXT_HAND_DELAY_MS } from './game-timing';
+
 export {
   catalogCosmetics,
   catalogGameModes,
@@ -99,6 +101,10 @@ export interface SessionState {
   handContributions: Record<string, number>;
   /** User ids ready to deal the next hand after COMPLETE */
   readyForNextHand: string[];
+  /** Unix ms when the current hand reached COMPLETE (for auto-deal delay) */
+  handCompletedAt?: number;
+  /** Unix ms deadline for the active human player to act */
+  actionDeadlineAt?: number;
   winners?: string[];
   winnersShare?: Record<string, number>;
   /** @deprecated still populated for older clients — use activePlayerIndex */

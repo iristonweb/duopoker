@@ -4,7 +4,6 @@ import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
 import { authGuard } from '../middleware/auth.js';
 import { canJoinPrivateSession, getSessionPlayerProfiles } from '../services/private-table-auth.js';
 import {
-  advanceBotTurns,
   enterMatchmaking,
   getQueueStatus,
   getSessionSnapshot,
@@ -12,7 +11,8 @@ import {
   leaveQueue,
   matchmakingAllowsSolo,
   processPlayerAction,
-  requestNextHand
+  requestNextHand,
+  tickSession
 } from '../services/game-session.js';
 
 const queueSchema = z.object({
@@ -92,8 +92,8 @@ gameRoutes.post('/join', async (c) => {
   }
 
   let state = await joinTable(sessionId, userId, mode, buyIn);
-  const botState = await advanceBotTurns(sessionId);
-  if (botState) state = botState;
+  const ticked = await tickSession(sessionId);
+  if (ticked) state = ticked;
 
   return c.json({
     session: sanitizeStateForViewer(state, userId)
@@ -114,8 +114,8 @@ gameRoutes.post('/action', async (c) => {
   }
 
   let outState = result.state;
-  const botState = await advanceBotTurns(parsed.data.sessionId);
-  if (botState) outState = botState;
+  const ticked = await tickSession(parsed.data.sessionId);
+  if (ticked) outState = ticked;
 
   return c.json({
     session: sanitizeStateForViewer(outState, userId),
@@ -138,8 +138,8 @@ gameRoutes.post('/ready-next-hand', async (c) => {
 
   let out = result.state;
   if (result.started) {
-    const botState = await advanceBotTurns(parsed.data.sessionId);
-    if (botState) out = botState;
+    const ticked = await tickSession(parsed.data.sessionId);
+    if (ticked) out = ticked;
   }
 
   return c.json({
@@ -151,13 +151,15 @@ gameRoutes.post('/ready-next-hand', async (c) => {
 gameRoutes.get('/session/:sessionId', async (c) => {
   const userId = c.get('auth').userId;
   const sessionId = c.req.param('sessionId');
-  const snapshot = await getSessionSnapshot(sessionId);
+  let snapshot = await getSessionSnapshot(sessionId);
   if (!snapshot) {
     return c.json({ session: null }, 404);
   }
   if (!snapshot.players.includes(userId)) {
     return c.json({ error: 'Not seated at this table' }, 403);
   }
+  const ticked = await tickSession(sessionId);
+  if (ticked) snapshot = ticked;
   return c.json({
     session: sanitizeStateForViewer(snapshot, userId)
   });

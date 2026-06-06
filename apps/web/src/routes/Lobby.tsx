@@ -12,6 +12,7 @@ import {
   AppBackground,
   Button,
   cn,
+  DpClubMark,
   GlassPanel,
   Input,
   LegalDisclaimer,
@@ -216,7 +217,7 @@ function AuthPanel() {
 export const Lobby = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { mode, setMode, opponentType, setOpponentType, botPlayerCount, setBotPlayerCount, connect, queue, pollQueueStatus, session, readyNextHand, fetchProfile } =
+  const { mode, setMode, opponentType, setOpponentType, botPlayerCount, setBotPlayerCount, connect, queue, pollQueueStatus, session, fetchProfile } =
     useAppStore();
   const accessToken = useAppStore((s) => s.accessToken);
   const sessionError = useAppStore((s) => s.sessionError);
@@ -485,20 +486,37 @@ export const Lobby = () => {
             >
               <div
                 className={cn(
-                  'h-1 w-full',
+                  'h-1.5 w-full',
                   opponentType === 'BOT'
                     ? 'bg-gradient-to-r from-transparent via-emerald to-transparent'
                     : 'bg-gradient-to-r from-transparent via-gold to-transparent'
                 )}
               />
-              <div className="border-b border-white/10 bg-black/20 px-4 py-4 sm:px-5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
-                  {t('lobby.opponentEyebrow')}
-                </p>
-                <h3 className="mt-1 font-display text-lg font-semibold text-ivory">{t('lobby.opponentTitle')}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-subtle">{t('lobby.opponentDesc')}</p>
+              <div className="relative border-b border-white/10 bg-gradient-to-br from-black/50 via-black/30 to-black/50 px-4 py-5 sm:px-6">
+                <div
+                  className="pointer-events-none absolute -right-8 top-0 h-32 w-32 rounded-full blur-3xl"
+                  style={{
+                    background:
+                      opponentType === 'BOT'
+                        ? 'radial-gradient(circle, rgba(74,222,128,0.12), transparent 70%)'
+                        : 'radial-gradient(circle, rgba(232,197,71,0.14), transparent 70%)'
+                  }}
+                  aria-hidden
+                />
+                <div className="relative flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
+                      {t('lobby.opponentEyebrow')}
+                    </p>
+                    <h3 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">
+                      {t('lobby.opponentTitle')}
+                    </h3>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-subtle">{t('lobby.opponentDesc')}</p>
+                  </div>
+                  <DpClubMark size="md" variant={opponentType === 'BOT' ? 'emerald' : 'gold'} className="shrink-0" />
+                </div>
               </div>
-              <div className="space-y-4 p-4 sm:p-5">
+              <div className="space-y-4 bg-black/15 p-4 sm:p-6">
               <OpponentSelector
                 value={opponentType}
                 onChange={setOpponentType}
@@ -515,7 +533,7 @@ export const Lobby = () => {
                     hint: t('lobby.opponentBotHint')
                   }
                 ]}
-                className="mb-0"
+                className="mb-0 border-0 bg-transparent p-0"
               />
               {opponentType === 'BOT' ? (
                 <PlayerCountSelector
@@ -623,11 +641,6 @@ export const Lobby = () => {
                       : t('lobby.queueHint')}
                   </p>
                 )}
-                {session?.street === 'COMPLETE' ? (
-                  <Button variant="secondary" size="sm" className="mt-3" onClick={readyNextHand}>
-                    {t('lobby.nextHand')}
-                  </Button>
-                ) : null}
               </div>
             </GlassPanel>
 

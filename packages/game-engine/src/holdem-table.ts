@@ -1,4 +1,5 @@
 import type { Card, GameStreet, PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import { isAutomatedPlayer } from './bot-actions';
 import { createDeck, shuffle } from './cards';
 import {
   computeSidePots,
@@ -625,6 +626,7 @@ export const applyTableAction = (
         winners: [w],
         winnersShare: { [w]: won },
         readyForNextHand: [],
+        activePlayerIndex: ns.players.indexOf(w),
         activePlayerId: w
       }
     };
@@ -664,9 +666,13 @@ export const markReadyForNextHand = (
   const ready = state.readyForNextHand.includes(userId)
     ? state.readyForNextHand
     : [...state.readyForNextHand, userId];
-  const allReady = state.players.every((p) => ready.includes(p));
-  if (!allReady) {
-    return { ok: true, started: false, state: { ...state, readyForNextHand: ready } };
+  const readyWithBots = [
+    ...new Set([...ready, ...state.players.filter(isAutomatedPlayer)])
+  ];
+  const humans = state.players.filter((p) => !isAutomatedPlayer(p));
+  const allHumansReady = humans.every((p) => readyWithBots.includes(p));
+  if (!allHumansReady) {
+    return { ok: true, started: false, state: { ...state, readyForNextHand: readyWithBots } };
   }
   return { ok: true, started: true, state: startNewHand({ ...state, readyForNextHand: [] }) };
 };

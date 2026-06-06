@@ -31,7 +31,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     requiredTier: 'FREE',
     imageUrl: asset('backs/deck_classic.svg'),
     rarity: 'COMMON',
-    description: 'Deep midnight felt with a subtle spade motif.'
+    description: 'Signature DP CLUB midnight deck with gold filigree.'
   },
   {
     id: 'deck_silver',
@@ -40,7 +40,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     requiredTier: 'SILVER',
     imageUrl: asset('backs/deck_silver.svg'),
     rarity: 'RARE',
-    description: 'Art-deco silver lattice with cool metallic sheen.'
+    description: 'DP CLUB sterling lattice with cool metallic sheen.'
   },
   {
     id: 'deck_gold',
@@ -49,7 +49,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     requiredTier: 'GOLD',
     imageUrl: asset('backs/deck_gold.svg'),
     rarity: 'EPIC',
-    description: 'Ornate gold border and damask center — signature DuoPoker luxury.'
+    description: 'DP CLUB champagne gold damask — signature luxury.'
   },
   {
     id: 'deck_platinum',
@@ -58,7 +58,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     requiredTier: 'PLATINUM',
     imageUrl: asset('backs/deck_platinum.svg'),
     rarity: 'EPIC',
-    description: 'Violet holographic geometry with prismatic highlights.'
+    description: 'DP CLUB prismatic violet holographic geometry.'
   },
   {
     id: 'deck_royal',
@@ -67,7 +67,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     requiredTier: 'ROYAL',
     imageUrl: asset('backs/deck_royal.svg'),
     rarity: 'LEGENDARY',
-    description: 'Crown crest, rose-gold filigree — the ultimate table statement.'
+    description: 'DP CLUB royal crest with rose-gold filigree crown.'
   },
   {
     id: 'chip_classic',
@@ -76,7 +76,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     requiredTier: 'FREE',
     imageUrl: asset('chips/chip_classic.svg'),
     rarity: 'COMMON',
-    description: 'Clean emerald edge stripes on midnight clay.'
+    description: 'Official DP CLUB house chips — emerald edge stripes.'
   },
   {
     id: 'chip_silver',

@@ -172,4 +172,20 @@ describe('markReadyForNextHand', () => {
     expect(r.started).toBe(true);
     expect(r.state.street).toBe('PREFLOP');
   });
+
+  it('starts next hand when the only human is ready and bots auto-ready', () => {
+    const complete: SessionState = {
+      ...baseHand(),
+      players: ['u1', 'duopoker-bot-1'],
+      stacks: { u1: 100, 'duopoker-bot-1': 100 },
+      street: 'COMPLETE',
+      phase: 'SHOWDOWN',
+      readyForNextHand: []
+    };
+    const r = markReadyForNextHand(complete, 'u1');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.started).toBe(true);
+    expect(r.state.street).toBe('PREFLOP');
+  });
 });

@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
   <defs>
-    <linearGradient id="nBg" x1="0" y1="0" x2="140" y2="200">
-      <stop stop-color="#041810"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#041510"/>
       <stop offset="1" stop-color="#050508"/>
     </linearGradient>
-    <linearGradient id="nGlow" x1="70" y1="20" x2="70" y2="180">
-      <stop stop-color="#4ade80" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
+    <linearGradient id="neon" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#4ade80"/>
+      <stop offset="1" stop-color="#22d3ee"/>
     </linearGradient>
   </defs>
-  <rect width="140" height="200" rx="10" fill="url(#nBg)" stroke="#4ade80" stroke-opacity="0.45" stroke-width="1.5"/>
-  <rect x="10" y="10" width="120" height="180" rx="7" fill="url(#nGlow)"/>
-  <path d="M30 60 H110 M30 100 H110 M30 140 H110" stroke="#4ade80" stroke-opacity="0.2" stroke-width="1"/>
-  <path d="M50 40 L70 70 L90 40 M50 160 L70 130 L90 160" stroke="#4ade80" stroke-opacity="0.35" stroke-width="1.2" fill="none"/>
-  <circle cx="70" cy="100" r="18" fill="none" stroke="#4ade80" stroke-width="1.5" opacity="0.6"/>
-  <text x="70" y="106" text-anchor="middle" fill="#4ade80" font-family="monospace" font-size="16">DP</text>
+  <rect width="140" height="200" rx="10" fill="url(#bg)" stroke="url(#neon)" stroke-opacity="0.5" stroke-width="1.5"/>
+  <rect x="14" y="14" width="112" height="172" rx="6" stroke="#4ade80" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="70" y="96" text-anchor="middle" fill="url(#neon)" font-family="Georgia,serif" font-size="36" font-weight="700">DP</text>
+  <text x="70" y="118" text-anchor="middle" fill="#4ade80" font-family="system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="0.34em">CLUB</text>
 </svg>

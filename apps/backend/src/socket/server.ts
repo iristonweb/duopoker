@@ -9,16 +9,21 @@ import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
 import { canJoinPrivateSession } from '../services/private-table-auth.js';
 import {
-  advanceBotTurns,
+  autoStartNextHand,
   enqueueMatchmaking,
   foldActivePlayerOnTimeout,
   getSessionSnapshot,
   joinTable,
-  listSessionIdsForUser,
   processPlayerAction,
   requestNextHand,
-  seatPlayersBatch
+  seatPlayersBatch,
+  tickSession
 } from '../services/game-session.js';
+import {
+  ACTION_TIMEOUT_MS,
+  NEXT_HAND_DELAY_MS,
+  playersWithChips
+} from '@duopoker/game-engine/index';
 import { attachOptionalSocketAuth } from './socket-auth.js';
 
 const joinSchema = z.object({
@@ -45,11 +50,11 @@ const matchmakingSchema = z.object({
 });
 
 const BOT_PREFIX = 'duopoker-bot';
-const ACTION_TIMEOUT_MS = 30_000;
 
 /** userId -> socket ids (tabs / reconnects) */
 const userToSockets = new Map<string, Set<string>>();
 const actionTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const nextHandTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const registerUserSocket = (userId: string, socketId: string) => {
   let set = userToSockets.get(userId);
@@ -67,6 +72,12 @@ const unregisterSocketEverywhere = (socketId: string) => {
       userToSockets.delete(uid);
     }
   }
+};
+
+const clearNextHandTimer = (sessionId: string) => {
+  const t = nextHandTimers.get(sessionId);
+  if (t) clearTimeout(t);
+  nextHandTimers.delete(sessionId);
 };
 
 const clearActionTimer = (sessionId: string) => {
@@ -91,21 +102,46 @@ const scheduleActionTimer = (io: Server, sessionId: string, state: SessionState)
   const activeId = state.players[state.activePlayerIndex];
   if (!activeId || activeId.startsWith(BOT_PREFIX)) return;
 
+  const deadline = state.actionDeadlineAt ?? Date.now() + ACTION_TIMEOUT_MS;
+  const delay = Math.max(0, deadline - Date.now());
+
   actionTimers.set(
     sessionId,
     setTimeout(async () => {
       const next = await foldActivePlayerOnTimeout(sessionId, activeId);
       if (next) {
-        await emitStateToSession(io, sessionId, next);
-        scheduleActionTimer(io, sessionId, next);
+        await broadcastSessionState(io, sessionId, next);
       }
-    }, ACTION_TIMEOUT_MS)
+    }, delay)
+  );
+};
+
+const scheduleNextHandTimer = (io: Server, sessionId: string, state: SessionState) => {
+  clearNextHandTimer(sessionId);
+  if (state.street !== 'COMPLETE') return;
+  if (playersWithChips(state).length < 2) return;
+
+  const completedAt = state.handCompletedAt ?? Date.now();
+  const delay = Math.max(0, NEXT_HAND_DELAY_MS - (Date.now() - completedAt));
+
+  nextHandTimers.set(
+    sessionId,
+    setTimeout(async () => {
+      const next = await autoStartNextHand(sessionId);
+      if (next) {
+        await broadcastSessionState(io, sessionId, next);
+      }
+    }, delay)
   );
 };
 
 const broadcastSessionState = async (io: Server, sessionId: string, state: SessionState) => {
-  await emitStateToSession(io, sessionId, state);
-  scheduleActionTimer(io, sessionId, state);
+  let out = state;
+  const ticked = await tickSession(sessionId);
+  if (ticked) out = ticked;
+  await emitStateToSession(io, sessionId, out);
+  scheduleActionTimer(io, sessionId, out);
+  scheduleNextHandTimer(io, sessionId, out);
 };
 
 const emitMatchFoundToPlayers = (
@@ -142,16 +178,7 @@ export const createRealtimeServer = (app: Express) => {
       registerUserSocket(socket.data.userId, socket.id);
     }
 
-    socket.on('disconnect', async () => {
-      const userId = typeof socket.data.userId === 'string' ? socket.data.userId : undefined;
-      if (userId) {
-        for (const sessionId of listSessionIdsForUser(userId)) {
-          const next = await foldActivePlayerOnTimeout(sessionId, userId);
-          if (next) {
-            await broadcastSessionState(io, sessionId, next);
-          }
-        }
-      }
+    socket.on('disconnect', () => {
       unregisterSocketEverywhere(socket.id);
     });
 
@@ -201,12 +228,6 @@ export const createRealtimeServer = (app: Express) => {
         return;
       }
 
-      let outState = result.state;
-      const botState = await advanceBotTurns(parsed.data.sessionId);
-      if (botState) {
-        outState = botState;
-      }
-
       if (isMongoReady()) {
         try {
           await replayCollection.insertOne({
@@ -219,22 +240,21 @@ export const createRealtimeServer = (app: Express) => {
         }
       }
       await redis.publish(`game:${parsed.data.sessionId}`, JSON.stringify(parsed.data));
-      await broadcastSessionState(io, parsed.data.sessionId, outState);
+      await broadcastSessionState(io, parsed.data.sessionId, result.state);
       io.to(parsed.data.sessionId).emit('reconciliation', { replay: result.replay });
     });
 
     socket.on('reconnectSession', async ({ sessionId }: { sessionId?: string }) => {
       if (!sessionId) return;
       socket.join(sessionId);
-      const snapshot = await getSessionSnapshot(sessionId);
+      const snapshot = await tickSession(sessionId);
       const viewerId = typeof socket.data.userId === 'string' ? socket.data.userId : undefined;
       socket.emit('sessionReconnected', {
         sessionId,
         snapshot: snapshot ? sanitizeStateForViewer(snapshot, viewerId) : null
       });
       if (snapshot) {
-        socket.emit('stateUpdate', sanitizeStateForViewer(snapshot, viewerId));
-        scheduleActionTimer(io, sessionId, snapshot);
+        await broadcastSessionState(io, sessionId, snapshot);
       }
     });
 
@@ -255,12 +275,7 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: result.reason });
         return;
       }
-      let out = result.state;
-      if (result.started) {
-        const botState = await advanceBotTurns(sessionId);
-        if (botState) out = botState;
-      }
-      await broadcastSessionState(io, sessionId, out);
+      await broadcastSessionState(io, sessionId, result.state);
     });
 
     socket.on('voiceSignal', (payload: Record<string, unknown>) => {
@@ -309,9 +324,9 @@ export const createRealtimeServer = (app: Express) => {
         match.mode as 'HOLDEM' | 'RASPISNOY',
         match.buyIn
       );
-      const botState = await advanceBotTurns(match.sessionId);
-      if (botState) {
-        await broadcastSessionState(io, match.sessionId, botState);
+      const initial = await getSessionSnapshot(match.sessionId);
+      if (initial) {
+        await broadcastSessionState(io, match.sessionId, initial);
       }
       emitMatchFoundToPlayers(io, match);
     });

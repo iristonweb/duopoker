@@ -4,8 +4,77 @@ import { deckBackUrl, isPremiumDeck } from '../../lib/cosmetics-client';
 
 const suitSymbol = (s: string) => (s === 'H' ? '♥' : s === 'D' ? '♦' : s === 'C' ? '♣' : '♠');
 const rankLabel = (r: string) => (r === 'T' ? '10' : r);
+const isRed = (s: string) => s === 'H' || s === 'D';
+const isFace = (r: string) => r === 'A' || r === 'K' || r === 'Q' || r === 'J';
 
-const suitColor = (s: string) => (s === 'H' || s === 'D' ? 'text-rose-500' : 'text-zinc-900');
+const sizeMap = {
+  sm: { box: 'h-[4.5rem] w-[3.15rem]', radius: 'rounded-[0.45rem]', pip: 'text-lg', corner: 'text-[0.62rem]', face: 'text-xl' },
+  md: { box: 'h-[5.75rem] w-[4rem]', radius: 'rounded-[0.55rem]', pip: 'text-2xl', corner: 'text-[0.72rem]', face: 'text-2xl' },
+  lg: { box: 'h-[7.5rem] w-[5.25rem]', radius: 'rounded-[0.65rem]', pip: 'text-3xl', corner: 'text-sm', face: 'text-3xl' }
+} as const;
+
+function CardFace({
+  rank,
+  suit,
+  size,
+  className
+}: {
+  rank: string;
+  suit: string;
+  size: keyof typeof sizeMap;
+  className?: string;
+}) {
+  const s = sizeMap[size];
+  const color = isRed(suit) ? '#dc2626' : '#18181b';
+  const sym = suitSymbol(suit);
+  const label = rankLabel(rank);
+
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden bg-[#fdfbf7] shadow-[0_10px_28px_rgba(0,0,0,0.45)] ring-1 ring-black/10',
+        s.box,
+        s.radius,
+        className
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/80 via-transparent to-black/[0.04]" />
+      <div className="pointer-events-none absolute inset-[3px] rounded-[inherit] border border-black/[0.06]" />
+      <span
+        className="pointer-events-none absolute bottom-1 right-1 font-display text-[0.45rem] font-bold uppercase tracking-[0.18em] text-black/[0.07]"
+        aria-hidden
+      >
+        DP
+      </span>
+
+      <div className="absolute left-[0.35rem] top-[0.3rem] flex flex-col items-center leading-none" style={{ color }}>
+        <span className={cn('font-display font-bold tracking-tight', s.corner)}>{label}</span>
+        <span className={cn('font-display', s.corner)}>{sym}</span>
+      </div>
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        {isFace(rank) ? (
+          <div className="flex flex-col items-center leading-none" style={{ color }}>
+            <span className={cn('font-display font-bold', s.face)}>{label}</span>
+            <span className={cn('font-display opacity-90', s.pip)}>{sym}</span>
+          </div>
+        ) : (
+          <span className={cn('font-display font-semibold drop-shadow-sm', s.pip)} style={{ color }}>
+            {sym}
+          </span>
+        )}
+      </div>
+
+      <div
+        className="absolute bottom-[0.3rem] right-[0.35rem] flex rotate-180 flex-col items-center leading-none"
+        style={{ color }}
+      >
+        <span className={cn('font-display font-bold tracking-tight', s.corner)}>{label}</span>
+        <span className={cn('font-display', s.corner)}>{sym}</span>
+      </div>
+    </div>
+  );
+}
 
 export function PlayingCard({
   card,
@@ -20,46 +89,29 @@ export function PlayingCard({
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const sizeClass =
-    size === 'sm' ? 'h-16 w-11 rounded-md' : size === 'lg' ? 'h-28 w-20 rounded-xl' : 'h-20 w-14 rounded-lg';
+  const s = sizeMap[size];
 
   if (!faceUp || !card) {
     const premium = isPremiumDeck(deckId);
     return (
       <div
         className={cn(
-          'relative overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.45)] ring-1 ring-white/10',
-          sizeClass,
+          'relative overflow-hidden shadow-[0_10px_28px_rgba(0,0,0,0.5)] ring-1 ring-white/15',
+          s.box,
+          s.radius,
           premium && deckId === 'deck_royal' && 'card-back-royal',
           premium && deckId === 'deck_platinum' && 'card-back-platinum',
           className
         )}
       >
         <img src={deckBackUrl(deckId)} alt="" className="h-full w-full object-cover" draggable={false} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/25" />
+        <div className="pointer-events-none absolute inset-[3px] rounded-[inherit] border border-gold/20" />
       </div>
     );
   }
 
   const rank = card[0];
   const suit = card[1];
-  return (
-    <div
-      className={cn(
-        'relative flex flex-col justify-between bg-ivory p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.35)] ring-1 ring-black/10',
-        sizeClass,
-        className
-      )}
-    >
-      <div className={cn('font-display text-sm font-bold leading-none', suitColor(suit))}>
-        {rankLabel(rank)}
-        <span className="block text-base">{suitSymbol(suit)}</span>
-      </div>
-      <div className={cn('self-center font-display text-2xl font-semibold', suitColor(suit))}>{suitSymbol(suit)}</div>
-      <div className={cn('rotate-180 self-end font-display text-sm font-bold leading-none', suitColor(suit))}>
-        {rankLabel(rank)}
-        <span className="block text-base">{suitSymbol(suit)}</span>
-      </div>
-    </div>
-  );
+  return <CardFace rank={rank} suit={suit} size={size} className={className} />;
 }

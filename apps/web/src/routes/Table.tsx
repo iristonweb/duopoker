@@ -13,7 +13,7 @@ import {
   SectionHeader
 } from '@duopoker/ui-kit';
 import type { EquippedCosmetics, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
-import { defaultEquipped } from '@duopoker/shared-types';
+import { NEXT_HAND_DELAY_MS, defaultEquipped } from '@duopoker/shared-types';
 import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
 import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { VoiceRoom } from '../components/VoiceRoom';
@@ -38,9 +38,9 @@ export const Table = () => {
   const { t } = useTranslation();
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
   const session = useAppStore((s) => s.session);
+  const sessionError = useAppStore((s) => s.sessionError);
   const userId = useAppStore((s) => s.userId);
   const playerAction = useAppStore((s) => s.playerAction);
-  const readyNextHand = useAppStore((s) => s.readyNextHand);
   const connect = useAppStore((s) => s.connect);
   const socket = useAppStore((s) => s.socket);
   const joinSession = useAppStore((s) => s.joinSession);
@@ -98,6 +98,31 @@ export const Table = () => {
   }, [routeSessionId, session?.players?.length, session?.handNumber]);
 
   const [raiseAmount, setRaiseAmount] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || !routeSessionId) return;
+      connect();
+      if (usesRealtimeSocket()) {
+        useAppStore.getState().socket?.emit('reconnectSession', { sessionId: routeSessionId });
+      } else {
+        void useAppStore.getState().apiFetch(`/game/session/${encodeURIComponent(routeSessionId)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data: { session?: SessionState } | null) => {
+            if (data?.session) useAppStore.setState({ session: data.session });
+          })
+          .catch(() => undefined);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [connect, routeSessionId]);
 
   const activeId = useMemo(() => {
     if (!session || session.players.length === 0) return undefined;
@@ -181,6 +206,16 @@ export const Table = () => {
 
   const need = amountToCall(session, userId);
   const myTurn = activeId === userId && session.street !== 'LOBBY' && session.street !== 'COMPLETE';
+  const secondsLeft =
+    myTurn && session.actionDeadlineAt
+      ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
+      : null;
+  const nextHandMsLeft =
+    session.street === 'COMPLETE' && session.handCompletedAt
+      ? Math.max(0, NEXT_HAND_DELAY_MS - (now - session.handCompletedAt))
+      : null;
+  const playersWithStack = session.players.filter((id) => (session.stacks[id] ?? 0) > 0);
+  const gameOver = session.street === 'COMPLETE' && playersWithStack.length < 2;
   const kettle =
     session.pot +
     Object.values(session.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
@@ -197,6 +232,11 @@ export const Table = () => {
     >
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-gold/80">
         {t('table.yourAction', { amount: need })}
+        {secondsLeft !== null ? (
+          <span className="ml-2 font-mono normal-case tracking-normal text-subtle">
+            · {t('table.timeLeft', { seconds: secondsLeft, defaultValue: `${secondsLeft}s` })}
+          </span>
+        ) : null}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button variant="ghost" size="sm" onClick={() => playerAction({ sessionId: sid, type: 'fold' })}>
@@ -318,6 +358,11 @@ export const Table = () => {
       </div>
 
       <GlassPanel glow={myTurn ? 'gold' : 'none'} className="border-white/10 p-5 sm:p-6">
+        {sessionError ? (
+          <p className="mb-4 rounded-xl border border-rose/30 bg-rose/10 px-3 py-2 text-sm text-rose">
+            {t('table.actionError', { code: sessionError, defaultValue: sessionError })}
+          </p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           {session.street ? <Badge variant={streetBadgeVariant(session.street)}>{session.street}</Badge> : null}
           {activeId ? (
@@ -361,21 +406,18 @@ export const Table = () => {
               })}
               className="mb-4"
             />
-            <p className="text-xs text-subtle">
-              {t('table.ready', {
-                ready: (session.readyForNextHand ?? []).length,
-                total: session.players.length
-              })}
-            </p>
-            <Button
-              variant="primary"
-              size="sm"
-              className="mt-4"
-              disabled={(session.readyForNextHand ?? []).includes(userId)}
-              onClick={() => readyNextHand()}
-            >
-              {(session.readyForNextHand ?? []).includes(userId) ? t('table.waitingOthers') : t('table.nextHand')}
-            </Button>
+            {gameOver ? (
+              <p className="text-sm text-muted">{t('table.gameOver', { defaultValue: 'Game over — not enough players with chips.' })}</p>
+            ) : (
+              <p className="text-sm text-muted">
+                {nextHandMsLeft !== null && nextHandMsLeft > 0
+                  ? t('table.nextHandAuto', {
+                      seconds: Math.ceil(nextHandMsLeft / 1000),
+                      defaultValue: `Next hand in ${Math.ceil(nextHandMsLeft / 1000)}s…`
+                    })
+                  : t('table.dealingNext', { defaultValue: 'Dealing next hand…' })}
+              </p>
+            )}
           </div>
         ) : null}
 

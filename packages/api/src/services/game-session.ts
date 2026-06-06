@@ -4,8 +4,10 @@ import {
   autoFoldActivePlayer,
   createInitialTableState,
   createReplayTimeline,
+  isAutomatedPlayer,
   markReadyForNextHand,
   normalizeSessionState,
+  pickBotAction,
   startNewHand
 } from '@duopoker/game-engine/index';
 import type { MatchmakingTicket, PlayerAction, SessionState } from '@duopoker/shared-types/index';
@@ -14,6 +16,12 @@ import { loadGameSnapshot, persistGameSnapshot } from './session-persistence.js'
 import { prisma } from '../lib/prisma.js';
 
 export const BOT_PREFIX = 'duopoker-bot';
+
+const saveState = async (state: SessionState): Promise<SessionState> => {
+  const enriched = enrichSessionMeta(state);
+  await persistGameSnapshot(enriched);
+  return enriched;
+};
 
 export const getSessionSnapshot = async (sessionId: string): Promise<SessionState | null> => {
   const db = await loadGameSnapshot(sessionId);
@@ -44,7 +52,7 @@ const seatPlayer = async (
   if (state.players.length >= 2 && state.street === 'LOBBY') {
     state = startNewHand(state);
   }
-  await persistGameSnapshot(state);
+  await saveState(state);
   if (clearAssignment) {
     await clearMatchAssignment(userId);
   }
@@ -69,11 +77,11 @@ export const processPlayerAction = async (action: PlayerAction) => {
     return { rejected: true as const, reason: result.reason };
   }
 
-  await persistGameSnapshot(result.state);
+  const saved = await saveState(result.state);
   return {
     rejected: false as const,
-    state: result.state,
-    replay: createReplayTimeline(result.state)
+    state: saved,
+    replay: createReplayTimeline(saved)
   };
 };
 
@@ -86,7 +94,7 @@ export const requestNextHand = async (sessionId: string, userId: string) => {
   if (!result.ok) {
     return { ok: false as const, reason: result.reason };
   }
-  await persistGameSnapshot(result.state);
+  await saveState(result.state);
   return { ok: true as const, state: result.state, started: result.started };
 };
 
@@ -126,7 +134,7 @@ const seatPlayersBatch = async (
   if (state.players.length >= 2 && state.street === 'LOBBY') {
     state = startNewHand(state);
   }
-  await persistGameSnapshot(state);
+  await saveState(state);
   return state;
 };
 
@@ -197,20 +205,60 @@ export const enqueueMatchmaking = async (
   return null;
 };
 
-/** Advances through consecutive bot turns (check → call → fold). */
+export const autoStartNextHand = async (sessionId: string): Promise<SessionState | null> => {
+  const state = await getSessionSnapshot(sessionId);
+  if (!state || !shouldAutoStartNextHand(state)) return state;
+  const next = await saveState(buildAutoNextHand(state));
+  const botState = await advanceBotTurns(sessionId);
+  return botState ?? next;
+};
+
+export const enforceActionTimeout = async (sessionId: string): Promise<SessionState | null> => {
+  const state = await getSessionSnapshot(sessionId);
+  if (!state || !shouldForceActionTimeout(state)) return null;
+  const activeId = state.players[state.activePlayerIndex];
+  if (!activeId) return null;
+  return foldActivePlayerOnTimeout(sessionId, activeId);
+};
+
+/** Timeouts, bot turns, and auto next-hand — call after every mutation or poll. */
+export const tickSession = async (sessionId: string): Promise<SessionState | null> => {
+  let state = await getSessionSnapshot(sessionId);
+  if (!state) return null;
+
+  const timedOut = await enforceActionTimeout(sessionId);
+  if (timedOut) state = timedOut;
+
+  let botState = await advanceBotTurns(sessionId);
+  if (botState) state = botState;
+
+  const nextHand = await autoStartNextHand(sessionId);
+  if (nextHand && nextHand.street !== 'COMPLETE') state = nextHand;
+
+  botState = await advanceBotTurns(sessionId);
+  if (botState) state = botState;
+
+  return state;
+};
+
+/** Advances through consecutive bot turns until a human acts or the hand ends. */
 export const advanceBotTurns = async (sessionId: string): Promise<SessionState | null> => {
   let last: SessionState | null = null;
-  for (let i = 0; i < 48; i += 1) {
+  for (let i = 0; i < 96; i += 1) {
     const state = await getSessionSnapshot(sessionId);
     if (!state) break;
     const activeId = state.players[state.activePlayerIndex];
-    if (!activeId || !activeId.startsWith(BOT_PREFIX)) break;
+    if (!activeId || !isAutomatedPlayer(activeId)) break;
     if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') break;
 
-    const at = Date.now();
-    let r = await processPlayerAction({ sessionId, userId: activeId, type: 'check', at });
-    if (r.rejected) r = await processPlayerAction({ sessionId, userId: activeId, type: 'call', at });
-    if (r.rejected) r = await processPlayerAction({ sessionId, userId: activeId, type: 'fold', at });
+    const primary = pickBotAction(state, activeId);
+    let r = await processPlayerAction(primary);
+    if (r.rejected) {
+      r = await processPlayerAction({ ...primary, type: 'call', at: Date.now() });
+    }
+    if (r.rejected) {
+      r = await processPlayerAction({ ...primary, type: 'fold', at: Date.now() });
+    }
     if (r.rejected) break;
     last = r.state;
   }
@@ -230,9 +278,10 @@ export const foldActivePlayerOnTimeout = async (
   }
   const result = autoFoldActivePlayer(state, userId);
   if (!result.ok) return null;
-  await persistGameSnapshot(result.state);
+  await saveState(result.state);
   const botState = await advanceBotTurns(sessionId);
-  return botState ?? result.state;
+  const next = botState ?? (await saveState(result.state));
+  return (await autoStartNextHand(sessionId)) ?? next;
 };
 
 export const createMatchFromQueue = async (
@@ -247,7 +296,7 @@ export const createMatchFromQueue = async (
     mode,
     buyIn
   );
-  await advanceBotTurns(sessionId);
+  await tickSession(sessionId);
 
   return {
     sessionId,

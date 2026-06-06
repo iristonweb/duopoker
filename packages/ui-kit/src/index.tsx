@@ -2,6 +2,7 @@ export { AppBackground } from './components/AppBackground';
 export { Badge } from './components/Badge';
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './components/Button';
 export { cn } from './cn';
+export { DpClubMark } from './components/DpClubMark';
 export { EmptyState } from './components/EmptyState';
 export { GlassCard, GlassPanel, type GlassPanelProps } from './components/GlassPanel';
 export { Input, type InputProps } from './components/Input';

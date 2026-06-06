@@ -98,3 +98,19 @@ export { bestStrengthFromSeven, strengthFiveCards, compareStrength, describeStre
 export { createDeck, shuffle } from './cards';
 export { SeededRng } from './rng';
 export { evaluateHoldem, evaluateRaspisnoy } from './evaluator';
+export {
+  amountToCall,
+  BOT_USER_PREFIX,
+  isAutomatedPlayer,
+  maxRoundBet,
+  pickBotAction
+} from './bot-actions';
+export {
+  ACTION_TIMEOUT_MS,
+  NEXT_HAND_DELAY_MS,
+  buildAutoNextHand,
+  enrichSessionMeta,
+  playersWithChips,
+  shouldAutoStartNextHand,
+  shouldForceActionTimeout
+} from './session-tick';

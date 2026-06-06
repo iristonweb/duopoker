@@ -1,26 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
   <defs>
-    <linearGradient id="pBg" x1="0" y1="0" x2="140" y2="200">
-      <stop stop-color="#1e1033"/>
-      <stop offset="0.5" stop-color="#0c0818"/>
-      <stop offset="1" stop-color="#120820"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#1e1035"/>
+      <stop offset="1" stop-color="#090612"/>
     </linearGradient>
-    <linearGradient id="pPrism" x1="0" y1="0" x2="140" y2="200">
-      <stop stop-color="#c4b5fd" stop-opacity="0.35"/>
-      <stop offset="0.35" stop-color="#818cf8" stop-opacity="0.2"/>
-      <stop offset="0.65" stop-color="#e8c547" stop-opacity="0.15"/>
-      <stop offset="1" stop-color="#a78bfa" stop-opacity="0.3"/>
+    <linearGradient id="platinum" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#e9d5ff"/>
+      <stop offset="0.5" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#7c3aed"/>
     </linearGradient>
-    <linearGradient id="pLine" x1="0" y1="0" x2="1" y2="0">
-      <stop stop-color="#c4b5fd"/>
-      <stop offset="1" stop-color="#818cf8"/>
-    </linearGradient>
+    <pattern id="prism" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path d="M8 0L16 8L8 16L0 8Z" fill="#a78bfa" fill-opacity="0.08"/>
+    </pattern>
   </defs>
-  <rect width="140" height="200" rx="10" fill="url(#pBg)" stroke="url(#pLine)" stroke-width="1.5"/>
-  <rect x="6" y="6" width="128" height="188" rx="8" fill="url(#pPrism)"/>
-  <path d="M70 20 L120 100 L70 180 L20 100 Z" stroke="url(#pLine)" stroke-opacity="0.35" stroke-width="1" fill="none"/>
-  <path d="M70 40 L100 100 L70 160 L40 100 Z" stroke="#c4b5fd" stroke-opacity="0.25" stroke-width="0.8" fill="none"/>
-  <path d="M20 50 L120 50 M20 100 L120 100 M20 150 L120 150" stroke="#818cf8" stroke-opacity="0.12" stroke-width="0.6"/>
-  <text x="70" y="108" text-anchor="middle" fill="#e9d5ff" font-family="Georgia,serif" font-size="36">`</text>
+  <rect width="140" height="200" rx="10" fill="url(#bg)" stroke="url(#platinum)" stroke-opacity="0.55" stroke-width="1.8"/>
+  <rect x="8" y="8" width="124" height="184" rx="7" fill="url(#prism)"/>
+  <rect x="14" y="14" width="112" height="172" rx="6" stroke="url(#platinum)" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="70" y="96" text-anchor="middle" fill="url(#platinum)" font-family="Georgia,serif" font-size="38" font-weight="700">DP</text>
+  <text x="70" y="118" text-anchor="middle" fill="#ddd6fe" font-family="system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="0.34em">CLUB</text>
 </svg>
