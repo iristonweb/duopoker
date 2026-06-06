@@ -14,7 +14,6 @@ export const recordGameOutcome = async (state: SessionState) => {
   const humans = state.players.filter(isHumanPlayer);
   if (!humans.length) return;
 
-  const winnerId = winners[0]!;
   const winnerSet = new Set(winners);
 
   await prisma.$transaction([
