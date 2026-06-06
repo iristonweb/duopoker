@@ -12,7 +12,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       HUSKY: "0"
     steps:
@@ -30,18 +30,23 @@ jobs:
       - run: pnpm --filter @duopoker/game-engine build
       - run: pnpm --filter @duopoker/backend build
       - run: pnpm --filter @duopoker/web build
-      - uses: actions/cache@v4
-        id: playwright-cache
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 15
+    # Pre-installed Chromium — avoids 10+ min browser download on GitHub runners.
+    container:
+      image: mcr.microsoft.com/playwright:v1.52.0-noble
+    env:
+      HUSKY: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          path: ~/.cache/ms-playwright
-          key: ms-playwright-${{ runner.os }}-chromium-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ms-playwright-${{ runner.os }}-chromium-
-      # Browser only — skip --with-deps (apt on GitHub runners often hangs 10+ min).
-      # ubuntu-latest already has headless Chromium system libraries.
-      - name: Install Playwright Chromium
-        timeout-minutes: 5
-        run: pnpm exec playwright install chromium
+          node-version: 24
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
       - name: Playwright E2E
-        timeout-minutes: 10
         run: pnpm exec playwright test tests/web.e2e.spec.ts
