@@ -50,7 +50,7 @@ export const titleDisplayLabel = (titleId: string): string | undefined =>
   titleBadgeLabel(titleId) ?? cosmeticById(titleId)?.name;
 
 export const isPremiumDeck = (deckId: string): boolean =>
-  deckId === 'deck_platinum' || deckId === 'deck_diamond' || deckId === 'deck_black';
+  deckId.startsWith('deck_') && deckId !== 'deck_classic';
 
 export const avatarGradient = (tier: SubscriptionTier): string => {
   switch (tier) {

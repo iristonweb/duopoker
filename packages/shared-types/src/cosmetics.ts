@@ -1,5 +1,3 @@
-import { brandLogoUrl } from './brand';
-
 export type SubscriptionTier =
   | 'FREE'
   | 'BRONZE'
@@ -198,7 +196,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: deck.name,
       slot: 'deck',
       requiredTier: tier,
-      imageUrl: asset(`backs/deck_${t}.svg`),
+      imageUrl: asset(`backs/deck_${t}.png`),
       rarity: deck.rarity,
       description: deck.description
     },
@@ -207,7 +205,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: chip.name,
       slot: 'chip',
       requiredTier: tier,
-      imageUrl: asset(`chips/chip_${t}.svg`),
+      imageUrl: asset(`chips/chip_${t}.png`),
       rarity: chip.rarity,
       description: chip.description
     },
@@ -216,7 +214,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: frame.name,
       slot: 'frame',
       requiredTier: tier,
-      imageUrl: asset(`frames/frame_${t}.svg`),
+      imageUrl: asset(`frames/frame_${t}.png`),
       rarity: frame.rarity,
       description: frame.description
     },
@@ -225,7 +223,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: title.name,
       slot: 'title',
       requiredTier: tier,
-      imageUrl: asset(`titles/title_${t}.svg`),
+      imageUrl: asset(`titles/title_${t}.png`),
       rarity: title.rarity,
       description: title.description
     }
@@ -239,7 +237,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     name: 'DP CLUB Classic',
     slot: 'deck',
     requiredTier: 'FREE',
-    imageUrl: brandLogoUrl,
+    imageUrl: asset('backs/deck_classic.png'),
     rarity: 'COMMON',
     description: 'Signature DP CLUB midnight deck with gold filigree.'
   },
@@ -248,7 +246,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     name: 'DP CLUB House',
     slot: 'chip',
     requiredTier: 'FREE',
-    imageUrl: brandLogoUrl,
+    imageUrl: asset('chips/chip_classic.png'),
     rarity: 'COMMON',
     description: 'Official DP CLUB house chips — emerald edge stripes.'
   },
