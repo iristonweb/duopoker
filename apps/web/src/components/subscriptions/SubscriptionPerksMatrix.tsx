@@ -1,5 +1,10 @@
 import type { PaidSubscriptionTier } from '@duopoker/shared-types';
-import { subscriptionCosmetics, subscriptionBannerImages, tierLabel } from '@duopoker/shared-types';
+import {
+  cosmeticImageUrl,
+  subscriptionCosmetics,
+  subscriptionBannerImages,
+  tierLabel
+} from '@duopoker/shared-types';
 import { GlassPanel, SectionHeader } from '@duopoker/ui-kit';
 
 const PAID_TIERS: PaidSubscriptionTier[] = [
@@ -66,18 +71,35 @@ export function SubscriptionPerksMatrix({
                   {[deck, chip, frame, titleItem].map((item) => (
                     <td key={item?.id ?? tier} className="px-3 py-3 text-center">
                       {item ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          title={item.name}
+                        <div
                           className={
                             item.slot === 'deck'
-                              ? 'mx-auto h-14 w-10 object-contain'
-                              : item.slot === 'title'
-                                ? 'mx-auto h-6 w-28 object-contain'
-                                : 'mx-auto h-12 w-12 object-contain'
+                              ? 'mx-auto flex h-16 w-12 items-center justify-center rounded-md bg-black/40'
+                              : 'mx-auto flex h-14 w-14 items-center justify-center rounded-lg'
                           }
-                        />
+                          style={
+                            item.slot !== 'deck'
+                              ? {
+                                  backgroundImage:
+                                    'radial-gradient(ellipse at center, rgba(13,61,40,0.85) 0%, rgba(3,5,8,0.95) 100%), url(/assets/table-felt.png)',
+                                  backgroundSize: 'cover, 72px 72px'
+                                }
+                              : undefined
+                          }
+                        >
+                          <img
+                            src={cosmeticImageUrl(item.id) ?? item.imageUrl}
+                            alt={item.name}
+                            title={item.name}
+                            className={
+                              item.slot === 'deck'
+                                ? 'h-14 w-10 object-contain'
+                                : item.slot === 'title'
+                                  ? 'h-6 w-28 object-contain'
+                                  : 'h-11 w-11 object-contain'
+                            }
+                          />
+                        </div>
                       ) : null}
                     </td>
                   ))}

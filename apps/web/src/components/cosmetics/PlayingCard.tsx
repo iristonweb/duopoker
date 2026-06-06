@@ -102,12 +102,18 @@ export function PlayingCard({
           premium && deckId === 'deck_black' && 'card-back-black',
           premium && deckId === 'deck_diamond' && 'card-back-diamond',
           premium && deckId === 'deck_platinum' && 'card-back-platinum',
+          premium && deckId === 'deck_gold' && 'card-back-gold',
           className
         )}
       >
-        <img src={deckBackUrl(deckId)} alt="" className="h-full w-full object-cover" draggable={false} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/25" />
-        <div className="pointer-events-none absolute inset-[3px] rounded-[inherit] border border-gold/20" />
+        <img
+          src={deckBackUrl(deckId)}
+          alt=""
+          className="h-full w-full object-fill"
+          draggable={false}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-black/10" />
+        <div className="pointer-events-none absolute inset-[1px] rounded-[inherit] border border-white/[0.08]" />
       </div>
     );
   }

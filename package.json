@@ -21,23 +21,25 @@
     "db:push": "pnpm --filter @duopoker/db-schema db:push",
     "db:generate": "pnpm --filter @duopoker/db-schema build",
     "grant:founder": "node scripts/grant-founder.mjs",
-    "build:vercel-api": "node scripts/bundle-vercel-api.mjs"
+    "build:vercel-api": "node scripts/bundle-vercel-api.mjs",
+    "crop:decks": "node scripts/crop-deck-backs.mjs"
   },
   "dependencies": {
     "@duopoker/db-schema": "workspace:*",
     "hono": "^4.7.10"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.3",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
+    "esbuild": "^0.25.0",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
     "husky": "^9.1.7",
     "prettier": "^3.5.3",
+    "sharp": "^0.34.5",
     "socket.io-client": "^4.8.1",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.58.2",

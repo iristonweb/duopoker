@@ -51,12 +51,6 @@ export function PlayerAvatar({
           folded && 'opacity-45 grayscale'
         )}
       >
-        <img
-          src={frameImageUrl(frameId)}
-          alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-contain"
-          draggable={false}
-        />
         {avatarUrl ? (
           <img
             src={avatarUrl}
@@ -74,6 +68,16 @@ export function PlayerAvatar({
             {initialsFromName(name)}
           </div>
         )}
+        {frameId !== 'frame_none' ? (
+          <img
+            src={frameImageUrl(frameId)}
+            alt=""
+            className="pointer-events-none absolute inset-0 z-[2] h-full w-full scale-[1.08] object-contain drop-shadow-[0_0_12px_rgba(232,197,71,0.25)]"
+            draggable={false}
+          />
+        ) : (
+          <span className="pointer-events-none absolute inset-0 z-[2] rounded-full ring-2 ring-white/15" />
+        )}
         {active ? (
           <span className="absolute -bottom-0.5 left-1/2 z-[2] h-2 w-2 -translate-x-1/2 rounded-full bg-emerald shadow-glow-emerald" />
         ) : null}
@@ -90,7 +94,7 @@ export function PlayerAvatar({
         <img
           src={titleSrc}
           alt={titleText ?? ''}
-          className="mt-0.5 h-4 w-auto max-w-[110px] object-contain"
+          className="mt-0.5 h-4 w-auto max-w-[120px] object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.65)] sm:h-[1.125rem]"
           title={titleText}
         />
       ) : tableStatus ? (

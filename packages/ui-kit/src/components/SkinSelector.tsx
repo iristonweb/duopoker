@@ -1,6 +1,7 @@
 import type { CosmeticDefinition, CosmeticSlot, SubscriptionTier } from '@duopoker/shared-types';
 import {
   canEquipCosmetic,
+  cosmeticImageUrl,
   subscriptionCosmeticsBySlot,
   tierLabel,
   tierMeetsRequirement
@@ -105,15 +106,35 @@ export function SkinSelector({
                   </Badge>
                 </div>
               ) : null}
-              <img
-                src={item.imageUrl}
-                alt=""
+              <div
                 className={cn(
-                  'mb-2 object-contain transition-transform duration-300 group-hover:scale-105',
-                  slot === 'deck' ? 'h-20 w-14' : slot === 'title' ? 'h-10 w-36 max-w-full' : 'h-16 w-16'
+                  'mb-2 flex w-full items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-[1.03]',
+                  slot === 'deck'
+                    ? 'h-[5.5rem] bg-black/40'
+                    : slot === 'title'
+                      ? 'h-12 bg-[radial-gradient(ellipse_at_center,#0a1f14_0%,#030508_100%)]'
+                      : 'h-[5.5rem] bg-[radial-gradient(ellipse_at_center,#0d3d28_0%,#030508_100%)]'
                 )}
-                loading="lazy"
-              />
+                style={
+                  slot !== 'deck'
+                    ? {
+                        backgroundImage:
+                          'radial-gradient(ellipse at center, rgba(13,61,40,0.9) 0%, rgba(3,5,8,0.95) 100%), url(/assets/table-felt.png)',
+                        backgroundSize: 'cover, 96px 96px'
+                      }
+                    : undefined
+                }
+              >
+                <img
+                  src={cosmeticImageUrl(item.id) ?? item.imageUrl}
+                  alt=""
+                  className={cn(
+                    'object-contain',
+                    slot === 'deck' ? 'h-20 w-14' : slot === 'title' ? 'h-9 w-36 max-w-full' : 'h-16 w-16'
+                  )}
+                  loading="lazy"
+                />
+              </div>
               <span className="text-xs font-semibold text-zinc-100">{item.name}</span>
               <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.12em] text-gold/75">
                 {item.rarity}
