@@ -441,8 +441,8 @@ export const Lobby = () => {
             loading="eager"
             decoding="async"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/55 via-background/10 to-transparent" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/75 via-transparent to-gold/5" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/25 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-gold/5" />
           <div className="absolute bottom-0 left-0 p-6 sm:p-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-gold/80">
               {t('lobby.heroPremium')}

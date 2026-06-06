@@ -1,21 +1,27 @@
-import { cardsBackgroundUrl } from '@duopoker/shared-types';
+import { appBackgroundUrl, cardsBackgroundUrl } from '@duopoker/shared-types';
 
 export function AppBackground() {
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
       <div className="absolute inset-0 bg-background" />
-      <div className="absolute inset-0 bg-mesh-premium opacity-80" />
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.22] mix-blend-screen sm:opacity-[0.26]"
-        style={{ backgroundImage: `url(${cardsBackgroundUrl})` }}
+      <div className="absolute inset-0 bg-mesh-premium opacity-60" />
+      <img
+        src={cardsBackgroundUrl}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover opacity-[0.42] sm:opacity-[0.5]"
+        draggable={false}
+        decoding="async"
       />
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.06]"
-        style={{ backgroundImage: 'url(/assets/banners/app-background.svg)' }}
+      <img
+        src={appBackgroundUrl}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover opacity-[0.12]"
+        draggable={false}
+        decoding="async"
       />
-      <div className="absolute inset-0 bg-radial-gold" />
-      <div className="absolute inset-0 bg-radial-emerald" />
-      <div className="absolute inset-0 bg-radial-violet" />
+      <div className="absolute inset-0 bg-radial-gold opacity-90" />
+      <div className="absolute inset-0 bg-radial-emerald opacity-80" />
+      <div className="absolute inset-0 bg-radial-violet opacity-70" />
 
       <div
         className="absolute -left-1/3 top-[-10%] h-[85vh] w-[85vh] animate-float-slow rounded-full blur-3xl"
@@ -49,7 +55,7 @@ export function AppBackground() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 80% 60% at 50% 50%, transparent 35%, rgba(5, 5, 8, 0.88) 100%)'
+            'radial-gradient(ellipse 85% 70% at 50% 50%, transparent 42%, rgba(5, 5, 8, 0.72) 100%)'
         }}
       />
     </div>

@@ -46,7 +46,7 @@ export function ModeCard({
             loading="lazy"
             decoding="async"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/85 via-surface/25 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/45 via-surface/10 to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-gold/10 via-transparent to-emerald/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         </div>
       ) : null}

@@ -26,7 +26,7 @@ export type OrganizerPlanTier = 'BASIC' | 'PRO' | 'NETWORK';
 export const lobbyHeroBanner = '/assets/banners/lobby-hero.svg';
 export const clubsHeroBanner = '/assets/banners/clubs-hero.svg';
 export const appBackgroundUrl = '/assets/banners/app-background.svg';
-export const cardsBackgroundUrl = '/assets/banners/cards-background.png';
+export const cardsBackgroundUrl = '/assets/banners/cards-background.svg';
 
 import { allCosmetics, bonusCosmetics } from './cosmetics';
 

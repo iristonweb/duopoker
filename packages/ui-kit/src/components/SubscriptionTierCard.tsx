@@ -47,14 +47,14 @@ export function SubscriptionTierCard({
           <img
             src={bannerUrl}
             alt=""
-            className="absolute inset-0 h-full w-full object-contain object-center"
+            className="absolute inset-0 h-full w-full object-cover object-center"
             loading="lazy"
             decoding="async"
           />
         ) : (
           <div className={cn('absolute inset-0 bg-gradient-to-br opacity-90', tierAccent[tier])} aria-hidden />
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/70 via-transparent to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/35 via-transparent to-transparent" />
         <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br opacity-40', tierAccent[tier])} />
       </div>
       <div className="p-5">
