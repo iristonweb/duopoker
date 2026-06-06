@@ -310,6 +310,7 @@ export function AdminPage() {
         return;
       }
       const data = (await res.json()) as { sessionId: string };
+      useAppStore.getState().resetTableJoin();
       await joinSession(data.sessionId, 'HOLDEM', vipBuyIn);
       navigate(`/table/${data.sessionId}`);
     } finally {

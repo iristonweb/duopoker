@@ -174,9 +174,10 @@
     "eyebrow": "Cosmetics",
     "title": "Table identity",
     "desc": "Card backs, chips, avatar frames, and titles — unlock with subscriptions.",
-    "tabs": { "deck": "Card backs", "chip": "Chips", "frame": "Avatars", "title": "Titles" },
+    "tabs": { "deck": "Card backs", "chip": "Chips", "frame": "Avatars", "title": "Titles", "table": "Table felt" },
     "equip": "Equip",
     "equipped": "Equipped",
+    "equipFailed": "Could not equip item",
     "buy": "Buy"
   },
   "voice": {

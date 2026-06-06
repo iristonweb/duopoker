@@ -10,6 +10,7 @@ import {
   publicProfileSelect,
   safeAvatarField
 } from '../lib/profile-privacy.js';
+import { equipCosmeticItem } from '../services/cosmetics-equip.js';
 
 const profileSchema = z
   .object({
@@ -25,6 +26,10 @@ const nicknameSchema = z.object({
   nickname: z.string().min(3).max(20)
 });
 
+const equipCosmeticSchema = z.object({
+  itemId: z.string().min(1)
+});
+
 export const profileRoutes = new Hono();
 
 profileRoutes.use('*', authGuard);
@@ -36,6 +41,20 @@ profileRoutes.get('/me/nickname', async (c) => {
   });
   if (!user) return c.json({ error: 'User not found' }, 404);
   return c.json(user);
+});
+
+profileRoutes.put('/me/cosmetics/equip', async (c) => {
+  const userId = c.get('auth').userId;
+  const body = await c.req.json().catch(() => null);
+  const parsed = equipCosmeticSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const result = await equipCosmeticItem(userId, parsed.data.itemId);
+  if (!result.ok) {
+    const status = result.error === 'NOT_ALLOWED' ? 403 : 404;
+    return c.json({ error: result.error }, status);
+  }
+  return c.json({ equipped: result.equipped });
 });
 
 profileRoutes.put('/me/nickname', async (c) => {

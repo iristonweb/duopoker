@@ -14,7 +14,7 @@ import {
 import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
 import { decryptProfileRow } from '../lib/profile-privacy.js';
 import { jsonError } from '../lib/http-error.js';
-import { resolveUserRole } from '../services/admin-access.js';
+import { isFounderEmail, resolveUserRole, syncFounderPrivileges } from '../services/admin-access.js';
 import {
   activatePendingReferralsForUser,
   attachReferralOnSignup,
@@ -250,6 +250,13 @@ authRoutes.get('/me', async (c) => {
     const authHeader = c.req.header('authorization') ?? '';
     const token = authHeader.replace(/^Bearer /, '');
     const payload = verifyAccessToken(token);
+    const emailRow = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { email: true }
+    });
+    if (emailRow && isFounderEmail(emailRow.email)) {
+      await syncFounderPrivileges(emailRow.email);
+    }
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: {

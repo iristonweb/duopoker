@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
 import type { EquippedCosmetics, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
-import { GHOST_BOARD_MIN_TIER, NEXT_HAND_DELAY_MS, defaultEquipped, tierMeetsRequirement } from '@duopoker/shared-types';
+import { GHOST_BOARD_MIN_TIER, NEXT_HAND_DELAY_MS, defaultEquipped, gameChipId, tierMeetsRequirement } from '@duopoker/shared-types';
 import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
 import { GameTableShell } from '../components/table/GameTableShell';
 import { TableTopHUD } from '../components/table/TableTopHUD';
@@ -40,10 +40,12 @@ export const Table = () => {
   const stopPolling = useAppStore((s) => s.stopPolling);
   const leaveTable = useAppStore((s) => s.leaveTable);
   const clearTableSession = useAppStore((s) => s.clearTableSession);
+  const tableVoluntaryLeave = useAppStore((s) => s.tableVoluntaryLeave);
   const mode = useAppStore((s) => s.mode);
 
   const equipped = useAppStore((s) => s.equipped);
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
+  const inventory = useAppStore((s) => s.inventory);
   const heroTableStatus = useAppStore((s) => s.tableStatus);
 
   const [playerProfiles, setPlayerProfiles] = useState<
@@ -109,7 +111,7 @@ export const Table = () => {
 
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState !== 'visible' || !routeSessionId) return;
+      if (document.visibilityState !== 'visible' || !routeSessionId || tableVoluntaryLeave) return;
       connect();
       if (usesRealtimeSocket()) {
         useAppStore.getState().socket?.emit('reconnectSession', { sessionId: routeSessionId });
@@ -124,7 +126,7 @@ export const Table = () => {
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [connect, routeSessionId]);
+  }, [connect, routeSessionId, tableVoluntaryLeave]);
 
   const activeId = useMemo(() => {
     if (!session || session.players.length === 0) return undefined;
@@ -156,6 +158,7 @@ export const Table = () => {
         tableStatus: hero ? heroTableStatus : profile?.tableStatus,
         tier: hero ? subscriptionTier : (profile?.subscriptionTier ?? 'FREE'),
         equipped: hero ? equipped : profile?.equipped,
+        inventory: hero ? inventory : undefined,
         holeCards: session.playerCards[uid] ?? [],
         revealCards: hero,
         isActive: uid === activeId,
@@ -163,14 +166,14 @@ export const Table = () => {
       };
     });
     return rotatePlayersForHero(visuals, userId);
-  }, [session, playerProfiles, userId, subscriptionTier, equipped, heroTableStatus, activeId]);
+  }, [session, playerProfiles, userId, subscriptionTier, equipped, inventory, heroTableStatus, activeId]);
 
   useEffect(() => {
     connect();
   }, [connect]);
 
   useEffect(() => {
-    if (!routeSessionId) return;
+    if (!routeSessionId || tableVoluntaryLeave) return;
     if (usesRealtimeSocket()) {
       joinSession(routeSessionId, mode);
       socket?.emit('reconnectSession', { sessionId: routeSessionId });
@@ -179,7 +182,7 @@ export const Table = () => {
     void joinSession(routeSessionId, mode);
     pollSession(routeSessionId);
     return () => stopPolling();
-  }, [routeSessionId, joinSession, pollSession, stopPolling, mode, socket]);
+  }, [routeSessionId, tableVoluntaryLeave, joinSession, pollSession, stopPolling, mode, socket]);
 
   useEffect(() => {
     if (session?.bigBlind) setRaiseAmount(session.bigBlind * 2);
@@ -198,25 +201,15 @@ export const Table = () => {
     navigate('/lobby', { replace: true });
   };
 
-  const handleLeaveTable = async () => {
+  const handleLeaveTable = () => {
     const id = session?.sessionId ?? routeSessionId;
     if (leaving) return;
-    if (!id) {
-      exitToLobby();
-      return;
-    }
     setLeaving(true);
-    try {
-      const result = await leaveTable(id);
-      if (
-        result.ok ||
-        result.reason === 'NOT_SEATED' ||
-        result.reason === 'SESSION_NOT_FOUND'
-      ) {
-        exitToLobby();
-        return;
-      }
-    } finally {
+    navigate('/lobby', { replace: true });
+    if (id) {
+      void leaveTable(id).finally(() => setLeaving(false));
+    } else {
+      clearTableSession();
       setLeaving(false);
     }
   };
@@ -237,10 +230,10 @@ export const Table = () => {
   }, [sessionError, routeSessionId]);
 
   useEffect(() => {
-    if (matchRoute && session) return;
+    if (tableVoluntaryLeave || (matchRoute && session)) return;
     const timer = window.setTimeout(() => exitToLobby(), 10_000);
     return () => window.clearTimeout(timer);
-  }, [matchRoute, session, routeSessionId]);
+  }, [matchRoute, session, routeSessionId, tableVoluntaryLeave]);
 
   if (!routeSessionId) {
     return (
@@ -248,6 +241,10 @@ export const Table = () => {
         <GlassPanel className="border-white/10 p-6 text-muted">{t('table.invalid')}</GlassPanel>
       </PageShell>
     );
+  }
+
+  if (tableVoluntaryLeave) {
+    return null;
   }
 
   if (!matchRoute || !session) {
@@ -342,7 +339,7 @@ export const Table = () => {
           smallBlind={session.smallBlind}
           bigBlind={session.bigBlind}
           handNumber={session.handNumber}
-          chipId={equipped.chip}
+          chipId={gameChipId(equipped.chip)}
           onLeaveTable={() => void handleLeaveTable()}
           leaving={leaving}
         />
@@ -365,6 +362,7 @@ export const Table = () => {
               players={tablePlayers}
               heroDeckId={equipped.deck}
               heroChipId={equipped.chip}
+              heroTableFeltId={equipped.table}
               className="h-full"
             />
             <HandResultOverlay

@@ -41,6 +41,7 @@ export function VipInviteBanner() {
           type="button"
           className="premium-btn premium-btn-primary mt-4 text-sm"
           onClick={() => {
+            useAppStore.getState().resetTableJoin();
             void joinSession(
               vipLiveSession.sessionId,
               vipLiveSession.mode as 'HOLDEM' | 'RASPISNOY',

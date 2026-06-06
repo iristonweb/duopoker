@@ -28,7 +28,8 @@ const defaultSlotTabs: { id: CosmeticSlot; label: string }[] = [
   { id: 'deck', label: 'Card backs' },
   { id: 'chip', label: 'Chips' },
   { id: 'frame', label: 'Avatars' },
-  { id: 'title', label: 'Titles' }
+  { id: 'title', label: 'Titles' },
+  { id: 'table', label: 'Table felt' }
 ];
 
 export function SkinSelector({
@@ -49,7 +50,7 @@ export function SkinSelector({
   catalog?: CosmeticItem[];
   subscriptionTier?: SubscriptionTier;
   inventory?: string[];
-  equipped?: { deck?: string; chip?: string; frame?: string; title?: string };
+  equipped?: { deck?: string; chip?: string; frame?: string; title?: string; table?: string };
   eyebrow?: string;
   title?: string;
   description?: string;
@@ -85,7 +86,8 @@ export function SkinSelector({
             (slot === 'deck' && equipped?.deck === item.id) ||
             (slot === 'chip' && equipped?.chip === item.id) ||
             (slot === 'frame' && equipped?.frame === item.id) ||
-            (slot === 'title' && equipped?.title === item.id);
+            (slot === 'title' && equipped?.title === item.id) ||
+            (slot === 'table' && equipped?.table === item.id);
           const needsTier = !tierMeetsRequirement(subscriptionTier, item.requiredTier);
           return (
             <div
@@ -113,10 +115,18 @@ export function SkinSelector({
                     ? 'h-[5.5rem] bg-black/40'
                     : slot === 'title'
                       ? 'h-12 bg-[radial-gradient(ellipse_at_center,#0a1f14_0%,#030508_100%)]'
-                      : 'h-[5.5rem] bg-[radial-gradient(ellipse_at_center,#0d3d28_0%,#030508_100%)]'
+                      : slot === 'table'
+                        ? 'h-[5.5rem] overflow-hidden rounded-xl'
+                        : 'h-[5.5rem] bg-[radial-gradient(ellipse_at_center,#0d3d28_0%,#030508_100%)]'
                 )}
                 style={
-                  slot !== 'deck'
+                  slot === 'table'
+                    ? {
+                        backgroundImage: `url(${cosmeticImageUrl(item.id, false) ?? item.imageUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                      }
+                    : slot !== 'deck'
                     ? {
                         backgroundImage:
                           'radial-gradient(ellipse at center, rgba(13,61,40,0.9) 0%, rgba(3,5,8,0.95) 100%), url(/assets/table-felt.png)',
@@ -125,6 +135,7 @@ export function SkinSelector({
                     : undefined
                 }
               >
+                {slot !== 'table' ? (
                 <img
                   src={cosmeticImageUrl(item.id) ?? item.imageUrl}
                   alt=""
@@ -134,6 +145,7 @@ export function SkinSelector({
                   )}
                   loading="lazy"
                 />
+                ) : null}
               </div>
               <span className="text-xs font-semibold text-zinc-100">{item.name}</span>
               <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.12em] text-gold/75">

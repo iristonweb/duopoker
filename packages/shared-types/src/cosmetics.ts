@@ -7,7 +7,7 @@ export type SubscriptionTier =
   | 'DIAMOND'
   | 'BLACK';
 
-export type CosmeticSlot = 'deck' | 'chip' | 'frame' | 'title';
+export type CosmeticSlot = 'deck' | 'chip' | 'frame' | 'title' | 'table';
 
 export const TIER_RANK: Record<SubscriptionTier, number> = {
   FREE: 0,
@@ -200,7 +200,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       slot: 'deck',
       requiredTier: tier,
       imageUrl: asset(`backs/deck_${t}.png`),
-      gameImageUrl: asset(`backs/deck_${t}.png`),
+      gameImageUrl: asset(`backs/deck_${t}_game.png`),
       rarity: deck.rarity,
       description: deck.description
     },
@@ -245,7 +245,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     slot: 'deck',
     requiredTier: 'FREE',
     imageUrl: asset('backs/deck_classic.png'),
-    gameImageUrl: asset('backs/deck_classic.png'),
+    gameImageUrl: asset('backs/deck_classic_game.png'),
     rarity: 'COMMON',
     description: 'Signature DP CLUB midnight deck with gold filigree.'
   },
@@ -268,6 +268,16 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     rarity: 'COMMON',
     description: 'Soft ring — clean and understated.'
   },
+  {
+    id: 'table_classic',
+    name: 'Classic Felt',
+    slot: 'table',
+    requiredTier: 'FREE',
+    imageUrl: '/assets/table-felt.png',
+    gameImageUrl: '/assets/table-felt.png',
+    rarity: 'COMMON',
+    description: 'Signature DP CLUB emerald felt.'
+  },
   ...paidTiers.flatMap(tierCosmetics)
 ];
 
@@ -278,7 +288,8 @@ export const bonusCosmetics: CosmeticDefinition[] = [
     name: 'Neon Pulse',
     slot: 'deck',
     requiredTier: 'FREE',
-    imageUrl: '/assets/cosmetics/deck_neon.svg',
+    imageUrl: asset('backs/deck_neon.png'),
+    gameImageUrl: asset('backs/deck_neon_game.png'),
     rarity: 'RARE',
     chipCost: 1800,
     description: 'Electric emerald circuit pattern — chip shop exclusive.'
@@ -286,12 +297,13 @@ export const bonusCosmetics: CosmeticDefinition[] = [
   {
     id: 'table_void',
     name: 'Void Felt',
-    slot: 'chip',
+    slot: 'table',
     requiredTier: 'FREE',
-    imageUrl: '/assets/cosmetics/table_void.svg',
+    imageUrl: asset('table_void.png'),
+    gameImageUrl: asset('table_void_game.png'),
     rarity: 'EPIC',
     chipCost: 4500,
-    description: 'Abyssal table felt preview token.'
+    description: 'Abyssal void felt — chip shop exclusive.'
   }
 ];
 
@@ -339,14 +351,35 @@ export type EquippedCosmetics = {
   chip: string;
   frame: string;
   title: string;
+  table: string;
 };
 
 export const defaultEquipped = (): EquippedCosmetics => ({
   deck: 'deck_classic',
   chip: 'chip_classic',
   frame: 'frame_none',
-  title: ''
+  title: '',
+  table: 'table_classic'
 });
+
+  /** Maps deck id → CSS shimmer class for in-game card backs. */
+export const deckBackEffectClass = (deckId: string): string | undefined => {
+  const effects: Record<string, string> = {
+    deck_classic: 'card-back-classic',
+    deck_bronze: 'card-back-bronze',
+    deck_silver: 'card-back-silver',
+    deck_gold: 'card-back-gold',
+    deck_platinum: 'card-back-platinum',
+    deck_diamond: 'card-back-diamond',
+    deck_black: 'card-back-black',
+    deck_neon: 'card-back-neon'
+  };
+  return effects[deckId];
+};
+
+/** Chip slot id safe for chip stack / pot visuals (excludes table felts). */
+export const gameChipId = (chipId: string): string =>
+  chipId.startsWith('table_') ? 'chip_classic' : chipId;
 
 export const resolveEquipped = (
   equipped: Partial<EquippedCosmetics> | undefined,
@@ -363,11 +396,16 @@ export const resolveEquipped = (
     if (slot === 'title') return '';
     return bestCosmeticForTier(slot, tier)?.id ?? defaultEquipped()[slot];
   };
+  const chipId = equipped?.chip === 'table_void' ? undefined : equipped?.chip;
+  const tableId =
+    equipped?.table ?? (equipped?.chip === 'table_void' ? 'table_void' : undefined);
+
   return {
     deck: pick('deck', equipped?.deck),
-    chip: pick('chip', equipped?.chip),
+    chip: pick('chip', chipId),
     frame: pick('frame', equipped?.frame),
-    title: pick('title', equipped?.title)
+    title: pick('title', equipped?.title),
+    table: pick('table', tableId)
   };
 };
 

@@ -1,3 +1,4 @@
+import { gameChipId } from '@duopoker/shared-types';
 import { cn } from '@duopoker/ui-kit';
 import { chipImageUrl } from '../../lib/cosmetics-client';
 
@@ -12,12 +13,13 @@ export function PokerChipVisual({
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }) {
+  const resolvedChipId = gameChipId(chipId);
   const dim = size === 'sm' ? 'h-8 w-8' : size === 'lg' ? 'h-14 w-14' : 'h-10 w-10';
   return (
     <div className={cn('relative inline-flex flex-col items-center', className)}>
       <div className={cn('relative', dim)}>
         <img
-          src={chipImageUrl(chipId)}
+          src={chipImageUrl(resolvedChipId)}
           alt=""
           className="h-full w-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]"
           draggable={false}
@@ -39,13 +41,14 @@ export function PokerChipStack({
   count?: number;
   className?: string;
 }) {
+  const resolvedChipId = gameChipId(chipId);
   const chips = Math.min(count, 5);
   return (
     <div className={cn('relative h-10 w-10', className)}>
       {Array.from({ length: chips }, (_, i) => (
         <img
           key={i}
-          src={chipImageUrl(chipId)}
+          src={chipImageUrl(resolvedChipId)}
           alt=""
           className="absolute left-0 h-8 w-8 object-contain drop-shadow-md"
           style={{ top: `${i * -3}px`, zIndex: i }}

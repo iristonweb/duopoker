@@ -213,12 +213,18 @@ export const ProfilePage = () => {
               { id: 'deck' as const, label: t('cosmetics.tabs.deck') },
               { id: 'chip' as const, label: t('cosmetics.tabs.chip') },
               { id: 'frame' as const, label: t('cosmetics.tabs.frame') },
-              { id: 'title' as const, label: t('cosmetics.tabs.title') }
+              { id: 'title' as const, label: t('cosmetics.tabs.title') },
+              { id: 'table' as const, label: t('cosmetics.tabs.table') }
             ]}
             equipLabel={t('cosmetics.equip')}
             equippedLabel={t('cosmetics.equipped')}
             buyLabel={t('cosmetics.buy')}
-            onEquip={(itemId) => equipCosmetic(itemId)}
+            onEquip={(itemId) => {
+              void equipCosmetic(itemId).then((result) => {
+                if (!result.ok) setShopMsg(t('cosmetics.equipFailed'));
+                else setShopMsg(null);
+              });
+            }}
             onBuy={(itemId) => {
               void buyCosmetic(itemId)
                 .then(() => setShopMsg(null))

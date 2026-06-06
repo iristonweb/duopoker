@@ -101,7 +101,10 @@ export const TableManager = () => {
               <Button
                 variant="primary"
                 onClick={() => {
-                  void startPrivateTable(clubId, tableId).then((sid) => navigate(`/table/${sid}`));
+                  void startPrivateTable(clubId, tableId).then((sid) => {
+                    useAppStore.getState().resetTableJoin();
+                    navigate(`/table/${sid}`);
+                  });
                 }}
               >
                 Запустить стол
@@ -110,7 +113,10 @@ export const TableManager = () => {
               <Button
                 variant="primary"
                 onClick={() => {
-                  void joinPrivateTable(clubId, tableId).then((sid) => navigate(`/table/${sid}`));
+                  void joinPrivateTable(clubId, tableId).then((sid) => {
+                    useAppStore.getState().resetTableJoin();
+                    navigate(`/table/${sid}`);
+                  });
                 }}
               >
                 Войти за стол

@@ -745,6 +745,7 @@ export const Lobby = () => {
                       street={session.street}
                       heroDeckId={equipped.deck}
                       heroChipId={equipped.chip}
+                      heroTableFeltId={equipped.table}
                     />
                   )}
                 </div>

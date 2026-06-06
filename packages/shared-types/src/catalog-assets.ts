@@ -4,7 +4,7 @@ export type CatalogCosmetic = {
   rarity: string;
   chipCost: number;
   imageUrl: string;
-  slot?: 'deck' | 'chip' | 'frame' | 'title';
+  slot?: 'deck' | 'chip' | 'frame' | 'title' | 'table';
   requiredTier?: 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
   description?: string;
 };

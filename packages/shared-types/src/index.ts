@@ -45,6 +45,8 @@ export {
   cosmeticsBySlot,
   defaultCosmeticForSlot,
   defaultEquipped,
+  deckBackEffectClass,
+  gameChipId,
   resolveEquipped,
   subscriptionCosmetics,
   subscriptionCosmeticsBySlot,

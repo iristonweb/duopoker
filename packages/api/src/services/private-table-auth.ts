@@ -153,9 +153,10 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
     const equippedFromDb: Partial<EquippedCosmetics> = {};
     for (const itemId of inventoryIds) {
       if (itemId.startsWith('deck_')) equippedFromDb.deck = itemId;
-      if (itemId.startsWith('chip_') || itemId === 'table_void') equippedFromDb.chip = itemId;
+      if (itemId.startsWith('chip_')) equippedFromDb.chip = itemId;
       if (itemId.startsWith('frame_')) equippedFromDb.frame = itemId;
       if (itemId.startsWith('title_')) equippedFromDb.title = itemId;
+      if (itemId.startsWith('table_')) equippedFromDb.table = itemId;
     }
     return {
       userId: id,

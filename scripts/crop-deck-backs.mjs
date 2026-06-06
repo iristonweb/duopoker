@@ -86,3 +86,37 @@ for (const id of decks) {
 }
 
 console.log('[crop-deck-backs] done');
+
+const cosmeticsDir = path.join(root, 'apps/web/public/assets/cosmetics');
+const neonSvg = path.join(cosmeticsDir, 'deck_neon.svg');
+
+if (fs.existsSync(neonSvg)) {
+  const neonBuf = await sharp(neonSvg).resize(CARD_W, CARD_H, { fit: 'fill' }).png({ compressionLevel: 9 }).toBuffer();
+  await sharp(neonBuf).toFile(path.join(backsDir, 'deck_neon.png'));
+  await sharp(neonBuf).toFile(path.join(backsDir, 'deck_neon_game.png'));
+  console.log('deck_neon: → catalog + game PNG');
+}
+
+const voidFeltSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <radialGradient id="void" cx="50%" cy="45%" r="65%">
+      <stop stop-color="#1a0a2e"/>
+      <stop offset="0.45" stop-color="#0a0618"/>
+      <stop offset="1" stop-color="#030208"/>
+    </radialGradient>
+    <pattern id="mist" width="64" height="64" patternUnits="userSpaceOnUse">
+      <circle cx="32" cy="32" r="18" fill="#6d28d9" fill-opacity="0.06"/>
+      <circle cx="8" cy="48" r="10" fill="#4ade80" fill-opacity="0.04"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" fill="url(#void)"/>
+  <rect width="512" height="512" fill="url(#mist)" opacity="0.85"/>
+  <ellipse cx="256" cy="240" rx="180" ry="140" fill="#4c1d95" fill-opacity="0.08"/>
+</svg>`;
+
+const voidTile = 512;
+const voidBuf = await sharp(Buffer.from(voidFeltSvg)).resize(voidTile, voidTile).png({ compressionLevel: 9 }).toBuffer();
+await sharp(voidBuf).toFile(path.join(cosmeticsDir, 'table_void.png'));
+await sharp(voidBuf).toFile(path.join(cosmeticsDir, 'table_void_game.png'));
+console.log('table_void: → tileable felt PNG 512×512');
