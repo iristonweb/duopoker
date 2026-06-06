@@ -458,7 +458,7 @@ export const Lobby = () => {
           variants={reduceMotion ? undefined : section}
           custom={0}
         >
-          <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
             <AppLogo size="lg" className="self-start" />
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">

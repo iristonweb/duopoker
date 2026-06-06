@@ -1,22 +1,23 @@
 {
-  "name": "DuoPoker",
-  "short_name": "DuoPoker",
+  "name": "DP CLUB — Duo Poker Club",
+  "short_name": "DP CLUB",
   "start_url": "/lobby",
   "display": "standalone",
-  "background_color": "#0A0A0A",
-  "theme_color": "#0A0A0A",
-  "description": "Premium dual-mode poker platform with virtual chips only.",
+  "background_color": "#050508",
+  "theme_color": "#050508",
+  "description": "Premium онлайн-покер на виртуальные фишки — Texas Hold'em и Расписной.",
+  "lang": "ru",
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon.svg",
+      "src": "/favicon.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]

@@ -10,6 +10,15 @@ export {
 export { ACTION_TIMEOUT_MS, NEXT_HAND_DELAY_MS } from './game-timing';
 
 export {
+  brandFullName,
+  brandLogoUrl,
+  brandName,
+  siteDescriptionEn,
+  siteDescriptionRu,
+  siteUrl
+} from './brand';
+
+export {
   catalogCosmetics,
   catalogGameModes,
   lobbyHeroBanner,

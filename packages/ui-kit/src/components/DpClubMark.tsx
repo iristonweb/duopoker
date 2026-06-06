@@ -1,38 +1,29 @@
+import { brandLogoUrl } from '@duopoker/shared-types';
 import { cn } from '../cn';
 
-/** Compact DP CLUB brand mark for premium UI surfaces. */
+/** Compact DP CLUB logo mark — same PNG as site header & favicon. */
 export function DpClubMark({
   className,
   variant = 'gold',
   size = 'md'
 }: {
   className?: string;
+  /** Kept for API compatibility; logo is always the official DP CLUB PNG. */
   variant?: 'gold' | 'emerald' | 'mono';
   size?: 'xs' | 'sm' | 'md' | 'lg';
 }) {
+  void variant;
   const dim =
-    size === 'xs' ? 'h-5 w-12' : size === 'sm' ? 'h-7 w-16' : size === 'lg' ? 'h-11 w-28' : 'h-9 w-20';
-  const accent =
-    variant === 'emerald' ? '#4ade80' : variant === 'mono' ? '#fafafa' : '#e8c547';
-  const accentSoft =
-    variant === 'emerald' ? '#86efac' : variant === 'mono' ? '#d4d4d8' : '#f5e6a8';
+    size === 'xs' ? 'h-5 w-5' : size === 'sm' ? 'h-7 w-7' : size === 'lg' ? 'h-11 w-11' : 'h-9 w-9';
 
   return (
-    <svg
-      viewBox="0 0 120 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn(dim, className)}
+    <img
+      src={brandLogoUrl}
+      alt=""
       aria-hidden
-    >
-      <rect x="1" y="1" width="118" height="46" rx="8" fill="#0c0c12" stroke={accent} strokeOpacity="0.45" strokeWidth="1.2" />
-      <rect x="5" y="5" width="110" height="38" rx="6" stroke={accent} strokeOpacity="0.18" strokeWidth="0.8" />
-      <text x="60" y="24" textAnchor="middle" fill={accentSoft} fontFamily="Georgia, serif" fontSize="16" fontWeight="700">
-        DP
-      </text>
-      <text x="60" y="38" textAnchor="middle" fill={accent} fillOpacity="0.92" fontFamily="system-ui,sans-serif" fontSize="7" fontWeight="700" letterSpacing="0.32em">
-        CLUB
-      </text>
-    </svg>
+      draggable={false}
+      decoding="async"
+      className={cn('shrink-0 object-contain drop-shadow-[0_2px_10px_rgba(232,197,71,0.35)]', dim, className)}
+    />
   );
 }

@@ -1,3 +1,5 @@
+import { brandLogoUrl } from './brand';
+
 export type SubscriptionTier = 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
 export type CosmeticSlot = 'deck' | 'chip' | 'frame';
 
@@ -26,10 +28,10 @@ const asset = (path: string) => `/assets/cosmetics/${path}`;
 export const subscriptionCosmetics: CosmeticDefinition[] = [
   {
     id: 'deck_classic',
-    name: 'Midnight Classic',
+    name: 'DP CLUB Classic',
     slot: 'deck',
     requiredTier: 'FREE',
-    imageUrl: asset('backs/deck_classic.svg'),
+    imageUrl: brandLogoUrl,
     rarity: 'COMMON',
     description: 'Signature DP CLUB midnight deck with gold filigree.'
   },
@@ -71,10 +73,10 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
   },
   {
     id: 'chip_classic',
-    name: 'House Chips',
+    name: 'DP CLUB House',
     slot: 'chip',
     requiredTier: 'FREE',
-    imageUrl: asset('chips/chip_classic.svg'),
+    imageUrl: brandLogoUrl,
     rarity: 'COMMON',
     description: 'Official DP CLUB house chips — emerald edge stripes.'
   },

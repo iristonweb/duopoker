@@ -32,6 +32,6 @@
     { "source": "/admin/:path*", "destination": "/api/admin/:path*" },
     { "source": "/health", "destination": "/api/health" },
     { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/((?!api/|assets/|icons/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|assets/|icons/|robots\\.txt|sitemap\\.xml|favicon\\.png|apple-touch-icon\\.png|manifest\\.webmanifest).*)", "destination": "/index.html" }
   ]
 }

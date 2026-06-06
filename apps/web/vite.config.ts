@@ -16,25 +16,26 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['manifest.webmanifest', 'icons/icon.svg', 'assets/**/*'],
+        includeAssets: ['manifest.webmanifest', 'favicon.png', 'apple-touch-icon.png', 'assets/**/*'],
         manifest: {
-          name: 'DuoPoker',
-          short_name: 'DuoPoker',
+          name: 'DP CLUB — Duo Poker Club',
+          short_name: 'DP CLUB',
+          description: 'Premium play-money poker — Texas Hold\'em & Raspisnoy.',
           theme_color: '#050508',
           background_color: '#050508',
           display: 'standalone',
           start_url: '/lobby',
           icons: [
             {
-              src: '/icons/icon.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
+              src: '/favicon.png',
+              sizes: '512x512',
+              type: 'image/png',
               purpose: 'any'
             },
             {
-              src: '/icons/icon.svg',
+              src: '/favicon.png',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'maskable'
             }
           ]
