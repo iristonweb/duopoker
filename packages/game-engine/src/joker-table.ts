@@ -1,5 +1,5 @@
 import type { Card, JokerHandState, PlayerAction, SessionState, Suit } from '@duopoker/shared-types/index';
-import { jokerCardsPerHand, jokerPoolLabel } from './joker-schedule';
+import { jokerCardsPerHand, jokerPoolLabel } from '@duopoker/shared-types/index';
 import { createJokerDeck } from './joker-deck';
 import { jokerPointsForHand } from './joker-scoring';
 import {

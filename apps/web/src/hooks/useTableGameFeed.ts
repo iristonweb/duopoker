@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import { formatCardLabel, suitLabel } from '../lib/joker-labels';
 import {
   playBlindSound,
   playCardSound,
@@ -20,29 +21,8 @@ export type GameFeedEvent = {
 const kettle = (s: SessionState) =>
   s.pot + Object.values(s.playerRoundBet ?? {}).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
 
-const suitLabel = (s: string, t: (key: string) => string): string => {
-  const map: Record<string, string> = {
-    S: t('table.suitSpades'),
-    H: t('table.suitHearts'),
-    D: t('table.suitDiamonds'),
-    C: t('table.suitClubs')
-  };
-  return map[s] ?? s;
-};
-
-const formatCard = (card: string): string => {
-  const rank = card.slice(0, -1);
-  const suit = card.slice(-1);
-  const rankNames: Record<string, string> = {
-    T: '10',
-    J: 'J',
-    Q: 'Q',
-    K: 'K',
-    A: 'A'
-  };
-  const suitSymbols: Record<string, string> = { S: '♠', H: '♥', D: '♦', C: '♣' };
-  return `${rankNames[rank] ?? rank}${suitSymbols[suit] ?? suit}`;
-};
+const formatCard = (card: Card, t: (key: string, opts?: Record<string, unknown>) => string): string =>
+  formatCardLabel(card, t);
 
 const formatAction = (
   action: PlayerAction,
@@ -64,7 +44,7 @@ const formatAction = (
     case 'bid':
       return t('table.feedJokerBid', { name, amount: action.amount ?? 0 });
     case 'playCard':
-      return t('table.feedJokerPlay', { name, card: action.card ? formatCard(action.card) : '?' });
+      return t('table.feedJokerPlay', { name, card: action.card ? formatCard(action.card, t) : '?' });
     default:
       return `${name}: ${action.type}`;
   }

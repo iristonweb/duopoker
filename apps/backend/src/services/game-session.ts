@@ -31,7 +31,9 @@ const RATE_LIMIT_PER_SECOND = 20;
 const save = (state: SessionState) => {
   const enriched = enrichSessionMeta(state);
   sessions.set(enriched.sessionId, enriched);
-  void persistGameSnapshot(enriched).catch(() => undefined);
+  void persistGameSnapshot(enriched).catch((err) => {
+    console.error('[game-session] persist failed', enriched.sessionId, err);
+  });
   return enriched;
 };
 

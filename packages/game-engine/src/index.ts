@@ -1,7 +1,7 @@
 import type { Card, GamePhase, PlayerAction, ReplayFrame, SessionState } from '@duopoker/shared-types/index';
 import { createDeck, shuffle } from './cards';
 import { createJokerDeck } from './joker-deck';
-import { jokerCardsPerHand } from './joker-schedule';
+import { jokerCardsPerHand } from '@duopoker/shared-types/index';
 import { compareStrength, strengthFiveFromHand, bestStrengthFromSeven, parseCard } from './poker-eval';
 import { createInitialTableState, totalInKettle } from './holdem-table';
 import { SeededRng } from './rng';
@@ -101,6 +101,7 @@ export {
 export { sanitizeStateForViewer, type SanitizeViewerOptions } from './viewer-state';
 export { peekGhostCommunityFromDeck } from './ghost-board';
 export { normalizeSessionState } from './normalize-state';
+export { parseLoadedSessionState, sessionStateSchema } from './session-schema';
 export { computeSidePots, distributeSidePots } from './pot-calculator';
 export { bestStrengthFromSeven, strengthFiveCards, compareStrength, describeStrength } from './poker-eval';
 export { createDeck, shuffle } from './cards';

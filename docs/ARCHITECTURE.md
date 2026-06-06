@@ -32,3 +32,21 @@
 - DuoPoker is implemented as a social play-money platform with paid organizer SaaS features.
 - Backend does not expose payout/cashout/p2p transfer APIs.
 - Club actions create `compliance_events` entries for moderation and audit.
+
+## Dual API stacks — when to use which
+
+| Concern | `packages/api` (Vercel) | `apps/backend` (Render / Docker) |
+|--------|-------------------------|-----------------------------------|
+| Transport | REST polling (~1.5s) | Socket.IO realtime + minimal REST |
+| Matchmaking | Postgres `matchmaking_tickets` | In-memory queue |
+| Game state | DB read-modify-write per action | In-memory cache + async Postgres snapshot |
+| Voice | LiveKit token via REST | LiveKit + socket `voiceSignal` |
+| VIP invites | Yes | No |
+| Referrals / admin | Yes | Partial / no admin routes |
+| Local dev | `pnpm dev:vercel` | `docker compose` or `pnpm --filter @duopoker/backend dev` |
+
+**Production (Vercel):** `apps/web` → `packages/api` → `packages/game-engine` → Postgres.
+
+**Local realtime / E2E:** `apps/web` with `VITE_API_PROXY=http://localhost:4000` → `apps/backend` Socket.IO.
+
+Both stacks share `@duopoker/game-engine` rules and `@duopoker/shared-types` joker schedule/legality. Persisted `gameState` JSON is validated via `parseLoadedSessionState` (Zod) on load.

@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button, cn } from '@duopoker/ui-kit';
-import type { Card } from '@duopoker/shared-types/index';
+import type { Card, GameStreet } from '@duopoker/shared-types/index';
 import { PlayingCard } from '../cosmetics/PlayingCard';
 import { TurnTimer } from './TurnTimer';
+import { formatTableError } from '../../lib/table-errors';
 
 type Props = {
   myTurn: boolean;
@@ -21,7 +22,7 @@ type Props = {
   deckId: string;
   activeLabel: string;
   isHeroActive: boolean;
-  street: string;
+  street: GameStreet;
   heroSpectating?: boolean;
   onFold: () => void;
   onCheck: () => void;
@@ -71,7 +72,7 @@ export function TableActionDock({
       <div className="mx-auto max-w-6xl px-3 py-3 sm:px-5 sm:py-4">
         {sessionError ? (
           <p className="mb-2 rounded-lg border border-rose/30 bg-rose/10 px-3 py-1.5 text-xs text-rose">
-            {t('table.actionError', { code: sessionError, defaultValue: sessionError })}
+            {formatTableError(sessionError, t)}
           </p>
         ) : null}
 

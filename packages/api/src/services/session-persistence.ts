@@ -1,4 +1,5 @@
 import type { SessionState } from '@duopoker/shared-types/index';
+import { parseLoadedSessionState } from '@duopoker/game-engine/index';
 import { prisma } from '../lib/prisma.js';
 
 const mapStatus = (state: SessionState): 'LOBBY' | 'IN_PROGRESS' => {
@@ -34,5 +35,5 @@ export const loadGameSnapshot = async (sessionId: string): Promise<SessionState 
     select: { gameState: true }
   });
   if (!row?.gameState || typeof row.gameState !== 'object') return null;
-  return row.gameState as unknown as SessionState;
+  return parseLoadedSessionState(row.gameState);
 };

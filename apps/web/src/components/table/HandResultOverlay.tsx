@@ -5,8 +5,12 @@ import { Button, cn } from '@duopoker/ui-kit';
 
 type Props = {
   visible: boolean;
-  winners: string;
+  winners?: string;
+  /** When set, replaces the winners line (e.g. Joker hand points). */
+  summaryText?: string;
+  summaryHeading?: string;
   gameOver: boolean;
+  gameOverMessage?: string;
   nextHandSeconds: number | null;
   canPeekGhostBoard?: boolean;
   ghostBoardVisible?: boolean;
@@ -18,7 +22,10 @@ type Props = {
 export function HandResultOverlay({
   visible,
   winners,
+  summaryText,
+  summaryHeading,
   gameOver,
+  gameOverMessage,
   nextHandSeconds,
   canPeekGhostBoard = false,
   ghostBoardVisible = false,
@@ -27,6 +34,10 @@ export function HandResultOverlay({
   className
 }: Props) {
   const { t } = useTranslation();
+  const resultLine =
+    summaryText !== undefined
+      ? summaryText
+      : t('table.winners', { names: winners || '—' });
 
   return (
     <AnimatePresence>
@@ -43,10 +54,10 @@ export function HandResultOverlay({
         >
           <div className="max-w-lg rounded-2xl border border-gold/30 bg-black/70 px-5 py-3 text-center shadow-[0_8px_40px_rgba(232,197,71,0.2)] backdrop-blur-xl">
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold/70">
-              {t('table.handResult')}
+              {summaryHeading ?? t('table.handResult')}
             </p>
             <p className="mt-1 font-display text-lg font-semibold text-gradient-gold">{t('table.handComplete')}</p>
-            <p className="mt-1 text-sm text-muted">{t('table.winners', { names: winners || '—' })}</p>
+            <p className="mt-1 text-sm text-muted">{resultLine}</p>
             {canPeekGhostBoard && onToggleGhostBoard ? (
               <div className="pointer-events-auto mt-3">
                 <Button
@@ -75,19 +86,14 @@ export function HandResultOverlay({
             ) : null}
             {gameOver ? (
               <p className="mt-2 text-xs text-subtle">
-                {t('table.gameOver', { defaultValue: 'Game over — not enough players with chips.' })}
+                {gameOverMessage ?? t('table.gameOver')}
               </p>
             ) : nextHandSeconds !== null && nextHandSeconds > 0 ? (
               <p className="mt-2 text-xs text-subtle">
-                {t('table.nextHandAuto', {
-                  seconds: nextHandSeconds,
-                  defaultValue: `Next hand in ${nextHandSeconds}s…`
-                })}
+                {t('table.nextHandAuto', { seconds: nextHandSeconds })}
               </p>
             ) : (
-              <p className="mt-2 text-xs text-subtle">
-                {t('table.dealingNext', { defaultValue: 'Dealing next hand…' })}
-              </p>
+              <p className="mt-2 text-xs text-subtle">{t('table.dealingNext')}</p>
             )}
           </div>
         </motion.div>

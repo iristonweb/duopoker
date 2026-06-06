@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
 import type { EquippedCosmetics, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
-import { GHOST_BOARD_MIN_TIER, NEXT_HAND_DELAY_MS, defaultEquipped, gameChipId, tierMeetsRequirement } from '@duopoker/shared-types';
+import { GHOST_BOARD_MIN_TIER, JOKER_TOTAL_HANDS, NEXT_HAND_DELAY_MS, defaultEquipped, gameChipId, tierMeetsRequirement } from '@duopoker/shared-types';
 import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
 import { GameTableShell } from '../components/table/GameTableShell';
 import { TableTopHUD } from '../components/table/TableTopHUD';
@@ -101,21 +101,24 @@ export const Table = () => {
           } | null
         ) => {
           if (!data?.players) return;
-          const map: typeof playerProfiles = {};
-          for (const p of data.players) {
-            map[p.userId] = {
-              name: p.nickname ? `@${p.nickname}` : p.displayName,
-              avatar: p.avatar,
-              tableStatus: p.tableStatus ?? null,
-              subscriptionTier: p.subscriptionTier ?? 'FREE',
-              equipped: p.equipped ?? defaultEquipped()
-            };
-          }
-          setPlayerProfiles(map);
+          setPlayerProfiles((prev) => {
+            const map = { ...prev };
+            for (const p of data.players!) {
+              if (p.userId === userId) continue;
+              map[p.userId] = {
+                name: p.nickname ? `@${p.nickname}` : p.displayName,
+                avatar: p.avatar,
+                tableStatus: p.tableStatus ?? null,
+                subscriptionTier: p.subscriptionTier ?? 'FREE',
+                equipped: p.equipped ?? defaultEquipped()
+              };
+            }
+            return map;
+          });
         }
       )
       .catch(() => undefined);
-  }, [routeSessionId, session?.players?.length, session?.handNumber]);
+  }, [routeSessionId, session?.players?.length, session?.handNumber, userId]);
 
   const [raiseAmount, setRaiseAmount] = useState(0);
   const [jokerBid, setJokerBid] = useState(0);
@@ -154,7 +157,10 @@ export const Table = () => {
     return session.players[session.activePlayerIndex];
   }, [session]);
 
-  const label = (uid: string) => playerProfiles[uid]?.name ?? uid.slice(0, 8);
+  const label = useCallback(
+    (uid: string) => playerProfiles[uid]?.name ?? uid.slice(0, 8),
+    [playerProfiles]
+  );
 
   const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(session, label, t, soundOn);
   useCommunityCardSounds(session?.communityCards?.length ?? 0, soundOn);
@@ -224,8 +230,12 @@ export const Table = () => {
   }, [session?.bigBlind, session?.handNumber]);
 
   useEffect(() => {
+    if (session?.mode === 'JOKER') {
+      setJokerBid(0);
+      return;
+    }
     if ((session?.stacks[userId] ?? 0) > 0) setBustedDismissed(false);
-  }, [session?.stacks, userId, session?.handNumber]);
+  }, [session?.mode, session?.stacks, userId, session?.handNumber, session?.joker?.cardsThisDeal]);
 
   useEffect(() => {
     setGhostBoardVisible(false);
@@ -327,10 +337,17 @@ export const Table = () => {
       : null;
   const nextHandSeconds =
     nextHandMsLeft !== null ? Math.max(0, Math.ceil(nextHandMsLeft / 1000)) : null;
+  const isJoker = session.mode === 'JOKER';
   const playersWithStack = session.players.filter((id) => (session.stacks[id] ?? 0) > 0);
-  const gameOver = session.street === 'COMPLETE' && playersWithStack.length < 2;
+  const jokerMatchOver =
+    isJoker &&
+    session.street === 'COMPLETE' &&
+    (session.joker?.matchHandIndex ?? 0) >= JOKER_TOTAL_HANDS - 1;
+  const gameOver = isJoker
+    ? jokerMatchOver
+    : session.street === 'COMPLETE' && playersWithStack.length < 2;
   const heroStack = session.stacks[userId] ?? 0;
-  const heroBusted = session.players.includes(userId) && heroStack <= 0;
+  const heroBusted = !isJoker && session.players.includes(userId) && heroStack <= 0;
   const heroSpectating = heroBusted && playersWithStack.length >= 2;
   const showBustedOverlay = heroBusted && !bustedDismissed;
   const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay;
@@ -366,6 +383,17 @@ export const Table = () => {
     ? `${label(activeId)}${activeId === userId ? ` ${t('table.you')}` : ''}`
     : '—';
   const winnerNames = (session.winners ?? []).map(label).join(', ') || '—';
+  const jokerHandSummary =
+    isJoker && session.joker?.handPoints
+      ? session.players
+          .map((p) => {
+            const pts = session.joker!.handPoints![p];
+            if (pts === undefined) return null;
+            return t('table.feedJokerScoreLine', { name: label(p), pts });
+          })
+          .filter(Boolean)
+          .join(' · ')
+      : undefined;
   const isPreflopMuckWin =
     session.street === 'COMPLETE' &&
     session.mode === 'HOLDEM' &&
@@ -397,6 +425,7 @@ export const Table = () => {
           bigBlind={session.bigBlind}
           handNumber={session.handNumber}
           chipId={gameChipId(equipped.chip)}
+          joker={session.mode === 'JOKER' ? session.joker : null}
           onLeaveTable={() => void handleLeaveTable()}
           leaving={leaving}
         />
@@ -426,9 +455,15 @@ export const Table = () => {
             />
             <HandResultOverlay
               visible={session.street === 'COMPLETE' && !showBustedOverlay}
-              winners={winnerNames}
+              winners={isJoker ? undefined : winnerNames}
+              summaryText={
+                isJoker && jokerHandSummary
+                  ? t('table.jokerHandSummary', { summary: jokerHandSummary })
+                  : undefined
+              }
               gameOver={gameOver}
-              nextHandSeconds={nextHandSeconds}
+              gameOverMessage={jokerMatchOver ? t('table.jokerMatchOver') : undefined}
+              nextHandSeconds={jokerMatchOver ? null : nextHandSeconds}
               canPeekGhostBoard={canPeekGhostBoard}
               ghostBoardVisible={ghostBoardVisible}
               onToggleGhostBoard={() => setGhostBoardVisible((v) => !v)}
@@ -472,7 +507,9 @@ export const Table = () => {
             {waitingForPlayers ? (
               <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/45 px-6 backdrop-blur-[2px]">
                 <GlassPanel glow="gold" className="pointer-events-auto max-w-md border-gold/15 p-6 text-center">
-                  <p className="font-display text-lg text-ivory">{t('table.waitingOpponent')}</p>
+                  <p className="font-display text-lg text-ivory">
+                    {isJoker ? t('table.waitingForPlayersJoker') : t('table.waitingOpponent')}
+                  </p>
                 </GlassPanel>
               </div>
             ) : null}
@@ -494,6 +531,7 @@ export const Table = () => {
             activeLabel={activeLabel}
             isHeroActive={activeId === userId}
             sessionError={sessionError}
+            actionLogLen={session.actionLog?.length ?? 0}
             onBid={() => playerAction({ sessionId: sid, type: 'bid', amount: jokerBid })}
             onPlayCard={(card) => playerAction({ sessionId: sid, type: 'playCard', card })}
           />

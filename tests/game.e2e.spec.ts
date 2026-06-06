@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { io, type Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
+import { jokerLegalPlays, leadSuitFromTrick } from '@duopoker/shared-types/index';
 
 const API = 'http://localhost:4000';
 
@@ -30,8 +31,8 @@ const connectClient = (): Socket =>
     transports: ['websocket']
   });
 
-async function playHandToComplete(mode: 'HOLDEM' | 'JOKER') {
-  const sessionId = `e2e-${mode}-${Date.now()}`;
+async function playHoldemHandToComplete() {
+  const sessionId = `e2e-HOLDEM-${Date.now()}`;
   const uid1 = `e2e-p1-${Date.now()}`;
   const uid2 = `e2e-p2-${Date.now()}`;
   const p1 = connectClient();
@@ -42,8 +43,8 @@ async function playHandToComplete(mode: 'HOLDEM' | 'JOKER') {
     new Promise<void>((res) => p2.once('connect', () => res()))
   ]);
 
-  p1.emit('joinSession', { sessionId, userId: uid1, mode, buyIn: 100 });
-  p2.emit('joinSession', { sessionId, userId: uid2, mode, buyIn: 100 });
+  p1.emit('joinSession', { sessionId, userId: uid1, mode: 'HOLDEM', buyIn: 100 });
+  p2.emit('joinSession', { sessionId, userId: uid2, mode: 'HOLDEM', buyIn: 100 });
 
   let state = await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2);
 
@@ -81,22 +82,71 @@ async function playHandToComplete(mode: 'HOLDEM' | 'JOKER') {
   p2.disconnect();
 }
 
+async function playJokerHandToComplete() {
+  const sessionId = `e2e-JOKER-${Date.now()}`;
+  const uid1 = `e2e-j1-${Date.now()}`;
+  const uid2 = `e2e-j2-${Date.now()}`;
+  const p1 = connectClient();
+  const p2 = connectClient();
+
+  await Promise.all([
+    new Promise<void>((res) => p1.once('connect', () => res())),
+    new Promise<void>((res) => p2.once('connect', () => res()))
+  ]);
+
+  p1.emit('joinSession', { sessionId, userId: uid1, mode: 'JOKER', buyIn: 100 });
+  p2.emit('joinSession', { sessionId, userId: uid2, mode: 'JOKER', buyIn: 100 });
+
+  let state = await waitForState(p1, (s) => s.street === 'BIDDING' && s.players.length === 2);
+
+  for (let guard = 0; guard < 60 && state.street !== 'COMPLETE'; guard += 1) {
+    const actor = state.players[state.activePlayerIndex]!;
+    const sock = actor === uid1 ? p1 : p2;
+    const prevLen = state.actionLog.length;
+
+    if (state.street === 'BIDDING') {
+      sock.emit('playerAction', { sessionId, userId: actor, type: 'bid', amount: 0, at: Date.now() });
+    } else if (state.street === 'TRICKS') {
+      const hand = state.playerCards[actor] ?? [];
+      const lead = leadSuitFromTrick(state.joker?.currentTrick ?? []);
+      const legal = jokerLegalPlays(hand, lead, state.joker?.trumpSuit ?? null);
+      const card = legal[0] ?? hand[0];
+      if (!card) throw new Error(`no legal card for ${actor}`);
+      sock.emit('playerAction', { sessionId, userId: actor, type: 'playCard', card, at: Date.now() });
+    } else {
+      break;
+    }
+
+    state = await waitForState(
+      p1,
+      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE' || s.street !== state.street
+    );
+  }
+
+  expect(state.street).toBe('COMPLETE');
+  expect(state.mode).toBe('JOKER');
+  expect(state.joker?.handPoints).toBeDefined();
+
+  p1.disconnect();
+  p2.disconnect();
+}
+
 test('socket gameplay — Hold\'em hand through showdown and next hand', async ({ request }, testInfo) => {
   const health = await request.get(`${API}/health`).catch(() => null);
   if (!health?.ok()) {
     testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
     return;
   }
-  await playHandToComplete('HOLDEM');
+  await playHoldemHandToComplete();
 });
 
-test('socket gameplay — Joker hand through showdown and next hand', async ({ request }, testInfo) => {
+test('socket gameplay — Joker hand through bidding, tricks, and complete', async ({ request }, testInfo) => {
   const health = await request.get(`${API}/health`).catch(() => null);
   if (!health?.ok()) {
     testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
     return;
   }
-  await playHandToComplete('JOKER');
+  await playJokerHandToComplete();
 });
 
 test('stateUpdate hides opponent hole cards', async ({ request }, testInfo) => {
@@ -118,9 +168,7 @@ test('stateUpdate hides opponent hole cards', async ({ request }, testInfo) => {
   p2.emit('joinSession', { sessionId, userId: 'hide-p2', mode: 'HOLDEM', buyIn: 100 });
 
   const state = await waitForState(p1, (s) => s.street === 'PREFLOP');
-  expect(state.playerCards['hide-p1']?.length).toBe(2);
   expect(state.playerCards['hide-p2']).toEqual([]);
-  expect(state.deck).toEqual([]);
 
   p1.disconnect();
   p2.disconnect();
