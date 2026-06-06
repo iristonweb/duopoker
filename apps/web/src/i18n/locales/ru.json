@@ -1,8 +1,5 @@
 {
-  "lang": {
-    "ru": "RU",
-    "en": "EN"
-  },
+  "lang": { "ru": "RU", "en": "EN" },
   "nav": {
     "lobby": "Лобби",
     "terms": "Условия",
@@ -23,6 +20,7 @@
     "signIn": "Вход",
     "register": "Регистрация",
     "signOut": "Выйти",
+    "player": "Игрок",
     "displayName": "Имя за столом",
     "displayNamePlaceholder": "Ваше имя",
     "email": "Email",
@@ -57,14 +55,65 @@
       "action_rejected": "Действие отклонено."
     }
   },
+  "modes": {
+    "selected": "Выбрано",
+    "HOLDEM": {
+      "title": "Texas Hold'em",
+      "desc": "Классический безлимитный Hold'em — общие карты и напряжение на вскрытии."
+    },
+    "RASPISNOY": {
+      "title": "Расписной покер",
+      "desc": "Пять карт, одна улица ставок — быстрые раздачи без общего борда."
+    }
+  },
+  "subscriptions": {
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "royal": "Royal",
+    "priceSilver": "$4.99/мес",
+    "priceGold": "$9.99/мес",
+    "pricePlatinum": "$19.99/мес",
+    "priceRoyal": "$49.99/мес",
+    "perks": "Эксклюзивная косметика и привилегии — без игры на реальные деньги."
+  },
+  "cosmetics": {
+    "eyebrow": "Косметика",
+    "title": "Стиль за столом",
+    "desc": "Рубашки карт, фишки и рамки аватаров — открываются с подпиской.",
+    "tabs": { "deck": "Рубашки", "chip": "Фишки", "frame": "Аватары" },
+    "equip": "Надеть",
+    "equipped": "Надето",
+    "buy": "Купить"
+  },
+  "voice": {
+    "eyebrow": "LiveKit",
+    "title": "Голос за столом",
+    "desc": "Чёткий голосовой чат, когда матч уже идёт.",
+    "beta": "Бета",
+    "joinTableFirst": "Сначала зайдите за стол, чтобы включить голос.",
+    "checking": "Проверка голосового сервиса…",
+    "unavailable": "LiveKit не настроен на сервере. Добавьте LIVEKIT_API_KEY, LIVEKIT_API_SECRET и LIVEKIT_URL в Vercel.",
+    "micOn": "Микрофон вкл.",
+    "micMuted": "Микрофон выкл.",
+    "leave": "Выйти из голоса",
+    "liveStatus": "LiveKit · {{count}} в комнате",
+    "connecting": "Подключение…",
+    "join": "Войти в голос (LiveKit)",
+    "tokenFailed": "Не удалось получить токен",
+    "connectionFailed": "Ошибка подключения к голосу"
+  },
+  "legal": {
+    "disclaimer": "Только виртуальные фишки. Без игры на реальные деньги. Фишки не конвертируются в наличные. Покупки не возвращаются. Играйте ответственно."
+  },
   "lobby": {
-    "playMode": "Режим игры",
     "modesEyebrow": "Режимы",
     "modesTitle": "Выберите игру",
     "modesDesc": "Выберите правила перед очередью.",
     "heroPremium": "Premium play-money",
     "heroTitle": "Стол ждёт",
     "heroDesc": "Войдите в очередь. Без реальных денег — только мастерство.",
+    "liveEyebrow": "Онлайн",
     "liveSession": "Ваша сессия",
     "liveSessionDesc": "Превью стола или возврат в активный матч.",
     "table3d": "Стол (3D)",
@@ -97,6 +146,7 @@
     "yourHole": "Ваши карты:",
     "waitingOpponent": "Ожидание соперника…",
     "handComplete": "Раздача завершена",
+    "handResult": "Итог раздачи",
     "winners": "Победители: {{names}}",
     "ready": "Готовы: {{ready}}/{{total}}",
     "nextHand": "Следующая раздача",
@@ -112,7 +162,7 @@
   },
   "clubs": {
     "title": "Приватные клубы",
-    "eyebrow": "Private clubs",
+    "eyebrow": "Приватные клубы",
     "desc": "Организуйте столы для друзей — play-money, без реальных денег.",
     "create": "Создать клуб",
     "back": "← Клубы",
@@ -124,7 +174,7 @@
     "emptyDesc": "Создайте первый приватный клуб.",
     "members": "участников",
     "newTitle": "Новый клуб",
-    "newEyrow": "New club",
+    "newEyrow": "Новый клуб",
     "newDesc": "Приватное пространство — виртуальные фишки.",
     "name": "Название",
     "namePlaceholder": "Например: Friday Night Crew",
@@ -135,9 +185,38 @@
     "createError": "Не удалось создать клуб"
   },
   "admin": {
-    "title": "Пользователи платформы",
+    "eyebrow": "Superadmin",
+    "dashboardTitle": "Панель администратора",
+    "dashboardDesc": "Мониторинг платформы · {{count}} пользователей",
+    "title": "Пользователи",
     "total": "Всего: {{count}}",
-    "forbidden": "Доступ только для superadmin."
+    "forbidden": "Доступ только для superadmin.",
+    "statsEyebrow": "Обзор",
+    "statsTitle": "Статистика платформы",
+    "statUsers": "Пользователи",
+    "statNew24h": "Новые за 24ч",
+    "statVerified": "Email подтверждён",
+    "statSubscriptions": "Активные подписки",
+    "statActiveSessions": "Активные сессии",
+    "statInProgress": "Идёт игра",
+    "statQueue": "В очереди",
+    "statClubs": "Клубы",
+    "statLiveTables": "Живые столы клубов",
+    "statScheduledTables": "Запланированные столы",
+    "statSuperadmins": "Superadmin",
+    "queueEyebrow": "Matchmaking",
+    "queueTitle": "Очередь",
+    "queueEmpty": "Очередь пуста.",
+    "inQueue": "В очереди",
+    "sessionsEyebrow": "Игра",
+    "sessionsTitle": "Активные столы",
+    "sessionsEmpty": "Нет активных сессий.",
+    "players": "игроков",
+    "openTable": "Открыть",
+    "usersEyebrow": "Аккаунты",
+    "chips": "фишек",
+    "verified": "Подтверждён",
+    "unverified": "Не подтверждён"
   },
   "common": {
     "loading": "Загрузка…",

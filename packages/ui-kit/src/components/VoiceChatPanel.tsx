@@ -2,18 +2,25 @@ import type { ReactNode } from 'react';
 import { GlassPanel } from './GlassPanel';
 import { SectionHeader } from './SectionHeader';
 
-export function VoiceChatPanel({ children }: { children?: ReactNode }) {
+export function VoiceChatPanel({
+  children,
+  eyebrow = 'LiveKit',
+  title = 'Voice at the table',
+  description = 'Crystal-clear push-to-talk when your match is live.',
+  betaLabel = 'Beta'
+}: {
+  children?: ReactNode;
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  betaLabel?: string;
+}) {
   return (
     <GlassPanel interactive glow="emerald" className="p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <SectionHeader
-          eyebrow="LiveKit"
-          title="Voice at the table"
-          description="Crystal-clear push-to-talk when your match is live."
-          className="mb-0"
-        />
+        <SectionHeader eyebrow={eyebrow} title={title} description={description} className="mb-0" />
         <span className="shrink-0 rounded-full border border-emerald/40 bg-emerald/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald">
-          Beta
+          {betaLabel}
         </span>
       </div>
       <div

@@ -82,7 +82,7 @@ function AuthPanel() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             <PlayerAvatar
-              name={displayName ?? 'Player'}
+              name={displayName ?? t('auth.player')}
               frameId={equipped.frame}
               tier={subscriptionTier}
               size="sm"
@@ -103,7 +103,7 @@ function AuthPanel() {
                 ) : null}
               </div>
               <p className="truncate font-display text-lg font-semibold text-ivory" title={email ?? undefined}>
-                {displayName ?? 'Player'}
+                {displayName ?? t('auth.player')}
               </p>
               {chips != null ? (
                 <div className="mt-1 flex items-center gap-2">
@@ -159,7 +159,7 @@ function AuthPanel() {
           setBusy(true);
           try {
             if (tab === 'register') {
-              const name = nameIn.trim().length >= 2 ? nameIn.trim() : 'Player';
+              const name = nameIn.trim().length >= 2 ? nameIn.trim() : t('auth.player');
               await register(emailIn, passwordIn, name);
             } else {
               await login(emailIn, passwordIn);
@@ -376,6 +376,8 @@ export const Lobby = () => {
 
   const holdemMode = gameModes.find((m) => m.id === 'HOLDEM') ?? catalogGameModes[0];
   const raspisnoyMode = gameModes.find((m) => m.id === 'RASPISNOY') ?? catalogGameModes[1];
+  const modeTitle = (id: 'HOLDEM' | 'RASPISNOY', fallback: string) => t(`modes.${id}.title`, { defaultValue: fallback });
+  const modeDesc = (id: 'HOLDEM' | 'RASPISNOY', fallback: string) => t(`modes.${id}.desc`, { defaultValue: fallback });
   const subBanner = (tier: keyof typeof subscriptionBannerImages) =>
     catalogSubs.find((s) => s.tier === tier)?.imageUrl ?? subscriptionBannerImages[tier];
 
@@ -425,19 +427,19 @@ export const Lobby = () => {
         </motion.header>
 
         <motion.div
-          className="glass-shine relative mb-10 overflow-hidden rounded-3xl border border-white/10 shadow-panel ring-1 ring-white/5"
+          className="glass-shine relative mb-10 overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-panel ring-1 ring-white/5"
           variants={reduceMotion ? undefined : section}
           custom={0.5}
         >
           <img
             src={lobbyBannerUrl}
-            alt="DuoPoker premium play-money tables"
-            className="h-40 w-full object-cover sm:h-52"
+            alt=""
+            className="block h-40 w-full object-cover object-center sm:h-52"
             loading="eager"
             decoding="async"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-transparent to-gold/5" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/55 via-background/10 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/75 via-transparent to-gold/5" />
           <div className="absolute bottom-0 left-0 p-6 sm:p-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-gold/80">
               {t('lobby.heroPremium')}
@@ -456,19 +458,21 @@ export const Lobby = () => {
             />
             <div className="flex flex-col gap-4">
               <ModeCard
-                title={holdemMode.title}
-                description={holdemMode.description}
+                title={modeTitle('HOLDEM', holdemMode.title)}
+                description={modeDesc('HOLDEM', holdemMode.description)}
                 bannerUrl={holdemMode.imageUrl}
                 icon={<span aria-hidden>♠</span>}
                 selected={mode === 'HOLDEM'}
+                selectedLabel={t('modes.selected')}
                 onClick={() => setMode('HOLDEM')}
               />
               <ModeCard
-                title={raspisnoyMode.title}
-                description={raspisnoyMode.description}
+                title={modeTitle('RASPISNOY', raspisnoyMode.title)}
+                description={modeDesc('RASPISNOY', raspisnoyMode.description)}
                 bannerUrl={raspisnoyMode.imageUrl}
                 icon={<span aria-hidden>♦</span>}
                 selected={mode === 'RASPISNOY'}
+                selectedLabel={t('modes.selected')}
                 onClick={() => setMode('RASPISNOY')}
               />
             </div>
@@ -502,7 +506,7 @@ export const Lobby = () => {
 
           <motion.div className="flex flex-col gap-4 lg:col-span-7" variants={reduceMotion ? undefined : section} custom={2}>
             <SectionHeader
-              eyebrow="Live"
+              eyebrow={t('lobby.liveEyebrow')}
               title={t('lobby.liveSession')}
               description={t('lobby.liveSessionDesc')}
             />
@@ -564,7 +568,13 @@ export const Lobby = () => {
             </GlassPanel>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <SubscriptionTierCard tier="SILVER" price="$4.99/mo" bannerUrl={subBanner('SILVER')}>
+              <SubscriptionTierCard
+                tier="SILVER"
+                price={t('subscriptions.priceSilver')}
+                tierName={t('subscriptions.silver')}
+                perkDescription={t('subscriptions.perks')}
+                bannerUrl={subBanner('SILVER')}
+              >
                 <Button
                   variant="secondary"
                   size="sm"
@@ -574,7 +584,13 @@ export const Lobby = () => {
                   {t('lobby.subscribe')}
                 </Button>
               </SubscriptionTierCard>
-              <SubscriptionTierCard tier="GOLD" price="$9.99/mo" bannerUrl={subBanner('GOLD')}>
+              <SubscriptionTierCard
+                tier="GOLD"
+                price={t('subscriptions.priceGold')}
+                tierName={t('subscriptions.gold')}
+                perkDescription={t('subscriptions.perks')}
+                bannerUrl={subBanner('GOLD')}
+              >
                 <Button
                   variant="secondary"
                   size="sm"
@@ -584,7 +600,13 @@ export const Lobby = () => {
                   {t('lobby.subscribe')}
                 </Button>
               </SubscriptionTierCard>
-              <SubscriptionTierCard tier="PLATINUM" price="$19.99/mo" bannerUrl={subBanner('PLATINUM')}>
+              <SubscriptionTierCard
+                tier="PLATINUM"
+                price={t('subscriptions.pricePlatinum')}
+                tierName={t('subscriptions.platinum')}
+                perkDescription={t('subscriptions.perks')}
+                bannerUrl={subBanner('PLATINUM')}
+              >
                 <Button
                   variant="secondary"
                   size="sm"
@@ -594,7 +616,13 @@ export const Lobby = () => {
                   {t('lobby.subscribe')}
                 </Button>
               </SubscriptionTierCard>
-              <SubscriptionTierCard tier="ROYAL" price="$49.99/mo" bannerUrl={subBanner('ROYAL')}>
+              <SubscriptionTierCard
+                tier="ROYAL"
+                price={t('subscriptions.priceRoyal')}
+                tierName={t('subscriptions.royal')}
+                perkDescription={t('subscriptions.perks')}
+                bannerUrl={subBanner('ROYAL')}
+              >
                 <Button
                   variant="secondary"
                   size="sm"
@@ -610,17 +638,17 @@ export const Lobby = () => {
         </div>
 
         <motion.div
-          className="glass-shine relative mt-12 overflow-hidden rounded-3xl border border-white/10 shadow-panel"
+          className="glass-shine relative mt-12 overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-panel"
           variants={reduceMotion ? undefined : section}
           custom={2.5}
         >
           <img
             src={clubsBannerUrl}
-            alt="Private clubs for your company"
-            className="h-36 w-full object-cover sm:h-44"
+            alt=""
+            className="block h-36 w-full object-cover object-center sm:h-44"
             loading="lazy"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/70 via-background/20 to-transparent" />
           <div className="relative flex flex-col gap-4 border-t border-white/10 bg-black/40 p-5 backdrop-blur-glass sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/70">
@@ -647,6 +675,17 @@ export const Lobby = () => {
             subscriptionTier={subscriptionTier}
             inventory={inventory}
             equipped={equipped}
+            eyebrow={t('cosmetics.eyebrow')}
+            title={t('cosmetics.title')}
+            description={t('cosmetics.desc')}
+            slotTabs={[
+              { id: 'deck' as const, label: t('cosmetics.tabs.deck') },
+              { id: 'chip' as const, label: t('cosmetics.tabs.chip') },
+              { id: 'frame' as const, label: t('cosmetics.tabs.frame') }
+            ]}
+            equipLabel={t('cosmetics.equip')}
+            equippedLabel={t('cosmetics.equipped')}
+            buyLabel={t('cosmetics.buy')}
             onEquip={(itemId) => equipCosmetic(itemId)}
             onBuy={(itemId) => {
               void useAppStore
@@ -655,7 +694,12 @@ export const Lobby = () => {
                 .catch(() => setCheckoutMsg(t('lobby.checkoutFailed')));
             }}
           />
-          <VoiceChatPanel>
+          <VoiceChatPanel
+            eyebrow={t('voice.eyebrow')}
+            title={t('voice.title')}
+            description={t('voice.desc')}
+            betaLabel={t('voice.beta')}
+          >
             <VoiceRoom />
           </VoiceChatPanel>
         </motion.div>
@@ -665,7 +709,7 @@ export const Lobby = () => {
           variants={reduceMotion ? undefined : section}
           custom={4}
         >
-          <LegalDisclaimer />
+          <LegalDisclaimer text={t('legal.disclaimer')} />
         </motion.footer>
       </motion.div>
     </div>

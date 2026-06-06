@@ -1,8 +1,5 @@
 {
-  "lang": {
-    "ru": "RU",
-    "en": "EN"
-  },
+  "lang": { "ru": "RU", "en": "EN" },
   "nav": {
     "lobby": "Lobby",
     "terms": "Terms",
@@ -23,6 +20,7 @@
     "signIn": "Sign in",
     "register": "Register",
     "signOut": "Sign out",
+    "player": "Player",
     "displayName": "Display name",
     "displayNamePlaceholder": "Your table name",
     "email": "Email",
@@ -57,14 +55,65 @@
       "action_rejected": "Action rejected."
     }
   },
+  "modes": {
+    "selected": "Selected",
+    "HOLDEM": {
+      "title": "Texas Hold'em",
+      "desc": "No-limit cadence, community cards, and classic showdown tension."
+    },
+    "RASPISNOY": {
+      "title": "Raspisnoy",
+      "desc": "Five-card duel: one betting round, best hand wins — no community board."
+    }
+  },
+  "subscriptions": {
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "royal": "Royal",
+    "priceSilver": "$4.99/mo",
+    "priceGold": "$9.99/mo",
+    "pricePlatinum": "$19.99/mo",
+    "priceRoyal": "$49.99/mo",
+    "perks": "Exclusive cosmetics & perks — no real-money gambling."
+  },
+  "cosmetics": {
+    "eyebrow": "Cosmetics",
+    "title": "Table identity",
+    "desc": "Card backs, chips, and avatar frames — unlock with subscriptions.",
+    "tabs": { "deck": "Card backs", "chip": "Chips", "frame": "Avatars" },
+    "equip": "Equip",
+    "equipped": "Equipped",
+    "buy": "Buy"
+  },
+  "voice": {
+    "eyebrow": "LiveKit",
+    "title": "Voice at the table",
+    "desc": "Crystal-clear voice when your match is live.",
+    "beta": "Beta",
+    "joinTableFirst": "Join a table to enable voice.",
+    "checking": "Checking voice service…",
+    "unavailable": "LiveKit is not configured on the server.",
+    "micOn": "Mic on",
+    "micMuted": "Mic muted",
+    "leave": "Leave voice",
+    "liveStatus": "LiveKit · {{count}} in room",
+    "connecting": "Connecting…",
+    "join": "Join voice (LiveKit)",
+    "tokenFailed": "Token request failed",
+    "connectionFailed": "Voice connection failed"
+  },
+  "legal": {
+    "disclaimer": "Virtual chips only. No real-money gambling. Chips are not convertible to cash. Purchases are final. Play responsibly."
+  },
   "lobby": {
-    "playMode": "Game mode",
     "modesEyebrow": "Modes",
     "modesTitle": "Choose your game",
     "modesDesc": "Select a ruleset before joining the queue.",
     "heroPremium": "Premium play-money",
     "heroTitle": "Your table awaits",
     "heroDesc": "Queue for a match. No real money — pure skill & strategy.",
+    "liveEyebrow": "Live",
     "liveSession": "Your session",
     "liveSessionDesc": "Preview the table or jump back into an active match.",
     "table3d": "Table (3D)",
@@ -73,7 +122,7 @@
     "sessionStatus": "Table {{id}} — {{street}}",
     "nextHand": "Next hand",
     "subscribe": "Subscribe",
-    "stripeNotConfigured": "Stripe price is not configured on the server (STRIPE_PRICE_* env).",
+    "stripeNotConfigured": "Stripe price is not configured on the server.",
     "networkError": "Network error",
     "clubsEyebrow": "Organizer SaaS",
     "clubsTitle": "Private clubs",
@@ -97,6 +146,7 @@
     "yourHole": "Your hole:",
     "waitingOpponent": "Waiting for opponent…",
     "handComplete": "Hand complete",
+    "handResult": "Hand result",
     "winners": "Winners: {{names}}",
     "ready": "Ready: {{ready}}/{{total}}",
     "nextHand": "Next hand",
@@ -135,9 +185,38 @@
     "createError": "Could not create club"
   },
   "admin": {
-    "title": "Platform users",
+    "eyebrow": "Superadmin",
+    "dashboardTitle": "Admin dashboard",
+    "dashboardDesc": "Platform monitoring · {{count}} users",
+    "title": "Users",
     "total": "Total: {{count}}",
-    "forbidden": "Superadmin access only."
+    "forbidden": "Superadmin access only.",
+    "statsEyebrow": "Overview",
+    "statsTitle": "Platform statistics",
+    "statUsers": "Users",
+    "statNew24h": "New (24h)",
+    "statVerified": "Email verified",
+    "statSubscriptions": "Active subscriptions",
+    "statActiveSessions": "Active sessions",
+    "statInProgress": "In progress",
+    "statQueue": "In queue",
+    "statClubs": "Clubs",
+    "statLiveTables": "Live club tables",
+    "statScheduledTables": "Scheduled tables",
+    "statSuperadmins": "Superadmins",
+    "queueEyebrow": "Matchmaking",
+    "queueTitle": "Queue",
+    "queueEmpty": "Queue is empty.",
+    "inQueue": "In queue",
+    "sessionsEyebrow": "Play",
+    "sessionsTitle": "Active tables",
+    "sessionsEmpty": "No active sessions.",
+    "players": "players",
+    "openTable": "Open",
+    "usersEyebrow": "Accounts",
+    "chips": "chips",
+    "verified": "Verified",
+    "unverified": "Unverified"
   },
   "common": {
     "loading": "Loading…",

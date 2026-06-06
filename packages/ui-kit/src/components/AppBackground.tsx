@@ -4,7 +4,7 @@ export function AppBackground() {
       <div className="absolute inset-0 bg-background" />
       <div className="absolute inset-0 bg-mesh-premium opacity-80" />
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.05]"
+        className="absolute inset-0 bg-cover bg-center opacity-[0.14]"
         style={{ backgroundImage: 'url(/assets/banners/app-background.svg)' }}
       />
       <div className="absolute inset-0 bg-radial-gold" />

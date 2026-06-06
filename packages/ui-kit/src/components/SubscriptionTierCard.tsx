@@ -20,41 +20,49 @@ export function SubscriptionTierCard({
   tier,
   price,
   bannerUrl,
+  tierName,
+  perkDescription,
   children,
   className
 }: {
   tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
   price: string;
   bannerUrl?: string;
+  tierName?: string;
+  perkDescription?: string;
   children?: ReactNode;
   className?: string;
 }) {
+  const label = tierName ?? tier;
+  const perks =
+    perkDescription ?? 'Exclusive cosmetics & perks — no real-money gambling.';
+
   return (
     <GlassPanel
       glow={tier === 'GOLD' || tier === 'ROYAL' ? 'gold' : 'none'}
       className={cn('overflow-hidden border-white/10 p-0', className)}
     >
-      {bannerUrl ? (
-        <div className="relative h-24 w-full overflow-hidden">
+      <div className="relative aspect-[5/1] min-h-[72px] w-full overflow-hidden bg-black/50">
+        {bannerUrl ? (
           <img
             src={bannerUrl}
             alt=""
-            className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain object-center"
             loading="lazy"
             decoding="async"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/95 via-surface/30 to-transparent" />
-          <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br opacity-60', tierAccent[tier])} />
-        </div>
-      ) : (
-        <div className={cn('h-24 bg-gradient-to-br opacity-90', tierAccent[tier])} aria-hidden />
-      )}
+        ) : (
+          <div className={cn('absolute inset-0 bg-gradient-to-br opacity-90', tierAccent[tier])} aria-hidden />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/70 via-transparent to-transparent" />
+        <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br opacity-40', tierAccent[tier])} />
+      </div>
       <div className="p-5">
         <div className="flex items-baseline justify-between gap-4">
-          <h3 className={cn('font-display text-xl font-semibold tracking-wide', tierLabel[tier])}>{tier}</h3>
+          <h3 className={cn('font-display text-xl font-semibold tracking-wide', tierLabel[tier])}>{label}</h3>
           <p className="text-lg font-semibold text-gold">{price}</p>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted">Exclusive cosmetics & perks — no real-money gambling.</p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{perks}</p>
         {children ? <div className="mt-4 border-t border-white/10 pt-4">{children}</div> : null}
       </div>
     </GlassPanel>

@@ -244,7 +244,7 @@ export const Table = () => {
         {session.street === 'COMPLETE' ? (
           <div className="mt-5 border-t border-white/10 pt-5">
             <SectionHeader
-              eyebrow="Hand result"
+              eyebrow={t('table.handResult')}
               title={t('table.handComplete')}
               description={t('table.winners', {
                 names: (session.winners ?? []).map(label).join(', ') || '—'

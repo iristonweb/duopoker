@@ -7,6 +7,7 @@ export interface ModeCardProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
   bannerUrl?: string;
   selected?: boolean;
+  selectedLabel?: string;
 }
 
 export function ModeCard({
@@ -15,6 +16,7 @@ export function ModeCard({
   icon,
   bannerUrl,
   selected,
+  selectedLabel = 'Selected',
   className,
   type = 'button',
   ...props
@@ -36,15 +38,15 @@ export function ModeCard({
       {...props}
     >
       {bannerUrl ? (
-        <div className="relative h-28 w-full overflow-hidden border-b border-white/10 sm:h-32">
+        <div className="relative h-28 w-full overflow-hidden border-b border-white/10 bg-black/40 sm:h-32">
           <img
             src={bannerUrl}
             alt=""
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
             decoding="async"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface via-surface/20 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/85 via-surface/25 to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-gold/10 via-transparent to-emerald/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         </div>
       ) : null}
@@ -69,7 +71,7 @@ export function ModeCard({
           {selected && (
             <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gold/35 bg-gold/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-gold">
               <span className="h-1.5 w-1.5 rounded-full bg-gold animate-pulse-glow" aria-hidden />
-              Selected
+              {selectedLabel}
             </span>
           )}
         </div>

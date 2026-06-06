@@ -16,6 +16,7 @@
     { "source": "/monetization/:path*", "destination": "/api/monetization/:path*" },
     { "source": "/clubs/:path*", "destination": "/api/clubs/:path*" },
     { "source": "/voice/:path*", "destination": "/api/voice/:path*" },
+    { "source": "/admin/:path*", "destination": "/api/admin/:path*" },
     { "source": "/health", "destination": "/api/health" },
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/((?!api/|assets/|icons/).*)", "destination": "/index.html" }

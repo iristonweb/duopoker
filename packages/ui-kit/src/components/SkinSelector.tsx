@@ -23,7 +23,7 @@ export type CosmeticItem = {
   description?: string;
 };
 
-const slotTabs: { id: CosmeticSlot; label: string }[] = [
+const defaultSlotTabs: { id: CosmeticSlot; label: string }[] = [
   { id: 'deck', label: 'Card backs' },
   { id: 'chip', label: 'Chips' },
   { id: 'frame', label: 'Avatars' }
@@ -34,6 +34,13 @@ export function SkinSelector({
   subscriptionTier = 'FREE',
   inventory = [],
   equipped,
+  eyebrow = 'Cosmetics',
+  title = 'Table identity',
+  description = 'Card backs, chips, and avatar frames — unlock higher tiers with subscriptions.',
+  slotTabs = defaultSlotTabs,
+  equipLabel = 'Equip',
+  equippedLabel = 'Equipped',
+  buyLabel = 'Buy',
   onBuy,
   onEquip
 }: {
@@ -41,6 +48,13 @@ export function SkinSelector({
   subscriptionTier?: SubscriptionTier;
   inventory?: string[];
   equipped?: { deck?: string; chip?: string; frame?: string };
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  slotTabs?: { id: CosmeticSlot; label: string }[];
+  equipLabel?: string;
+  equippedLabel?: string;
+  buyLabel?: string;
   onBuy?: (itemId: string) => void;
   onEquip?: (itemId: string) => void;
 }) {
@@ -60,11 +74,7 @@ export function SkinSelector({
 
   return (
     <GlassPanel interactive glow="gold" className="p-5 sm:p-6">
-      <SectionHeader
-        eyebrow="Cosmetics"
-        title="Table identity"
-        description="Card backs, chips, and avatar frames — unlock higher tiers with subscriptions."
-      />
+      <SectionHeader eyebrow={eyebrow} title={title} description={description} />
       <TabGroup tabs={slotTabs} value={slot} onChange={setSlot} className="mb-4" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {items.map((item) => {
@@ -117,7 +127,7 @@ export function SkinSelector({
                   )}
                   onClick={() => onEquip(item.id)}
                 >
-                  {isEquipped ? 'Equipped' : 'Equip'}
+                  {isEquipped ? equippedLabel : equipLabel}
                 </button>
               ) : null}
               {!unlocked && item.chipCost && onBuy ? (
@@ -126,7 +136,7 @@ export function SkinSelector({
                   className="mt-2 rounded-lg border border-emerald/30 bg-emerald/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald hover:bg-emerald/20"
                   onClick={() => onBuy(item.id)}
                 >
-                  Buy
+                  {buyLabel}
                 </button>
               ) : null}
             </div>

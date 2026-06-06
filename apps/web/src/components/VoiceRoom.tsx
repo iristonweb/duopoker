@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Room, RoomEvent } from 'livekit-client';
 import { Button } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
 type VoiceStatus = 'idle' | 'checking' | 'connecting' | 'live' | 'error' | 'unavailable';
 
-/**
- * Table voice via LiveKit Cloud SFU (option B).
- * Backend mints a short-lived JWT at POST /voice/token.
- */
 export function VoiceRoom() {
+  const { t } = useTranslation();
   const { session, userId, displayName, apiFetch } = useAppStore();
   const roomRef = useRef<Room | null>(null);
   const [status, setStatus] = useState<VoiceStatus>('idle');
@@ -71,7 +69,7 @@ export function VoiceRoom() {
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(typeof err.error === 'string' ? err.error : 'Token request failed');
+        throw new Error(typeof err.error === 'string' ? err.error : t('voice.tokenFailed'));
       }
       const { token, url } = (await res.json()) as { token: string; url: string };
 
@@ -95,7 +93,7 @@ export function VoiceRoom() {
       refreshCount(room);
       setStatus('live');
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Voice connection failed');
+      setErrorMsg(e instanceof Error ? e.message : t('voice.connectionFailed'));
       setStatus('error');
       await leaveVoice();
     }
@@ -110,25 +108,15 @@ export function VoiceRoom() {
   };
 
   if (!session?.sessionId) {
-    return <p className="text-xs text-subtle">Join a table to enable voice.</p>;
+    return <p className="text-xs text-subtle">{t('voice.joinTableFirst')}</p>;
   }
 
   if (status === 'checking') {
-    return <p className="text-xs text-subtle">Checking voice service…</p>;
+    return <p className="text-xs text-subtle">{t('voice.checking')}</p>;
   }
 
   if (status === 'unavailable') {
-    return (
-      <p className="text-[11px] leading-relaxed text-subtle">
-        LiveKit is not configured on the server. Add{' '}
-        <code className="font-mono">LIVEKIT_API_KEY</code>, <code className="font-mono">LIVEKIT_API_SECRET</code>,{' '}
-        <code className="font-mono">LIVEKIT_URL</code> (from{' '}
-        <a href="https://cloud.livekit.io" className="premium-link" target="_blank" rel="noreferrer">
-          cloud.livekit.io
-        </a>
-        ) on Render or Vercel.
-      </p>
-    );
+    return <p className="text-[11px] leading-relaxed text-subtle">{t('voice.unavailable')}</p>;
   }
 
   return (
@@ -137,19 +125,19 @@ export function VoiceRoom() {
         <>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant={micOn ? 'secondary' : 'ghost'} size="sm" onClick={() => void toggleMic()}>
-              {micOn ? 'Mic on' : 'Mic muted'}
+              {micOn ? t('voice.micOn') : t('voice.micMuted')}
             </Button>
             <Button variant="ghost" size="sm" className="text-rose-300 hover:text-rose-200" onClick={() => void leaveVoice()}>
-              Leave voice
+              {t('voice.leave')}
             </Button>
           </div>
           <p className="text-[11px] text-subtle">
-            LiveKit · {participants} in room · TURN/NAT handled by LiveKit Cloud
+            {t('voice.liveStatus', { count: participants })}
           </p>
         </>
       ) : (
         <Button variant="secondary" size="sm" disabled={status === 'connecting'} onClick={() => void joinVoice()}>
-          {status === 'connecting' ? 'Connecting…' : 'Join voice (LiveKit)'}
+          {status === 'connecting' ? t('voice.connecting') : t('voice.join')}
         </Button>
       )}
       {errorMsg ? <p className="text-[11px] text-rose-400">{errorMsg}</p> : null}
