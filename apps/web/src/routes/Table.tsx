@@ -343,6 +343,20 @@ export const Table = () => {
   const halfPotRaise = Math.max(minRaise, Math.floor(kettle / 2));
   const potRaise = Math.max(minRaise, kettle);
   const holeCards = session.playerCards[userId] ?? [];
+  const jokerBoardCards =
+    session.mode !== 'JOKER'
+      ? (session.communityCards ?? [])
+      : session.street === 'TRICKS' && session.joker
+        ? session.joker.currentTrick.map((p) => p.card)
+        : session.street === 'BIDDING'
+          ? (session.communityCards ?? [])
+          : [];
+  const jokerBoardKeys =
+    session.mode === 'JOKER' && session.street === 'TRICKS' && session.joker
+      ? session.joker.currentTrick.map(
+          (p, i) => `trick-${session.joker!.trickNumber}-${p.userId}-${i}`
+        )
+      : undefined;
   const activeLabel = activeId
     ? `${label(activeId)}${activeId === userId ? ` ${t('table.you')}` : ''}`
     : '—';
@@ -391,14 +405,9 @@ export const Table = () => {
             className="relative h-full min-h-0"
           >
             <PokerTable3D
-              communityCards={
-                session.mode === 'JOKER'
-                  ? [
-                      ...(session.communityCards ?? []),
-                      ...(session.joker?.currentTrick.map((p) => p.card) ?? [])
-                    ]
-                  : (session.communityCards ?? [])
-              }
+              communityCards={jokerBoardCards}
+              boardCardKeys={jokerBoardKeys}
+              showBoardSlots={session.mode !== 'JOKER'}
               ghostCommunityCards={
                 ghostBoardVisible && canPeekGhostBoard ? (session.ghostCommunityCards ?? []) : []
               }

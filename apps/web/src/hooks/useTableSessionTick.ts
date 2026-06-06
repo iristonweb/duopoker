@@ -5,7 +5,7 @@ import { usesRealtimeSocket } from '../config/api';
 import { isBotUserId } from '../lib/table-layout';
 import { useAppStore } from '../store/useAppStore';
 
-const BOT_STUCK_MS = 2000;
+const BOT_STUCK_MS = 8000;
 
 /** Nudge server tick when hand-complete timer elapsed or a bot turn appears stuck. */
 export function useTableSessionTick(
@@ -15,6 +15,7 @@ export function useTableSessionTick(
   const apiFetch = useAppStore((s) => s.apiFetch);
   const botStuckSince = useRef<number | null>(null);
   const lastActiveKey = useRef<string | null>(null);
+  const hasNudged = useRef(false);
 
   useEffect(() => {
     if (!session || !sessionId || session.street !== 'COMPLETE') return;
@@ -46,6 +47,7 @@ export function useTableSessionTick(
     if (street !== 'BIDDING' && street !== 'TRICKS') {
       botStuckSince.current = null;
       lastActiveKey.current = null;
+      hasNudged.current = false;
       return;
     }
 
@@ -53,6 +55,7 @@ export function useTableSessionTick(
     if (!activeId || !isBotUserId(activeId)) {
       botStuckSince.current = null;
       lastActiveKey.current = null;
+      hasNudged.current = false;
       return;
     }
 
@@ -60,8 +63,10 @@ export function useTableSessionTick(
     if (lastActiveKey.current !== activeKey) {
       lastActiveKey.current = activeKey;
       botStuckSince.current = Date.now();
-      return;
+      hasNudged.current = false;
     }
+
+    if (hasNudged.current) return;
 
     const stuckSince = botStuckSince.current;
     if (!stuckSince) return;
@@ -81,26 +86,12 @@ export function useTableSessionTick(
         .catch(() => undefined);
     };
 
-    const elapsed = Date.now() - stuckSince;
-    if (elapsed >= BOT_STUCK_MS) {
+    const delay = Math.max(0, BOT_STUCK_MS - (Date.now() - stuckSince));
+    const timeout = setTimeout(() => {
+      hasNudged.current = true;
       nudge();
-      const id = setInterval(nudge, 1500);
-      return () => clearInterval(id);
-    }
+    }, delay);
 
-    const delay = BOT_STUCK_MS - elapsed;
-    const timeout = setTimeout(nudge, delay);
-    const interval = setInterval(nudge, 1500);
-    return () => {
-      clearTimeout(timeout);
-      clearInterval(interval);
-    };
-  }, [
-    session,
-    sessionId,
-    session?.street,
-    session?.handNumber,
-    session?.activePlayerIndex,
-    apiFetch
-  ]);
+    return () => clearTimeout(timeout);
+  }, [sessionId, session?.street, session?.handNumber, session?.activePlayerIndex, apiFetch]);
 }

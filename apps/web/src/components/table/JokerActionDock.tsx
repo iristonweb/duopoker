@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button, cn } from '@duopoker/ui-kit';
 import type { Card, JokerHandState } from '@duopoker/shared-types/index';
 import { jokerLegalPlays, leadSuitFromTrick } from '@duopoker/shared-types/index';
@@ -44,6 +44,7 @@ export function JokerActionDock({
   const [pendingCard, setPendingCard] = useState<string | null>(null);
   const showActions = myTurn && street !== 'COMPLETE' && street !== 'LOBBY';
   const bidding = street === 'BIDDING';
+  const showHand = street === 'BIDDING' || street === 'TRICKS';
 
   const legalCards = useMemo(() => {
     if (bidding || !showActions) return new Set<string>();
@@ -133,36 +134,55 @@ export function JokerActionDock({
           </div>
         ) : null}
 
-        {showActions && !bidding ? (
-          <div className="flex flex-wrap gap-2">
-            <AnimatePresence mode="popLayout">
-              {holeCards.map((c) => {
-                const playable = legalCards.has(c);
-                return (
-                  <motion.button
-                    key={c}
-                    layout
-                    type="button"
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -24, scale: 0.75, transition: { duration: 0.28 } }}
-                    disabled={!playable || pendingCard === c}
-                    className={cn(
-                      'rounded-lg transition focus:outline-none focus:ring-2 focus:ring-gold/50',
-                      playable && !pendingCard ? 'hover:scale-105' : 'cursor-not-allowed opacity-40 grayscale'
-                    )}
-                    onClick={() => handlePlay(c)}
-                  >
-                    <PlayingCard card={c} faceUp deckId={deckId} size="md" className="shadow-lg" />
-                  </motion.button>
-                );
-              })}
-            </AnimatePresence>
+        {showHand ? (
+          <div className="flex flex-col gap-2">
+            {!showActions && street !== 'COMPLETE' && street !== 'LOBBY' ? (
+              <p className="text-center text-sm text-subtle">{t('table.waitingOpponent')}</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {holeCards.length === 0 ? (
+                <p className="text-sm text-muted">{t('table.jokerNoCards', { defaultValue: 'No cards in hand' })}</p>
+              ) : (
+                holeCards.map((c, i) => {
+                  const playable = showActions && !bidding && legalCards.has(c);
+                  const CardEl = (
+                    <PlayingCard
+                      card={c}
+                      faceUp
+                      deckId={deckId}
+                      size="md"
+                      className={cn(
+                        'shadow-lg transition',
+                        playable && !pendingCard ? 'hover:scale-105' : '',
+                        !playable && showActions && !bidding ? 'opacity-40 grayscale' : ''
+                      )}
+                    />
+                  );
+                  if (showActions && !bidding) {
+                    return (
+                      <button
+                        key={`${joker.trickNumber}-${i}-${c}`}
+                        type="button"
+                        disabled={!playable || pendingCard === c}
+                        className={cn(
+                          'rounded-lg focus:outline-none focus:ring-2 focus:ring-gold/50',
+                          playable && !pendingCard ? 'cursor-pointer' : 'cursor-default'
+                        )}
+                        onClick={() => handlePlay(c)}
+                      >
+                        {CardEl}
+                      </button>
+                    );
+                  }
+                  return (
+                    <div key={`${joker.trickNumber}-${i}-${c}`} className="rounded-lg">
+                      {CardEl}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-        ) : null}
-
-        {!showActions && street !== 'COMPLETE' && street !== 'LOBBY' ? (
-          <p className="text-center text-sm text-subtle">{t('table.waitingOpponent')}</p>
         ) : null}
       </div>
     </motion.footer>

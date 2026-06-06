@@ -30,6 +30,8 @@ export type TablePlayerVisual = {
 
 type Props = {
   communityCards: Card[];
+  /** Stable keys for board cards (e.g. Joker trick positions). */
+  boardCardKeys?: string[];
   pot: number;
   street?: string;
   players?: TablePlayerVisual[];
@@ -38,11 +40,14 @@ type Props = {
   heroTableFeltId?: string;
   /** Semi-transparent preview of cards that would have been dealt (subscription perk). */
   ghostCommunityCards?: Card[];
+  /** When false, hide Hold'em-style empty board slots (Joker). */
+  showBoardSlots?: boolean;
   className?: string;
 };
 
 export function PokerTable3D({
   communityCards,
+  boardCardKeys,
   pot,
   street,
   players = [],
@@ -50,6 +55,7 @@ export function PokerTable3D({
   heroChipId = 'chip_classic',
   heroTableFeltId = 'table_classic',
   ghostCommunityCards = [],
+  showBoardSlots = true,
   className
 }: Props) {
   const felt = tableFeltVisual(heroTableFeltId);
@@ -115,7 +121,7 @@ export function PokerTable3D({
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
                 <motion.div
-                  key={`board-${c}-${i}`}
+                  key={boardCardKeys?.[i] ?? `board-${c}-${i}`}
                   layout
                   initial={{ opacity: 0, y: -20, scale: 0.75, rotateY: 90 }}
                   animate={{ opacity: showGhostBoard ? 0.72 : 1, y: 0, scale: 1, rotateY: 0 }}
@@ -135,7 +141,7 @@ export function PokerTable3D({
                 </motion.div>
               ))}
             </AnimatePresence>
-          ) : (
+          ) : showBoardSlots ? (
             Array.from({ length: 5 }).map((_, i) => (
               <PlayingCard
                 key={`slot-${i}`}
@@ -145,7 +151,7 @@ export function PokerTable3D({
                 className="border border-gold/15 opacity-50 sm:scale-110"
               />
             ))
-          )}
+          ) : null}
         </div>
 
         <div className="absolute left-1/2 top-[50%] -translate-x-1/2">

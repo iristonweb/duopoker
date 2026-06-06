@@ -12,6 +12,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     env:
       HUSKY: "0"
     steps:
@@ -29,5 +30,10 @@ jobs:
       - run: pnpm --filter @duopoker/game-engine build
       - run: pnpm --filter @duopoker/backend build
       - run: pnpm --filter @duopoker/web build
+      - uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-chromium-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium --with-deps
       - run: pnpm exec playwright test tests/web.e2e.spec.ts
