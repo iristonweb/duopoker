@@ -4,8 +4,8 @@ export type CatalogCosmetic = {
   rarity: string;
   chipCost: number;
   imageUrl: string;
-  slot?: 'deck' | 'chip' | 'frame';
-  requiredTier?: 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
+  slot?: 'deck' | 'chip' | 'frame' | 'title';
+  requiredTier?: 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
   description?: string;
 };
 
@@ -17,7 +17,7 @@ export type CatalogGameMode = {
 };
 
 export type CatalogSubscription = {
-  tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
+  tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
   imageUrl: string;
 };
 
@@ -61,10 +61,12 @@ export const catalogGameModes: CatalogGameMode[] = [
 ];
 
 export const subscriptionBannerImages: Record<CatalogSubscription['tier'], string> = {
-  SILVER: '/assets/subscriptions/silver.png',
-  GOLD: '/assets/subscriptions/gold.png',
-  PLATINUM: '/assets/subscriptions/platinum.png',
-  ROYAL: '/assets/subscriptions/royal.png'
+  BRONZE: '/assets/subscriptions/bronze.svg',
+  SILVER: '/assets/subscriptions/silver.svg',
+  GOLD: '/assets/subscriptions/gold.svg',
+  PLATINUM: '/assets/subscriptions/platinum.svg',
+  DIAMOND: '/assets/subscriptions/diamond.svg',
+  BLACK: '/assets/subscriptions/black.svg'
 };
 
 export const organizerPlanBanners: Record<OrganizerPlanTier, string> = {

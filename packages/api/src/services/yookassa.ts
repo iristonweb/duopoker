@@ -244,7 +244,7 @@ const fetchPaymentFromYooKassa = async (paymentId: string) => {
   };
 };
 
-const paidTiers = ['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const;
+const paidTiers = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'] as const;
 
 export const handleYooKassaWebhook = async (payload: {
   event: string;

@@ -1,20 +1,17 @@
 import {
   resolveEquipped,
+  TIER_RANK,
   type EquippedCosmetics,
   type SubscriptionTier
 } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
 import { decryptField } from '../lib/field-crypto.js';
 import { BOT_PREFIX } from './game-session.js';
+import { resolveUserSubscriptionTier } from './subscription-tier.js';
 
 export const getUserSubscriptionTier = async (userId: string): Promise<SubscriptionTier> => {
   if (userId.startsWith(BOT_PREFIX)) return 'FREE';
-  const sub = await prisma.subscription.findFirst({
-    where: { userId, status: 'ACTIVE', expiresAt: { gt: new Date() } },
-    orderBy: { expiresAt: 'desc' },
-    select: { tier: true }
-  });
-  return (sub?.tier as SubscriptionTier | undefined) ?? 'FREE';
+  return resolveUserSubscriptionTier(userId);
 };
 
 export const getSubscriptionTiersBatch = async (
@@ -33,14 +30,27 @@ export const getSubscriptionTiersBatch = async (
       status: 'ACTIVE',
       expiresAt: { gt: new Date() }
     },
-    orderBy: { expiresAt: 'desc' },
     select: { userId: true, tier: true }
   });
   for (const id of unique) map.set(id, 'FREE');
+  const byUser = new Map<string, Array<{ tier: string }>>();
   for (const sub of subs) {
-    if (!map.has(sub.userId) || map.get(sub.userId) === 'FREE') {
-      map.set(sub.userId, sub.tier as SubscriptionTier);
+    const list = byUser.get(sub.userId) ?? [];
+    list.push({ tier: sub.tier });
+    byUser.set(sub.userId, list);
+  }
+  for (const [userId, rows] of byUser) {
+    let best: SubscriptionTier = 'FREE';
+    let bestRank = TIER_RANK.FREE;
+    for (const row of rows) {
+      const tier = row.tier as SubscriptionTier;
+      const rank = TIER_RANK[tier] ?? 0;
+      if (rank > bestRank) {
+        bestRank = rank;
+        best = tier;
+      }
     }
+    map.set(userId, best);
   }
   return map;
 };
@@ -145,6 +155,7 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
       if (itemId.startsWith('deck_')) equippedFromDb.deck = itemId;
       if (itemId.startsWith('chip_') || itemId === 'table_void') equippedFromDb.chip = itemId;
       if (itemId.startsWith('frame_')) equippedFromDb.frame = itemId;
+      if (itemId.startsWith('title_')) equippedFromDb.title = itemId;
     }
     return {
       userId: id,

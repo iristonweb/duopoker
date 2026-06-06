@@ -48,6 +48,7 @@ export {
   subscriptionCosmetics,
   subscriptionCosmeticsBySlot,
   tierLabel,
+  titleBadgeLabel,
   tierMeetsRequirement,
   TIER_RANK,
   type CosmeticDefinition,
@@ -64,6 +65,18 @@ export {
   formatRubOnce,
   type PaidSubscriptionTier
 } from './pricing';
+
+export {
+  REFERRAL_ACTIVE_MIN_HANDS,
+  REFERRAL_ACTIVE_MIN_AGE_MS,
+  REFERRAL_CODE_WINDOW_DAYS,
+  REFERRAL_MILESTONES,
+  referralMilestoneByLevel,
+  nextReferralMilestone,
+  type ReferralMilestone,
+  type ReferralStatus,
+  type ReferralRewardKind
+} from './referrals';
 
 export type GameMode = 'HOLDEM' | 'RASPISNOY';
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
@@ -132,7 +145,7 @@ export interface SessionState {
 }
 
 /** Minimum subscription tier to reveal ghost board after a preflop muck-win. */
-export const GHOST_BOARD_MIN_TIER = 'SILVER' as const;
+export const GHOST_BOARD_MIN_TIER = 'BRONZE' as const;
 
 export interface ReplayFrame {
   at: number;

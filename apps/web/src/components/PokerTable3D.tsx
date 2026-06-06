@@ -175,7 +175,8 @@ export function PokerTable3D({
                 folded={player.isFolded}
                 isBot={isBotUserId(player.userId)}
                 size={isHeroSeat ? 'lg' : players.length > 4 ? 'sm' : 'md'}
-                showTier={tier === 'ROYAL' || tier === 'PLATINUM'}
+                titleId={equipped.title}
+                showTier={tier === 'BLACK' || tier === 'DIAMOND' || tier === 'PLATINUM'}
               />
 
               <p className="relative z-[1] max-w-[5.5rem] truncate text-center text-[10px] font-medium text-zinc-200 sm:max-w-[7rem] sm:text-xs">

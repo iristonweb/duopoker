@@ -1,13 +1,20 @@
 import type { SubscriptionTier } from '@duopoker/shared-types';
 import { tierLabel } from '@duopoker/shared-types';
 import { Badge, cn } from '@duopoker/ui-kit';
-import { avatarGradient, frameImageUrl, initialsFromName } from '../../lib/cosmetics-client';
+import {
+  avatarGradient,
+  frameImageUrl,
+  initialsFromName,
+  titleDisplayLabel,
+  titleImageUrl
+} from '../../lib/cosmetics-client';
 
 export function PlayerAvatar({
   name,
   avatarUrl,
   tableStatus,
   frameId = 'frame_none',
+  titleId = '',
   tier = 'FREE',
   active = false,
   folded = false,
@@ -20,6 +27,7 @@ export function PlayerAvatar({
   avatarUrl?: string | null;
   tableStatus?: string | null;
   frameId?: string;
+  titleId?: string;
   tier?: SubscriptionTier;
   active?: boolean;
   folded?: boolean;
@@ -30,6 +38,8 @@ export function PlayerAvatar({
 }) {
   const outer = size === 'sm' ? 'h-12 w-12' : size === 'lg' ? 'h-20 w-20' : 'h-16 w-16';
   const inner = size === 'sm' ? 'h-9 w-9 text-xs' : size === 'lg' ? 'h-14 w-14 text-lg' : 'h-12 w-12 text-sm';
+  const titleSrc = titleId ? titleImageUrl(titleId) : undefined;
+  const titleText = titleId ? titleDisplayLabel(titleId) : undefined;
 
   return (
     <div className={cn('relative flex flex-col items-center', className)}>
@@ -76,7 +86,14 @@ export function PlayerAvatar({
       <p className={cn('mt-1 max-w-[88px] truncate text-center text-[11px]', active ? 'text-gold-light' : 'text-muted')}>
         {name}
       </p>
-      {tableStatus ? (
+      {titleSrc ? (
+        <img
+          src={titleSrc}
+          alt={titleText ?? ''}
+          className="mt-0.5 h-4 w-auto max-w-[110px] object-contain"
+          title={titleText}
+        />
+      ) : tableStatus ? (
         <p className="mt-0.5 max-w-[96px] truncate text-center text-[9px] leading-tight text-gold/75" title={tableStatus}>
           {tableStatus}
         </p>

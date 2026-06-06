@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
+import type { PaidSubscriptionTier } from '@duopoker/shared-types';
 import {
   catalogGameModes,
   clubsHeroBanner,
@@ -23,8 +24,7 @@ import {
   PlayerCountSelector,
   SectionHeader,
   SubscriptionTierCard,
-  TabGroup,
-  VoiceChatPanel
+  TabGroup
 } from '@duopoker/ui-kit';
 import { AppLogo } from '../components/AppLogo';
 import { LanguageSwitch } from '../components/LanguageSwitch';
@@ -33,9 +33,14 @@ import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { PokerTable3D } from '../components/PokerTable3D';
-import { VoiceRoom } from '../components/VoiceRoom';
+import { SubscriptionPerksMatrix } from '../components/subscriptions/SubscriptionPerksMatrix';
+import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { useAppStore } from '../store/useAppStore';
-import { translateAuthError, translateQueueError } from '../lib/translate-store-error';
+import {
+  isAuthReferralWarning,
+  translateAuthError,
+  translateQueueError
+} from '../lib/translate-store-error';
 import { resolveApiUrl, usesRealtimeSocket } from '../config/api';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
@@ -86,7 +91,16 @@ function AuthPanel() {
   const [passwordIn, setPasswordIn] = useState('');
   const [nameIn, setNameIn] = useState('');
   const [nicknameIn, setNicknameIn] = useState('');
+  const [referralIn, setReferralIn] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) {
+      setReferralIn(ref.toUpperCase());
+      setTab('register');
+    }
+  }, []);
 
   if (accessToken) {
     const nickLabel = nickname ? `@${nickname}` : displayName ?? t('auth.player');
@@ -98,6 +112,7 @@ function AuthPanel() {
               name={nickLabel}
               avatarUrl={avatarUrl}
               frameId={equipped.frame}
+              titleId={equipped.title}
               tier={subscriptionTier}
               size="md"
               showTier
@@ -145,7 +160,7 @@ function AuthPanel() {
   }
 
   return (
-    <GlassPanel glow="gold" className="w-full max-w-sm border-gold/15 p-5 sm:max-w-md">
+    <GlassPanel id="auth" glow="gold" className="w-full max-w-sm border-gold/15 p-5 sm:max-w-md">
       <p className="mb-3 font-display text-lg font-semibold text-ivory">{t('auth.joinTable')}</p>
       <TabGroup
         tabs={[
@@ -165,7 +180,13 @@ function AuthPanel() {
         </p>
       ) : null}
       {authNotice ? (
-        <p className="mb-3 rounded-lg border border-emerald/20 bg-emerald/10 px-3 py-2 text-xs text-emerald">
+        <p
+          className={`mb-3 rounded-lg px-3 py-2 text-xs ${
+            isAuthReferralWarning(authNotice)
+              ? 'border border-amber-500/20 bg-amber-500/10 text-amber-200'
+              : 'border border-emerald/20 bg-emerald/10 text-emerald'
+          }`}
+        >
           {translateAuthError(authNotice)}
         </p>
       ) : null}
@@ -178,7 +199,7 @@ function AuthPanel() {
             if (tab === 'register') {
               const name = nameIn.trim().length >= 2 ? nameIn.trim() : t('auth.player');
               const nick = nicknameIn.trim().replace(/^@/, '').toLowerCase();
-              await register(emailIn, passwordIn, name, nick);
+              await register(emailIn, passwordIn, name, nick, referralIn);
             } else {
               await login(emailIn, passwordIn);
             }
@@ -208,6 +229,13 @@ function AuthPanel() {
               onChange={(e) => setNicknameIn(e.target.value.replace(/^@/, '').toLowerCase())}
             />
             <p className="-mt-1 text-[11px] text-subtle">{t('auth.nicknameHint')}</p>
+            <Input
+              label={t('auth.referralCode')}
+              placeholder={t('auth.referralPlaceholder')}
+              maxLength={24}
+              value={referralIn}
+              onChange={(e) => setReferralIn(e.target.value.toUpperCase())}
+            />
           </>
         ) : null}
         <Input
@@ -436,30 +464,31 @@ export const Lobby = () => {
     }
   };
 
-  const tierPerkBullets = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') => {
-    const key = `subscriptions.perkBullets.${tier.toLowerCase()}` as
-      | 'subscriptions.perkBullets.silver'
-      | 'subscriptions.perkBullets.gold'
-      | 'subscriptions.perkBullets.platinum'
-      | 'subscriptions.perkBullets.royal';
+  const PAID_TIERS: PaidSubscriptionTier[] = [
+    'BRONZE',
+    'SILVER',
+    'GOLD',
+    'PLATINUM',
+    'DIAMOND',
+    'BLACK'
+  ];
+
+  const tierPerkBullets = (tier: PaidSubscriptionTier) => {
+    const key = `subscriptions.perkBullets.${tier.toLowerCase()}`;
     const bullets = t(key, { returnObjects: true });
     return Array.isArray(bullets) ? (bullets as string[]) : [];
   };
 
-  const subscriptionPriceLabel = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') => {
+  const subscriptionPriceLabel = (tier: PaidSubscriptionTier) => {
     const fromCatalog = catalogSubs.find((s) => s.tier === tier)?.priceRubMonthly;
     if (typeof fromCatalog === 'number') {
       return `${fromCatalog.toLocaleString('ru-RU')} ₽/мес`;
     }
-    const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}` as
-      | 'subscriptions.priceSilver'
-      | 'subscriptions.priceGold'
-      | 'subscriptions.pricePlatinum'
-      | 'subscriptions.priceRoyal';
+    const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}`;
     return t(priceKey);
   };
 
-  const tierPerks = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') =>
+  const tierPerks = (tier: PaidSubscriptionTier) =>
     subscriptionCosmetics
       .filter((c) => c.requiredTier === tier)
       .map((c) => c.name);
@@ -751,20 +780,23 @@ export const Lobby = () => {
             {checkoutMsg ? (
               <p className="rounded-xl border border-gold/25 bg-gold/10 px-4 py-3 text-sm text-gold-light">{checkoutMsg}</p>
             ) : null}
-            <div id="subscriptions" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const).map((tier) => {
+            <div className="mb-6">
+              <SubscriptionPerksMatrix />
+            </div>
+            <div id="subscriptions" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {PAID_TIERS.map((tier) => {
                 const active = subscriptionTier === tier;
                 return (
                   <SubscriptionTierCard
                     key={tier}
                     tier={tier}
                     price={subscriptionPriceLabel(tier)}
-                    tierName={t(`subscriptions.${tier.toLowerCase()}` as 'subscriptions.silver')}
-                    perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}` as 'subscriptions.perkSummary.silver')}
+                    tierName={t(`subscriptions.${tier.toLowerCase()}`)}
+                    perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}`)}
                     featureBullets={tierPerkBullets(tier)}
                     perks={tierPerks(tier)}
                     active={active}
-                    featured={tier === 'ROYAL'}
+                    featured={tier === 'BLACK'}
                     bannerUrl={subBanner(tier)}
                   >
                     <Button
@@ -836,14 +868,7 @@ export const Lobby = () => {
               </Button>
             </Link>
           </GlassPanel>
-          <VoiceChatPanel
-            eyebrow={t('voice.eyebrow')}
-            title={t('voice.title')}
-            description={t('voice.desc')}
-            betaLabel={t('voice.beta')}
-          >
-            <VoiceRoom />
-          </VoiceChatPanel>
+          <ReferralPanel variant="lobby" />
         </motion.div>
 
         <motion.footer

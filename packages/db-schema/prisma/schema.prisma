@@ -14,10 +14,12 @@ datasource db {
 }
 
 enum Tier {
+  BRONZE
   SILVER
   GOLD
   PLATINUM
-  ROYAL
+  DIAMOND
+  BLACK
 }
 
 enum Status {
@@ -103,6 +105,11 @@ enum PlatformDuelInviteStatus {
   DECLINED
 }
 
+enum ReferralStatus {
+  PENDING
+  ACTIVE
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
@@ -130,6 +137,10 @@ model User {
   tableInvitesSent PrivateTableSeat[] @relation("seat_inviter")
   duelsHosted   PlatformDuel[]     @relation("duel_host")
   duelInvites   PlatformDuelInvite[]
+  referralCode  ReferralCode?
+  referralsMade Referral[]         @relation("referrals_made")
+  referredBy    Referral?          @relation("referred_user")
+  referralRewards ReferralRewardClaim[]
   @@map("users")
 }
 
@@ -352,6 +363,41 @@ model PlatformDuel {
   invites   PlatformDuelInvite[]
   @@index([hostId, status])
   @@map("platform_duels")
+}
+
+model ReferralCode {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("referral_codes")
+}
+
+model Referral {
+  id           String         @id @default(cuid())
+  referrerId   String
+  referredId   String         @unique
+  code         String
+  status       ReferralStatus @default(PENDING)
+  handsPlayed  Int            @default(0)
+  registeredAt DateTime       @default(now())
+  activatedAt  DateTime?
+  referrer     User           @relation("referrals_made", fields: [referrerId], references: [id])
+  referred     User           @relation("referred_user", fields: [referredId], references: [id])
+  @@index([referrerId, status])
+  @@map("referrals")
+}
+
+model ReferralRewardClaim {
+  id        String   @id @default(cuid())
+  userId    String
+  level     Int
+  chips     Int      @default(0)
+  claimedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, level])
+  @@map("referral_reward_claims")
 }
 
 model PlatformDuelInvite {

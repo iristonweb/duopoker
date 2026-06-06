@@ -4,10 +4,12 @@ export type PaidSubscriptionTier = Exclude<SubscriptionTier, 'FREE'>;
 
 /** Player subscription prices (RUB / month). */
 export const SUBSCRIPTION_PRICES_RUB: Record<PaidSubscriptionTier, number> = {
+  BRONZE: 290,
   SILVER: 490,
   GOLD: 990,
   PLATINUM: 1990,
-  ROYAL: 4990
+  DIAMOND: 2990,
+  BLACK: 4990
 };
 
 /** One-time chip pack prices (RUB). */

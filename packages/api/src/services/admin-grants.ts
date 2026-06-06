@@ -1,16 +1,23 @@
-import { allCosmetics } from '@duopoker/shared-types';
+import { allCosmetics, TIER_RANK } from '@duopoker/shared-types';
+import type { PaidSubscriptionTier } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
+import { getEffectiveOrganizerTier, PLAN_LIMITS } from './club-plans.js';
+import { pickHighestTier } from './subscription-tier.js';
 
-type PaidTier = 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
+type PaidTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
 
 export const LIFETIME_EXPIRES = new Date('2099-12-31T23:59:59.999Z');
 
 export const grantSubscription = async (
   userId: string,
   tier: PaidTier,
-  lifetime = false
+  lifetime = false,
+  days = 32
 ) => {
   const subId = `${userId}-${tier}`;
+  const expiresAt = lifetime
+    ? LIFETIME_EXPIRES
+    : new Date(Date.now() + 1000 * 60 * 60 * 24 * days);
   await prisma.subscription.upsert({
     where: { id: subId },
     create: {
@@ -18,12 +25,12 @@ export const grantSubscription = async (
       userId,
       tier,
       status: 'ACTIVE',
-      expiresAt: lifetime ? LIFETIME_EXPIRES : new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+      expiresAt
     },
     update: {
       tier,
       status: 'ACTIVE',
-      expiresAt: lifetime ? LIFETIME_EXPIRES : new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+      expiresAt
     }
   });
 };
@@ -32,16 +39,24 @@ export const grantCosmeticItems = async (userId: string, itemIds: string[]) => {
   const defs = itemIds
     .map((id) => allCosmetics.find((c) => c.id === id))
     .filter((d): d is NonNullable<typeof d> => Boolean(d));
+  if (!defs.length) return [];
 
-  for (const def of defs) {
-    const existing = await prisma.userItem.findFirst({
-      where: { userId, itemId: def.id }
+  const existing = await prisma.userItem.findMany({
+    where: { userId, itemId: { in: defs.map((d) => d.id) } },
+    select: { itemId: true }
+  });
+  const owned = new Set(existing.map((row) => row.itemId));
+  const missing = defs.filter((d) => !owned.has(d.id));
+  if (missing.length) {
+    await prisma.userItem.createMany({
+      data: missing.map((d) => ({
+        userId,
+        itemId: d.id,
+        rarity: d.rarity,
+        equipped: false
+      })),
+      skipDuplicates: true
     });
-    if (!existing) {
-      await prisma.userItem.create({
-        data: { userId, itemId: def.id, rarity: def.rarity, equipped: false }
-      });
-    }
   }
   return defs.map((d) => d.id);
 };
@@ -52,8 +67,23 @@ export const grantAllCosmetics = async (userId: string) =>
     allCosmetics.map((c) => c.id)
   );
 
+export const grantTierCosmetics = async (userId: string, tier: PaidSubscriptionTier) =>
+  grantCosmeticItems(
+    userId,
+    allCosmetics.filter((c) => TIER_RANK[c.requiredTier] <= TIER_RANK[tier]).map((c) => c.id)
+  );
+
+export const revokeUserSubscriptions = async (userId: string) => {
+  await prisma.subscription.updateMany({
+    where: { userId, status: 'ACTIVE' },
+    data: { status: 'CANCELLED' }
+  });
+};
+
 export const grantFounderPackage = async (email: string) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } }
+  });
   if (!user) {
     return { ok: false as const, error: 'USER_NOT_FOUND' };
   }
@@ -67,7 +97,7 @@ export const grantFounderPackage = async (email: string) => {
     }
   });
 
-  await grantSubscription(user.id, 'ROYAL', true);
+  await grantSubscription(user.id, 'BLACK', true);
   const items = await grantAllCosmetics(user.id);
 
   return {
@@ -98,6 +128,14 @@ export type AdminUserDetail = {
     matchAssignment: string | null;
     clubMemberships: number;
   };
+  clubsOwned: Array<{
+    id: string;
+    name: string;
+    organizerTier: string;
+    members: number;
+    activeTables: number;
+    limits: { maxMembers: number; maxActiveTables: number };
+  }>;
 };
 
 export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetail | null> => {
@@ -116,12 +154,22 @@ export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetai
       createdAt: true,
       subscriptions: {
         where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
-        orderBy: { expiresAt: 'desc' },
-        take: 1,
         select: { tier: true, expiresAt: true, status: true }
       },
       inventory: { select: { itemId: true, equipped: true, rarity: true } },
-      _count: { select: { clubMemberships: true } }
+      _count: { select: { clubMemberships: true } },
+      clubsOwned: {
+        select: {
+          id: true,
+          name: true,
+          organizerPlan: { select: { tier: true, status: true, expiresAt: true } },
+          _count: { select: { members: true, privateTables: true } },
+          privateTables: {
+            where: { status: { in: ['SCHEDULED', 'LIVE'] } },
+            select: { id: true }
+          }
+        }
+      }
     }
   });
   if (!user) return null;
@@ -132,16 +180,31 @@ export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetai
     prisma.matchAssignment.findUnique({ where: { userId } })
   ]);
 
-  const { subscriptions, inventory, _count, ...profile } = user;
+  const { subscriptions, inventory, _count, clubsOwned, ...profile } = user;
+  const effectiveTier = pickHighestTier(subscriptions);
+  const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
+
   return {
     ...profile,
-    subscription: subscriptions[0] ?? null,
+    subscription: topSub,
     inventory,
     stats: {
       handsPlayed,
       inQueue: Boolean(queueTicket),
       matchAssignment: assignment?.sessionId ?? null,
       clubMemberships: _count.clubMemberships
-    }
+    },
+    clubsOwned: clubsOwned.map((club) => {
+      const organizerTier = getEffectiveOrganizerTier(club.organizerPlan);
+      const limits = PLAN_LIMITS[organizerTier];
+      return {
+        id: club.id,
+        name: club.name,
+        organizerTier,
+        members: club._count.members,
+        activeTables: club.privateTables.length,
+        limits
+      };
+    })
   };
 };

@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { config } from '../config.js';
 import { createVoiceRoomToken, isLiveKitConfigured } from '../services/livekit.js';
+import { TIER_RANK } from '@duopoker/shared-types';
 import { assertVoiceSessionAccess } from '../services/session-access.js';
+import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
 
 const tokenSchema = z.object({
   sessionId: z.string().min(1),
@@ -29,6 +31,11 @@ voiceRoutes.post('/token', authGuard, async (c) => {
   const parsed = tokenSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const tier = await resolveUserSubscriptionTier(userId);
+  if (TIER_RANK[tier] < TIER_RANK.GOLD) {
+    return c.json({ error: 'Voice chat requires Gold subscription or higher', code: 'TIER_REQUIRED' }, 403);
   }
 
   const access = await assertVoiceSessionAccess(parsed.data.sessionId, userId);

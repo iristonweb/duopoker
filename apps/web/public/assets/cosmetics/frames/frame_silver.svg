@@ -2,11 +2,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
   <defs>
     <linearGradient id="fG" x1="0" y1="0" x2="120" y2="120">
-      <stop stop-color="#fafafa"/>
-      <stop offset="1" stop-color="#71717a"/>
+      <stop stop-color="#d4d4d8"/><stop offset="1" stop-color="#a1a1aa"/>
     </linearGradient>
+    
   </defs>
-  <circle cx="60" cy="60" r="54" fill="none" stroke="url(#fG)" stroke-width="4"/>
-  <circle cx="60" cy="60" r="47" fill="none" stroke="#d4d4d8" stroke-opacity="0.25" stroke-width="1"/>
-  <text x="60" y="108" text-anchor="middle" fill="#d4d4d8" font-family="system-ui,sans-serif" font-size="6" font-weight="700" letter-spacing="0.22em">DP CLUB</text>
+  
+  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#fG)" stroke-width="4"/>
+  <circle cx="60" cy="60" r="45" fill="none" stroke="#e8e8e8" stroke-opacity="0.25" stroke-width="1"/>
+  
+  
 </svg>

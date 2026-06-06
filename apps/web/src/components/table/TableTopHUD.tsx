@@ -50,12 +50,23 @@ export function TableTopHUD({
     >
       <div className="mx-auto flex h-12 items-center justify-between gap-2 px-3 sm:h-14 sm:gap-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <Link
-            to="/lobby"
-            className="premium-link hidden shrink-0 text-[11px] font-semibold uppercase tracking-wider sm:inline sm:text-xs"
-          >
-            ← {t('nav.backLobby')}
-          </Link>
+          {onLeaveTable ? (
+            <button
+              type="button"
+              className="premium-link hidden shrink-0 text-[11px] font-semibold uppercase tracking-wider sm:inline sm:text-xs"
+              disabled={leaving}
+              onClick={onLeaveTable}
+            >
+              ← {t('nav.backLobby')}
+            </button>
+          ) : (
+            <Link
+              to="/lobby"
+              className="premium-link hidden shrink-0 text-[11px] font-semibold uppercase tracking-wider sm:inline sm:text-xs"
+            >
+              ← {t('nav.backLobby')}
+            </Link>
+          )}
           {onLeaveTable ? (
             <Button
               variant="ghost"

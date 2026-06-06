@@ -21,6 +21,7 @@ import {
   type CosmeticItem
 } from '@duopoker/ui-kit';
 import { ProfileEditor } from '../components/ProfileEditor';
+import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { useAppStore } from '../store/useAppStore';
@@ -46,9 +47,12 @@ export const ProfilePage = () => {
   const equipCosmetic = useAppStore((s) => s.equipCosmetic);
   const buyCosmetic = useAppStore((s) => s.buyCosmetic);
   const fetchProfile = useAppStore((s) => s.fetchProfile);
+  const apiFetch = useAppStore((s) => s.apiFetch);
 
   const [cosmetics, setCosmetics] = useState<CosmeticItem[]>([]);
   const [shopMsg, setShopMsg] = useState<string | null>(null);
+  const [bonusMsg, setBonusMsg] = useState<string | null>(null);
+  const [bonusBusy, setBonusBusy] = useState(false);
 
   useEffect(() => {
     void fetchProfile();
@@ -69,6 +73,26 @@ export const ProfilePage = () => {
     subscriptionCosmetics.filter((c) => c.requiredTier === tier).map((c) => c.name);
 
   const nickLabel = nickname ? `@${nickname}` : displayName ?? t('auth.player');
+
+  const claimDailyBonus = async () => {
+    setBonusBusy(true);
+    setBonusMsg(null);
+    try {
+      const res = await apiFetch('/monetization/bonus', { method: 'POST' });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        setBonusMsg(
+          err.error === 'ALREADY_CLAIMED' ? t('profile.dailyBonusClaimed') : t('profile.dailyBonusFailed')
+        );
+        return;
+      }
+      const data = (await res.json()) as { amount?: number };
+      setBonusMsg(t('profile.dailyBonusOk', { amount: data.amount ?? 500 }));
+      await fetchProfile();
+    } finally {
+      setBonusBusy(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen">
@@ -116,6 +140,7 @@ export const ProfilePage = () => {
                     name={nickLabel}
                     avatarUrl={avatarUrl}
                     frameId={equipped.frame}
+                    titleId={equipped.title}
                     tier={subscriptionTier}
                     tableStatus={tableStatus}
                     size="lg"
@@ -154,6 +179,28 @@ export const ProfilePage = () => {
           variants={reduceMotion ? undefined : fade}
           className="mb-8 grid gap-4 lg:grid-cols-2"
         >
+          <ReferralPanel />
+          <GlassPanel glow="emerald" className="flex flex-col justify-between border-emerald/20 p-5">
+            <SectionHeader
+              eyebrow={t('profile.dailyBonusEyebrow')}
+              title={t('profile.dailyBonusTitle')}
+              description={t('profile.dailyBonusDesc')}
+            />
+            <div className="mt-4">
+              <Button variant="primary" size="md" disabled={bonusBusy} onClick={() => void claimDailyBonus()}>
+                {bonusBusy ? t('profile.dailyBonusClaiming') : t('profile.dailyBonusClaim')}
+              </Button>
+              {bonusMsg ? <p className="mt-3 text-xs text-gold-light">{bonusMsg}</p> : null}
+            </div>
+          </GlassPanel>
+        </motion.div>
+
+        <motion.div
+          initial={reduceMotion ? false : 'hidden'}
+          animate="show"
+          variants={reduceMotion ? undefined : fade}
+          className="mb-8 grid gap-4 lg:grid-cols-2"
+        >
           <SkinSelector
             catalog={cosmetics}
             subscriptionTier={subscriptionTier}
@@ -165,7 +212,8 @@ export const ProfilePage = () => {
             slotTabs={[
               { id: 'deck' as const, label: t('cosmetics.tabs.deck') },
               { id: 'chip' as const, label: t('cosmetics.tabs.chip') },
-              { id: 'frame' as const, label: t('cosmetics.tabs.frame') }
+              { id: 'frame' as const, label: t('cosmetics.tabs.frame') },
+              { id: 'title' as const, label: t('cosmetics.tabs.title') }
             ]}
             equipLabel={t('cosmetics.equip')}
             equippedLabel={t('cosmetics.equipped')}
@@ -185,12 +233,12 @@ export const ProfilePage = () => {
             />
             {subscriptionTier === 'FREE' ? (
               <SubscriptionTierCard
-                tier="SILVER"
-                price={t('subscriptions.priceSilver')}
-                tierName={t('subscriptions.silver')}
-                perkDescription={t('subscriptions.perkSummary.silver')}
-                perks={tierPerks('SILVER')}
-                bannerUrl={subscriptionBannerImages.SILVER}
+                tier="BRONZE"
+                price={t('subscriptions.priceBronze')}
+                tierName={t('subscriptions.bronze')}
+                perkDescription={t('subscriptions.perkSummary.bronze')}
+                perks={tierPerks('BRONZE')}
+                bannerUrl={subscriptionBannerImages.BRONZE}
                 featured
               >
                 <Link to="/lobby#subscriptions">

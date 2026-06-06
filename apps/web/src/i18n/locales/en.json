@@ -33,11 +33,15 @@
     "createAccount": "Create account",
     "guestHint": "Guest session {{id}} — sign in to save progress.",
     "adminBadge": "Admin",
+    "signInRequired": "Sign in to open the admin panel.",
+    "referralCode": "Referral code",
+    "referralPlaceholder": "Friend's code (optional)",
     "errors": {
       "network": "Could not reach the server. Check your connection.",
       "invalidCredentials": "Invalid email or password",
       "registrationFailed": "Registration failed",
-      "verificationRequired": "Account created. Check your email for a verification link."
+      "verificationRequired": "Account created. Check your email for a verification link.",
+      "referralSkipped": "Account created, but the referral code could not be applied."
     }
   },
   "profile": {
@@ -63,6 +67,14 @@
     "fileTooLarge": "Image must be under 450 KB.",
     "uploadFailed": "Could not read the file.",
     "hint": "Avatar and status are shown to everyone at your poker table. GIFs supported.",
+    "dailyBonusEyebrow": "Daily reward",
+    "dailyBonusTitle": "Daily chip bonus",
+    "dailyBonusDesc": "Claim free chips once per day. Silver+ subscribers get +50% bonus.",
+    "dailyBonusClaim": "Claim bonus",
+    "dailyBonusClaiming": "Claiming…",
+    "dailyBonusOk": "+{{amount}} chips added to your balance.",
+    "dailyBonusClaimed": "Already claimed today — come back tomorrow.",
+    "dailyBonusFailed": "Could not claim daily bonus.",
     "errors": {
       "notSignedIn": "Sign in to save your profile.",
       "saveFailed": "Could not save profile.",
@@ -104,40 +116,56 @@
     }
   },
   "subscriptions": {
-    "silver": "Silver",
-    "gold": "Gold",
-    "platinum": "Platinum",
-    "royal": "Royal",
+    "bronze": "Bronze Club",
+    "silver": "Silver Club",
+    "gold": "Gold Club",
+    "platinum": "Platinum Club",
+    "diamond": "Diamond Club",
+    "black": "Black Club",
+    "priceBronze": "290 ₽/mo",
     "priceSilver": "490 ₽/mo",
     "priceGold": "990 ₽/mo",
     "pricePlatinum": "1,990 ₽/mo",
-    "priceRoyal": "4,990 ₽/mo",
+    "priceDiamond": "2,990 ₽/mo",
+    "priceBlack": "4,990 ₽/mo",
     "perks": "DP CLUB cosmetics and table perks. Play-money only — chips cannot be cashed out.",
     "perkSummary": {
-      "silver": "Entry premium: Silver table identity plus ghost board peek when everyone folds preflop.",
-      "gold": "Everything in Silver plus Gold cosmetics and LiveKit voice at live tables.",
-      "platinum": "Everything in Gold plus Platinum visuals and AI coach hints (coming soon).",
-      "royal": "Full DP CLUB Royal set — maximum presence and status at the table."
+      "bronze": "Private tables and basic club features. Bronze cosmetics and ghost board peek.",
+      "silver": "Expanded features and unique designs. Silver cosmetics and +50% daily chip bonus.",
+      "gold": "More privileges, exclusive tables, and premium designs. Gold cosmetics and voice chat.",
+      "platinum": "Prestigious status, limited designs, and priority support. Platinum cosmetics.",
+      "diamond": "Unique rewards, rare designs, and maximum features. Diamond cosmetics.",
+      "black": "Maximum club status. Exclusive privileges, Black cosmetics, and personal approach."
     },
     "perkBullets": {
+      "bronze": [
+        "Bronze deck, chips, frame, and title",
+        "Access to private club tables",
+        "Ghost board peek on preflop muck-win"
+      ],
       "silver": [
-        "Silver deck, chips, and avatar frame",
-        "Peek the board that would have run out (preflop muck-win)",
+        "All Bronze perks",
+        "Silver deck, chips, frame, and title",
         "+50% daily chip bonus"
       ],
       "gold": [
         "All Silver perks",
-        "Gold deck, chips, and frame",
+        "Gold deck, chips, frame, and title",
         "LiveKit voice chat at the table"
       ],
       "platinum": [
         "All Gold perks",
-        "Platinum deck, chips, and frame",
+        "Platinum deck, chips, frame, and title",
         "AI coach hints (coming soon)"
       ],
-      "royal": [
+      "diamond": [
         "All Platinum perks",
-        "Royal deck, chips, and frame — full premium set",
+        "Diamond deck, chips, frame, and title",
+        "Rare limited-edition designs"
+      ],
+      "black": [
+        "All Diamond perks",
+        "Black deck, chips, frame, and title — full premium set",
         "Maximum table status and visibility"
       ]
     }
@@ -145,8 +173,8 @@
   "cosmetics": {
     "eyebrow": "Cosmetics",
     "title": "Table identity",
-    "desc": "Card backs, chips, and avatar frames — unlock with subscriptions.",
-    "tabs": { "deck": "Card backs", "chip": "Chips", "frame": "Avatars" },
+    "desc": "Card backs, chips, avatar frames, and titles — unlock with subscriptions.",
+    "tabs": { "deck": "Card backs", "chip": "Chips", "frame": "Avatars", "title": "Titles" },
     "equip": "Equip",
     "equipped": "Equipped",
     "buy": "Buy"
@@ -220,6 +248,7 @@
     "joiningTitle": "Joining table",
     "connectingTo": "Connecting to {{id}}…",
     "connectingHint": "Open this link after matchmaking found you a seat.",
+    "backToLobby": "Back to lobby",
     "invalid": "Invalid table.",
     "pot": "Pot",
     "toAct": "To act:",
@@ -323,6 +352,8 @@
     "title": "Users",
     "total": "Total: {{count}}",
     "forbidden": "Superadmin access only.",
+    "sessionExpired": "Session expired. Sign out and sign in again.",
+    "loadFailed": "Could not load admin data. Try refreshing the page.",
     "statsEyebrow": "Overview",
     "statsTitle": "Platform statistics",
     "statUsers": "Users",
@@ -362,9 +393,23 @@
     "inventory": "Inventory",
     "items": "items",
     "grantRoyal": "Royal lifetime",
+    "grantSubscription": "DP CLUB subscription",
+    "grantSub": "Grant subscription",
+    "revokeSub": "Revoke subscriptions",
+    "lifetime": "Lifetime",
+    "grantExtras": "Chips & cosmetics",
     "grantCosmetics": "All cosmetics",
-    "grantChips": "999,999 chips",
+    "grantTierCosmetics": "Tier cosmetics",
+    "grantChips": "Grant chips",
     "makeAdmin": "Make superadmin",
+    "clubsOwned": "Player clubs (organizer plan)",
+    "members": "members",
+    "tables": "tables",
+    "applyClubPlan": "Apply plan",
+    "clubPlanOk": "Club plan updated",
+    "clubPlanRevoked": "Club plan downgraded to Basic",
+    "revokeClubPlan": "Revoke plan",
+    "demoteAdmin": "Remove superadmin",
     "actionOk": "Done",
     "actionFailed": "Action failed",
     "statVipPending": "VIP invites",
@@ -381,6 +426,45 @@
     "vipStart": "Start table",
     "vipCreated": "Invite sent",
     "vipNotFound": "Not found: {{list}}"
+  },
+  "referral": {
+    "eyebrow": "Invite friends",
+    "title": "Referral program",
+    "desc": "Bring players — earn chips, cosmetics, and time-limited subscriptions for active referrals.",
+    "lobbyDesc": "Invite friends — rewards for active players.",
+    "lobbyTeaser": "Sign in to get your personal invite code and share link.",
+    "openProfile": "All rewards in profile",
+    "nextGoal": "{{current}} / {{target}} active until next reward",
+    "active": "Active",
+    "pending": "Pending",
+    "total": "Total",
+    "yourCode": "Your code",
+    "copyLink": "Copy link",
+    "copied": "Copied!",
+    "copyFailed": "Could not copy link",
+    "signInCta": "Sign in to invite friends",
+    "status": {
+      "PENDING": "pending",
+      "ACTIVE": "active"
+    },
+    "activeRule": "Active referral: verified email, account at least 3 days old, 20+ hands played.",
+    "applyPlaceholder": "Inviter code",
+    "apply": "Apply code",
+    "applyOk": "Code applied",
+    "applyFailed": "Could not apply code",
+    "referredBy": "Invited by: {{code}} ({{status}})",
+    "claimed": "Claimed",
+    "claim": "Claim",
+    "claimOk": "Reward claimed",
+    "claimFailed": "Could not claim reward",
+    "needMore": "Need {{n}} active",
+    "errors": {
+      "INVALID_CODE": "Invalid code",
+      "SELF_REFERRAL": "Cannot use your own code",
+      "ALREADY_REFERRED": "Code already applied",
+      "WINDOW_EXPIRED": "Code window expired (7 days after signup)",
+      "unknown": "Error"
+    }
   },
   "vipInvite": {
     "eyebrow": "VIP from admin",

@@ -2,13 +2,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
   <defs>
     <linearGradient id="fG" x1="0" y1="0" x2="120" y2="120">
-      <stop stop-color="#ddd6fe"/>
-      <stop offset="0.5" stop-color="#a78bfa"/>
-      <stop offset="1" stop-color="#7c3aed"/>
+      <stop stop-color="#c8e0f8"/><stop offset="1" stop-color="#a8c8e8"/>
     </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="1.2"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <circle cx="60" cy="60" r="54" fill="none" stroke="url(#fG)" stroke-width="4"/>
-  <circle cx="60" cy="60" r="47" fill="none" stroke="#c4b5fd" stroke-opacity="0.35" stroke-width="1"/>
-  <circle cx="60" cy="60" r="50" fill="none" stroke="url(#fG)" stroke-opacity="0.2" stroke-width="1" stroke-dasharray="3 5"/>
-  <text x="60" y="108" text-anchor="middle" fill="#ddd6fe" font-family="system-ui,sans-serif" font-size="6" font-weight="700" letter-spacing="0.22em">DP CLUB</text>
+  
+  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#fG)" stroke-width="4"/>
+  <circle cx="60" cy="60" r="45" fill="none" stroke="#e8f4fc" stroke-opacity="0.25" stroke-width="1"/>
+  
+  <polygon points="60,10 64,18 60,26 56,18" fill="#d0e8ff" fill-opacity="0.7" filter="url(#glow)"/>
+  <polygon points="110,60 102,64 94,60 102,56" fill="#d0e8ff" fill-opacity="0.5" filter="url(#glow)"/>
+  <polygon points="60,110 56,102 60,94 64,102" fill="#d0e8ff" fill-opacity="0.5" filter="url(#glow)"/>
+  <polygon points="10,60 18,56 26,60 18,64" fill="#d0e8ff" fill-opacity="0.5" filter="url(#glow)"/>
+  
+  
 </svg>

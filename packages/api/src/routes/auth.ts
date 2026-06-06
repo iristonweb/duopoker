@@ -14,18 +14,13 @@ import {
 import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
 import { decryptProfileRow } from '../lib/profile-privacy.js';
 import { jsonError } from '../lib/http-error.js';
-import { grantFounderPackage } from '../services/admin-grants.js';
-
-const ensureFounderAccount = async (email: string): Promise<'SUPERADMIN' | 'USER' | null> => {
-  if (email.toLowerCase() !== config.founderEmail) return null;
-  const result = await grantFounderPackage(email);
-  if (!result.ok) return null;
-  const updated = await prisma.user.findUnique({
-    where: { id: result.userId },
-    select: { role: true }
-  });
-  return updated?.role ?? 'SUPERADMIN';
-};
+import { resolveUserRole } from '../services/admin-access.js';
+import {
+  activatePendingReferralsForUser,
+  attachReferralOnSignup,
+  ensureReferralCode
+} from '../services/referrals.js';
+import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -36,7 +31,8 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   displayName: z.string().min(2).max(40),
-  nickname: z.string().min(3).max(20)
+  nickname: z.string().min(3).max(20),
+  referralCode: z.string().min(3).max(24).optional()
 });
 
 const issueSession = async (userId: string, email: string, deviceId: string) => {
@@ -109,7 +105,14 @@ authRoutes.post('/register', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
-    const founderRole = await ensureFounderAccount(user.email);
+    await ensureReferralCode(user.id, user.nickname);
+    let referralWarning: string | undefined;
+    if (parsed.data.referralCode) {
+      const refResult = await attachReferralOnSignup(user.id, parsed.data.referralCode);
+      if (!refResult.ok) referralWarning = refResult.error;
+    }
+    const role =
+      (await resolveUserRole(user.id, user.email, { bootstrapFounder: true })) ?? user.role;
     return c.json(
       {
         ...tokens,
@@ -119,9 +122,10 @@ authRoutes.post('/register', async (c) => {
           displayName: user.displayName,
           nickname: user.nickname,
           emailVerified: user.emailVerified,
-          role: founderRole ?? user.role
+          role
         },
-        verificationRequired: verify && !user.emailVerified
+        verificationRequired: verify && !user.emailVerified,
+        referralWarning
       },
       201
     );
@@ -137,8 +141,8 @@ authRoutes.post('/login', async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Invalid email or password' }, 400);
     }
-    const user = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: parsed.data.email, mode: 'insensitive' } },
       select: { id: true, email: true, passwordHash: true, displayName: true, nickname: true, emailVerified: true, role: true }
     });
     if (!user?.passwordHash) {
@@ -153,7 +157,8 @@ authRoutes.post('/login', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
-    const founderRole = await ensureFounderAccount(user.email);
+    const role =
+      (await resolveUserRole(user.id, user.email, { bootstrapFounder: true })) ?? user.role;
     return c.json({
       ...tokens,
       user: {
@@ -162,7 +167,7 @@ authRoutes.post('/login', async (c) => {
         displayName: user.displayName,
         nickname: user.nickname,
         emailVerified: user.emailVerified,
-        role: founderRole ?? user.role
+        role
       }
     });
   } catch (error) {
@@ -192,6 +197,7 @@ authRoutes.get('/verify-email', async (c) => {
       verificationTokenExpiresAt: null
     }
   });
+  await activatePendingReferralsForUser(user.id);
   return c.json({ ok: true, email: user.email });
 });
 
@@ -260,8 +266,6 @@ authRoutes.get('/me', async (c) => {
         role: true,
         subscriptions: {
           where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
-          orderBy: { expiresAt: 'desc' },
-          take: 1,
           select: { tier: true, expiresAt: true, status: true }
         },
         inventory: {
@@ -270,10 +274,14 @@ authRoutes.get('/me', async (c) => {
       }
     });
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const role = (await resolveUserRole(user.id, user.email)) ?? user.role;
+    await ensureReferralCode(user.id, user.nickname);
     const { subscriptions, inventory, ...profile } = user;
+    const effectiveTier = await resolveUserSubscriptionTier(user.id);
+    const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
     return c.json({
-      user: decryptProfileRow(profile),
-      subscription: subscriptions[0] ?? null,
+      user: { ...decryptProfileRow(profile), role },
+      subscription: topSub,
       inventory
     });
   } catch {
