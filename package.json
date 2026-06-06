@@ -4,7 +4,16 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.7.0",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
   },
   "scripts": {
     "build": "pnpm -r build",
@@ -22,7 +31,8 @@
     "db:generate": "pnpm --filter @duopoker/db-schema build",
     "grant:founder": "node scripts/grant-founder.mjs",
     "build:vercel-api": "node scripts/bundle-vercel-api.mjs",
-    "crop:decks": "node scripts/crop-deck-backs.mjs"
+    "crop:decks": "node scripts/crop-deck-backs.mjs",
+    "fix:game-alpha": "node scripts/fix-game-asset-alpha.mjs"
   },
   "dependencies": {
     "@duopoker/db-schema": "workspace:*",

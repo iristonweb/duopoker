@@ -72,7 +72,7 @@ export function PlayerAvatar({
           <img
             src={frameImageUrl(frameId)}
             alt=""
-            className="pointer-events-none absolute inset-0 z-[2] h-full w-full scale-[1.08] object-contain drop-shadow-[0_0_12px_rgba(232,197,71,0.25)]"
+            className="pointer-events-none absolute inset-0 z-[2] h-full w-full scale-[1.12] object-contain object-center [background:transparent] drop-shadow-[0_0_12px_rgba(232,197,71,0.25)]"
             draggable={false}
           />
         ) : (

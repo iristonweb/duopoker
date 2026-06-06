@@ -1,6 +1,7 @@
 import type { Card } from '@duopoker/shared-types/index';
+import { deckBackEffectClass } from '@duopoker/shared-types';
 import { cn } from '@duopoker/ui-kit';
-import { deckBackUrl, isPremiumDeck } from '../../lib/cosmetics-client';
+import { deckBackUrl } from '../../lib/cosmetics-client';
 
 const suitSymbol = (s: string) => (s === 'H' ? '♥' : s === 'D' ? '♦' : s === 'C' ? '♣' : '♠');
 const rankLabel = (r: string) => (r === 'T' ? '10' : r);
@@ -92,17 +93,14 @@ export function PlayingCard({
   const s = sizeMap[size];
 
   if (!faceUp || !card) {
-    const premium = isPremiumDeck(deckId);
+    const effectClass = deckBackEffectClass(deckId);
     return (
       <div
         className={cn(
-          'relative overflow-hidden shadow-[0_10px_28px_rgba(0,0,0,0.5)] ring-1 ring-white/15',
+          'relative overflow-hidden ring-1 ring-white/15',
           s.box,
           s.radius,
-          premium && deckId === 'deck_black' && 'card-back-black',
-          premium && deckId === 'deck_diamond' && 'card-back-diamond',
-          premium && deckId === 'deck_platinum' && 'card-back-platinum',
-          premium && deckId === 'deck_gold' && 'card-back-gold',
+          effectClass,
           className
         )}
       >

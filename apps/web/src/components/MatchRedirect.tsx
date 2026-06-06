@@ -13,6 +13,7 @@ export function MatchRedirect() {
   useEffect(() => {
     if (!usesRealtimeSocket() || !socket) return;
     const onMatch = (match: { sessionId: string; buyIn?: number; mode?: string }) => {
+      useAppStore.getState().resetTableJoin();
       socket.emit('joinSession', {
         sessionId: match.sessionId,
         userId,

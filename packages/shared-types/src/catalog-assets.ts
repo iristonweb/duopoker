@@ -4,7 +4,7 @@ export type CatalogCosmetic = {
   rarity: string;
   chipCost: number;
   imageUrl: string;
-  slot?: 'deck' | 'chip' | 'frame' | 'title';
+  slot?: 'deck' | 'chip' | 'frame' | 'title' | 'table';
   requiredTier?: 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
   description?: string;
 };
@@ -29,14 +29,14 @@ export const clubsHeroBanner = '/assets/banners/clubs-hero.png';
 export const appBackgroundUrl = '/assets/banners/app-background.svg';
 export const cardsBackgroundUrl = '/assets/banners/cards-background.png';
 
-import { allCosmetics, bonusCosmetics } from './cosmetics';
+import { allCosmetics, bonusCosmetics, catalogPreviewUrl } from './cosmetics';
 
 export const catalogCosmetics: CatalogCosmetic[] = allCosmetics.map((c) => ({
   id: c.id,
   name: c.name,
   rarity: c.rarity,
   chipCost: c.chipCost ?? 0,
-  imageUrl: c.imageUrl,
+  imageUrl: catalogPreviewUrl(c.id) ?? c.imageUrl,
   slot: c.slot,
   requiredTier: c.requiredTier,
   description: c.description

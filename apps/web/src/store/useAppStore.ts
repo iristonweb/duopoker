@@ -42,6 +42,8 @@ type AppStore = {
   refreshToken?: string;
   mode: 'HOLDEM' | 'RASPISNOY';
   session?: SessionState;
+  /** User left the table intentionally — block auto-rejoin until a new match starts. */
+  tableVoluntaryLeave: boolean;
   socket?: Socket;
   authError?: string;
   authNotice?: string;
@@ -75,6 +77,7 @@ type AppStore = {
   readyNextHand: () => Promise<void>;
   leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
   clearTableSession: () => void;
+  resetTableJoin: () => void;
   register: (
     email: string,
     password: string,
@@ -104,7 +107,7 @@ type AppStore = {
   joinPrivateTable: (clubId: string, tableId: string) => Promise<string>;
   acceptInviteByCode: (code: string) => Promise<{ clubId: string; tableId: string }>;
   buyCosmetic: (itemId: string) => Promise<void>;
-  equipCosmetic: (itemId: string) => void;
+  equipCosmetic: (itemId: string) => Promise<{ ok: boolean; error?: string }>;
   vipInvites: VipInvite[];
   vipLiveSession: VipLiveSession | null;
   fetchVipInvites: () => Promise<void>;
@@ -171,6 +174,7 @@ export const useAppStore = create<AppStore>((set, get) => {
     accessToken: initial.access,
     refreshToken: initial.refresh,
     mode: 'HOLDEM',
+    tableVoluntaryLeave: false,
     opponentType: 'BOT',
     botPlayerCount: 2,
     vipInvites: [],
@@ -239,11 +243,16 @@ export const useAppStore = create<AppStore>((set, get) => {
         reconnectionDelayMax: 10_000,
         transports: ['websocket', 'polling']
       });
-      socket.on('stateUpdate', (session: SessionState) => set({ session, sessionError: undefined }));
+      socket.on('stateUpdate', (session: SessionState) => {
+        if (get().tableVoluntaryLeave) return;
+        set({ session, sessionError: undefined });
+      });
       socket.on('sessionEvent', (evt: { state?: SessionState }) => {
+        if (get().tableVoluntaryLeave) return;
         if (evt.state) set({ session: evt.state, sessionError: undefined });
       });
       socket.on('sessionReconnected', (payload: { snapshot?: SessionState | null }) => {
+        if (get().tableVoluntaryLeave) return;
         if (payload.snapshot) set({ session: payload.snapshot, sessionError: undefined });
       });
       socket.on('sessionError', (err: { code?: string }) => {
@@ -251,7 +260,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       socket.on('leftTable', () => {
         get().stopPolling();
-        set({ session: undefined, sessionError: undefined });
+        set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
       });
       socket.on('connect', () => {
         const sid = get().session?.sessionId;
@@ -323,6 +332,7 @@ export const useAppStore = create<AppStore>((set, get) => {
         buyIn?: number;
       };
       if (data.status === 'matched' && data.sessionId) {
+        get().resetTableJoin();
         await get().joinSession(data.sessionId, data.mode ?? get().mode, data.buyIn ?? 100);
         return { status: 'matched', sessionId: data.sessionId };
       }
@@ -346,6 +356,7 @@ export const useAppStore = create<AppStore>((set, get) => {
         buyIn?: number;
       };
       if (data.status === 'matched' && data.sessionId) {
+        get().resetTableJoin();
         await get().joinSession(data.sessionId, data.mode ?? get().mode, data.buyIn ?? 100);
         return { status: 'matched', sessionId: data.sessionId };
       }
@@ -356,7 +367,9 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!get().accessToken) return;
       await get().apiFetch('/game/queue', { method: 'DELETE' });
     },
+    resetTableJoin: () => set({ tableVoluntaryLeave: false }),
     joinSession: async (sessionId, mode, buyIn = 100) => {
+      if (get().tableVoluntaryLeave) return;
       if (usesRealtimeSocket()) {
         get().connect();
         get().socket?.emit('joinSession', {
@@ -384,9 +397,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       set({ session: data.session, sessionError: undefined });
     },
     pollSession: (sessionId) => {
-      if (usesRealtimeSocket()) return;
+      if (usesRealtimeSocket() || get().tableVoluntaryLeave) return;
       get().stopPolling();
       const tick = async () => {
+        if (get().tableVoluntaryLeave) return;
         try {
           const res = await get().apiFetch(`/game/session/${encodeURIComponent(sessionId)}`);
           if (res.status === 403) {
@@ -458,11 +472,13 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     clearTableSession: () => {
       get().stopPolling();
-      set({ session: undefined, sessionError: undefined });
+      set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
     },
     leaveTable: async (sessionId) => {
       get().stopPolling();
-      const clearLocal = () => set({ session: undefined, sessionError: undefined });
+      set({ tableVoluntaryLeave: true });
+      const clearLocal = () =>
+        set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
       if (usesRealtimeSocket()) {
         get().connect();
         get().socket?.emit('leaveTable', { sessionId, userId: get().userId });
@@ -609,8 +625,10 @@ export const useAppStore = create<AppStore>((set, get) => {
         if (data.user) {
           const uid = get().userId;
           const tier = data.subscription?.tier ?? 'FREE';
-          const inventory = (data.inventory ?? []).map((i) => i.itemId);
-          const equipped = loadResolvedEquipped(uid, tier, inventory);
+          const inventoryRows = data.inventory ?? [];
+          const inventory = inventoryRows.map((i) => i.itemId);
+          const equipped = loadResolvedEquipped(uid, tier, inventory, inventoryRows);
+          writeEquipped(uid, equipped);
           set({
             chips: data.user.chips,
             displayName: data.user.displayName,
@@ -737,6 +755,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       if (!res.ok) throw new Error('Failed to start table');
       const data = (await res.json()) as { sessionId: string };
+      get().resetTableJoin();
       return data.sessionId;
     },
     joinPrivateTable: async (clubId, tableId) => {
@@ -745,6 +764,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       if (!res.ok) throw new Error('Failed to join table');
       const data = (await res.json()) as { sessionId: string };
+      get().resetTableJoin();
       await get().joinSession(data.sessionId);
       return data.sessionId;
     },
@@ -762,18 +782,31 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!res.ok) throw new Error('Purchase failed');
       await get().fetchProfile();
     },
-    equipCosmetic: (itemId) => {
+    equipCosmetic: async (itemId) => {
       const def = cosmeticById(itemId);
-      if (!def) return;
-      const { subscriptionTier, inventory, userId, equipped } = get();
-      if (!canEquipCosmetic(itemId, subscriptionTier, inventory)) return;
-      const next = { ...equipped };
-      if (def.slot === 'deck') next.deck = itemId;
-      if (def.slot === 'chip') next.chip = itemId;
-      if (def.slot === 'frame') next.frame = itemId;
-      if (def.slot === 'title') next.title = itemId;
-      writeEquipped(userId, next);
-      set({ equipped: next });
+      if (!def) return { ok: false, error: 'itemNotFound' };
+      const { subscriptionTier, inventory, userId } = get();
+      if (!canEquipCosmetic(itemId, subscriptionTier, inventory)) {
+        return { ok: false, error: 'notAllowed' };
+      }
+      const token = get().accessToken;
+      if (!token) return { ok: false, error: 'notSignedIn' };
+      try {
+        const res = await get().apiFetch('/profile/me/cosmetics/equip', {
+          method: 'PUT',
+          body: JSON.stringify({ itemId })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return { ok: false, error: readApiError(err, 'equipFailed') };
+        }
+        const data = (await res.json()) as { equipped: EquippedCosmetics };
+        writeEquipped(userId, data.equipped);
+        set({ equipped: data.equipped });
+        return { ok: true };
+      } catch {
+        return { ok: false, error: 'network' };
+      }
     },
     fetchVipInvites: async () => {
       if (!get().accessToken) {

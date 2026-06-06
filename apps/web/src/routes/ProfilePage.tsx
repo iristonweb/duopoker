@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   subscriptionBannerImages,
-  subscriptionCosmetics,
   tierLabel,
   type SubscriptionTier
 } from '@duopoker/shared-types';
@@ -17,7 +16,6 @@ import {
   PageShell,
   SectionHeader,
   SkinSelector,
-  SubscriptionTierCard,
   type CosmeticItem
 } from '@duopoker/ui-kit';
 import { ProfileEditor } from '../components/ProfileEditor';
@@ -69,10 +67,16 @@ export const ProfilePage = () => {
     return <Navigate to="/lobby" replace />;
   }
 
-  const tierPerks = (tier: SubscriptionTier) =>
-    subscriptionCosmetics.filter((c) => c.requiredTier === tier).map((c) => c.name);
+  const cosmeticSlotTabs = [
+    { id: 'deck' as const, label: t('cosmetics.tabs.deck') },
+    { id: 'chip' as const, label: t('cosmetics.tabs.chip') },
+    { id: 'frame' as const, label: t('cosmetics.tabs.frame') },
+    { id: 'title' as const, label: t('cosmetics.tabs.title') },
+    { id: 'table' as const, label: t('cosmetics.tabs.table') }
+  ];
 
   const nickLabel = nickname ? `@${nickname}` : displayName ?? t('auth.player');
+  const paidTier = subscriptionTier !== 'FREE' ? subscriptionTier : null;
 
   const claimDailyBonus = async () => {
     setBonusBusy(true);
@@ -199,65 +203,90 @@ export const ProfilePage = () => {
           initial={reduceMotion ? false : 'hidden'}
           animate="show"
           variants={reduceMotion ? undefined : fade}
-          className="mb-8 grid gap-4 lg:grid-cols-2"
+          className="mb-8"
         >
-          <SkinSelector
-            catalog={cosmetics}
-            subscriptionTier={subscriptionTier}
-            inventory={inventory}
-            equipped={equipped}
-            eyebrow={t('cosmetics.eyebrow')}
-            title={t('cosmetics.title')}
-            description={t('cosmetics.desc')}
-            slotTabs={[
-              { id: 'deck' as const, label: t('cosmetics.tabs.deck') },
-              { id: 'chip' as const, label: t('cosmetics.tabs.chip') },
-              { id: 'frame' as const, label: t('cosmetics.tabs.frame') },
-              { id: 'title' as const, label: t('cosmetics.tabs.title') }
-            ]}
-            equipLabel={t('cosmetics.equip')}
-            equippedLabel={t('cosmetics.equipped')}
-            buyLabel={t('cosmetics.buy')}
-            onEquip={(itemId) => equipCosmetic(itemId)}
-            onBuy={(itemId) => {
-              void buyCosmetic(itemId)
-                .then(() => setShopMsg(null))
-                .catch(() => setShopMsg(t('lobby.checkoutFailed')));
-            }}
-          />
-          <GlassPanel glow={subscriptionTier === 'FREE' ? 'gold' : 'emerald'} className="border-white/10 p-6">
-            <SectionHeader
-              eyebrow={t('profile.perksEyebrow')}
-              title={t('profile.perksTitle')}
-              description={t('profile.perksDesc')}
-            />
-            {subscriptionTier === 'FREE' ? (
-              <SubscriptionTierCard
-                tier="BRONZE"
-                price={t('subscriptions.priceBronze')}
-                tierName={t('subscriptions.bronze')}
-                perkDescription={t('subscriptions.perkSummary.bronze')}
-                perks={tierPerks('BRONZE')}
-                bannerUrl={subscriptionBannerImages.BRONZE}
-                featured
-              >
-                <Link to="/lobby#subscriptions">
-                  <Button variant="primary" size="sm" className="w-full">
-                    {t('lobby.subscribe')}
-                  </Button>
-                </Link>
-              </SubscriptionTierCard>
-            ) : (
-              <ul className="mt-4 space-y-2">
-                {tierPerks(subscriptionTier).map((perk) => (
-                  <li key={perk} className="flex items-start gap-2 text-sm text-ivory/90">
-                    <span className="text-gold">✦</span>
-                    {perk}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {shopMsg ? <p className="mt-4 text-xs text-rose-300">{shopMsg}</p> : null}
+          <GlassPanel
+            glow={subscriptionTier === 'FREE' ? 'gold' : 'emerald'}
+            className="overflow-hidden border-white/10 p-0"
+          >
+            <div className="border-b border-white/10 bg-gradient-to-br from-gold/[0.08] via-transparent to-emerald/[0.04] px-5 py-4 sm:px-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                {paidTier ? (
+                  <img
+                    src={subscriptionBannerImages[paidTier]}
+                    alt=""
+                    className="h-20 w-36 shrink-0 rounded-lg object-cover object-left shadow-lg ring-1 ring-white/10"
+                    loading="lazy"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <SectionHeader
+                    eyebrow={t('profile.subscriptionBlockEyebrow')}
+                    title={t('profile.subscriptionBlockTitle')}
+                    description={t('profile.subscriptionBlockDesc')}
+                  />
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Badge variant={paidTier ? 'gold' : 'default'}>
+                      {paidTier
+                        ? t('profile.subscriptionActive', { tier: tierLabel[paidTier] })
+                        : t('profile.tierFree')}
+                    </Badge>
+                    {paidTier ? (
+                      <>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-subtle">
+                          {t('profile.subscriptionUnlockedSlots')}:
+                        </span>
+                        {cosmeticSlotTabs.map((tab) => (
+                          <span
+                            key={tab.id}
+                            className="rounded-full border border-emerald/25 bg-emerald/10 px-2 py-0.5 text-[10px] font-medium text-emerald"
+                          >
+                            {tab.label}
+                          </span>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        <p className="w-full text-xs text-muted">{t('profile.subscriptionUpgradeHint')}</p>
+                        <Link to="/lobby#subscriptions">
+                          <Button variant="primary" size="sm">
+                            {t('lobby.subscribe')}
+                          </Button>
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5">
+              <SkinSelector
+                embedded
+                catalog={cosmetics}
+                subscriptionTier={subscriptionTier}
+                inventory={inventory}
+                equipped={equipped}
+                slotTabs={cosmeticSlotTabs}
+                equipLabel={t('cosmetics.equip')}
+                equippedLabel={t('cosmetics.equipped')}
+                buyLabel={t('cosmetics.buy')}
+                headerExtra={
+                  shopMsg ? <p className="mb-3 text-xs text-rose-300">{shopMsg}</p> : null
+                }
+                onEquip={(itemId) => {
+                  void equipCosmetic(itemId).then((result) => {
+                    if (!result.ok) setShopMsg(t('cosmetics.equipFailed'));
+                    else setShopMsg(null);
+                  });
+                }}
+                onBuy={(itemId) => {
+                  void buyCosmetic(itemId)
+                    .then(() => setShopMsg(null))
+                    .catch(() => setShopMsg(t('lobby.checkoutFailed')));
+                }}
+              />
+            </div>
           </GlassPanel>
         </motion.div>
       </PageShell>
