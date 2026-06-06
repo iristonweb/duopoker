@@ -3,6 +3,7 @@ import type { PaidSubscriptionTier } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
 import { getEffectiveOrganizerTier, PLAN_LIMITS } from './club-plans.js';
 import { pickHighestTier } from './subscription-tier.js';
+import { fetchUserGameStats } from './game-stats.js';
 
 type PaidTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
 
@@ -152,9 +153,6 @@ export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetai
       chips: true,
       level: true,
       xp: true,
-      gamesPlayed: true,
-      gamesWon: true,
-      gamesLost: true,
       emailVerified: true,
       createdAt: true,
       subscriptions: {
@@ -187,15 +185,14 @@ export const getAdminUserDetail = async (userId: string): Promise<AdminUserDetai
   const { subscriptions, inventory, _count, clubsOwned, ...profile } = user;
   const effectiveTier = pickHighestTier(subscriptions);
   const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
+  const gameStats = await fetchUserGameStats(userId);
 
   return {
     ...profile,
     subscription: topSub,
     inventory,
     stats: {
-      gamesPlayed: user.gamesPlayed,
-      gamesWon: user.gamesWon,
-      gamesLost: user.gamesLost,
+      ...gameStats,
       inQueue: Boolean(queueTicket),
       matchAssignment: assignment?.sessionId ?? null,
       clubMemberships: _count.clubMemberships

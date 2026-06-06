@@ -21,6 +21,7 @@ import {
   ensureReferralCode
 } from '../services/referrals.js';
 import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
+import { fetchUserGameStats } from '../services/game-stats.js';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -269,9 +270,6 @@ authRoutes.get('/me', async (c) => {
         chips: true,
         level: true,
         xp: true,
-        gamesPlayed: true,
-        gamesWon: true,
-        gamesLost: true,
         emailVerified: true,
         role: true,
         subscriptions: {
@@ -289,15 +287,12 @@ authRoutes.get('/me', async (c) => {
     const { subscriptions, inventory, ...profile } = user;
     const effectiveTier = await resolveUserSubscriptionTier(user.id);
     const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
+    const stats = await fetchUserGameStats(user.id);
     return c.json({
       user: { ...decryptProfileRow(profile), role },
       subscription: topSub,
       inventory,
-      stats: {
-        gamesPlayed: user.gamesPlayed,
-        gamesWon: user.gamesWon,
-        gamesLost: user.gamesLost
-      }
+      stats
     });
   } catch {
     return c.json({ error: 'Unauthorized' }, 401);
