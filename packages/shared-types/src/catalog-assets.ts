@@ -24,9 +24,10 @@ export type CatalogSubscription = {
 export type OrganizerPlanTier = 'BASIC' | 'PRO' | 'NETWORK';
 
 export const lobbyHeroBanner = '/assets/banners/lobby-hero.svg';
+export const lobbyPreviewBanner = '/assets/banners/lobby-preview.png';
 export const clubsHeroBanner = '/assets/banners/clubs-hero.svg';
 export const appBackgroundUrl = '/assets/banners/app-background.svg';
-export const cardsBackgroundUrl = '/assets/banners/cards-background.svg';
+export const cardsBackgroundUrl = '/assets/banners/cards-background.png';
 
 import { allCosmetics, bonusCosmetics } from './cosmetics';
 
@@ -48,14 +49,14 @@ export const catalogGameModes: CatalogGameMode[] = [
     id: 'HOLDEM',
     title: "Texas Hold'em",
     description: 'No-limit cadence, community cards, and classic showdown tension.',
-    imageUrl: '/assets/modes/holdem.svg'
+    imageUrl: '/assets/modes/holdem.png'
   },
   {
     id: 'RASPISNOY',
     title: 'Расписной покер',
     description:
       'Five-card duel: antes, one betting round, best hand wins — fast reads, no community board.',
-    imageUrl: '/assets/modes/raspisnoy.svg'
+    imageUrl: '/assets/modes/raspisnoy.png'
   }
 ];
 

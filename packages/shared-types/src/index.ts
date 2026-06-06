@@ -11,6 +11,7 @@ export {
   catalogCosmetics,
   catalogGameModes,
   lobbyHeroBanner,
+  lobbyPreviewBanner,
   clubsHeroBanner,
   appBackgroundUrl,
   cardsBackgroundUrl,

@@ -593,8 +593,8 @@ export const Lobby = () => {
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
                     {t('lobby.lobbyPreview')}
                   </p>
-                  <Suspense fallback={<div className="h-36 w-full animate-pulse rounded-2xl bg-white/5" />}>
-                    <LobbyChipPreview staticOnly={Boolean(reduceMotion)} />
+                  <Suspense fallback={<div className="aspect-video w-full animate-pulse rounded-2xl bg-white/5" />}>
+                    <LobbyChipPreview />
                   </Suspense>
                 </div>
               )}

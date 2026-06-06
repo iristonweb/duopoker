@@ -38,15 +38,15 @@ export function ModeCard({
       {...props}
     >
       {bannerUrl ? (
-        <div className="relative h-28 w-full overflow-hidden border-b border-white/10 bg-black/40 sm:h-32">
+        <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-white/10 bg-black/50">
           <img
             src={bannerUrl}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
             loading="lazy"
             decoding="async"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/45 via-surface/10 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/50 via-surface/5 to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-gold/10 via-transparent to-emerald/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         </div>
       ) : null}

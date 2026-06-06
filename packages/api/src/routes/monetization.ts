@@ -7,6 +7,7 @@ import {
   chipPackImages,
   clubsHeroBanner,
   lobbyHeroBanner,
+  lobbyPreviewBanner,
   organizerPlanBanners,
   subscriptionBannerImages
 } from '@duopoker/shared-types';
@@ -51,6 +52,7 @@ monetizationRoutes.get('/catalog', (c) =>
   c.json({
     mockCheckout: config.mockCheckout,
     lobbyBannerUrl: lobbyHeroBanner,
+    lobbyPreviewUrl: lobbyPreviewBanner,
     clubsBannerUrl: clubsHeroBanner,
     gameModes: catalogGameModes,
     subscriptions: [
