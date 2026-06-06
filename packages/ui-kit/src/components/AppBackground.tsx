@@ -1,10 +1,16 @@
+import { cardsBackgroundUrl } from '@duopoker/shared-types';
+
 export function AppBackground() {
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
       <div className="absolute inset-0 bg-background" />
       <div className="absolute inset-0 bg-mesh-premium opacity-80" />
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.14]"
+        className="absolute inset-0 bg-cover bg-center opacity-[0.22] mix-blend-screen sm:opacity-[0.26]"
+        style={{ backgroundImage: `url(${cardsBackgroundUrl})` }}
+      />
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-[0.06]"
         style={{ backgroundImage: 'url(/assets/banners/app-background.svg)' }}
       />
       <div className="absolute inset-0 bg-radial-gold" />
@@ -43,7 +49,7 @@ export function AppBackground() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 80% 60% at 50% 50%, transparent 40%, rgba(5, 5, 8, 0.85) 100%)'
+            'radial-gradient(ellipse 80% 60% at 50% 50%, transparent 35%, rgba(5, 5, 8, 0.88) 100%)'
         }}
       />
     </div>

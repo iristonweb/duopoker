@@ -45,9 +45,11 @@ type AppStore = {
   authNotice?: string;
   sessionError?: string;
   opponentType: 'HUMAN' | 'BOT';
+  botPlayerCount: number;
   pollTimer?: ReturnType<typeof setInterval>;
   setMode: (mode: 'HOLDEM' | 'RASPISNOY') => void;
   setOpponentType: (opponentType: 'HUMAN' | 'BOT') => void;
+  setBotPlayerCount: (count: number) => void;
   setTokens: (access: string, refresh: string, userId: string) => void;
   logout: () => void;
   refreshAccessToken: () => Promise<boolean>;
@@ -131,8 +133,10 @@ export const useAppStore = create<AppStore>((set, get) => {
     refreshToken: initial.refresh,
     mode: 'HOLDEM',
     opponentType: 'BOT',
+    botPlayerCount: 2,
     setMode: (mode) => set({ mode }),
     setOpponentType: (opponentType) => set({ opponentType }),
+    setBotPlayerCount: (botPlayerCount) => set({ botPlayerCount }),
     setTokens: (access, refresh, userId) => {
       localStorage.setItem(LS_ACCESS, access);
       localStorage.setItem(LS_REFRESH, refresh);
@@ -229,7 +233,8 @@ export const useAppStore = create<AppStore>((set, get) => {
           userId: get().userId,
           mode: get().mode,
           buyIn: 100,
-          opponent: get().opponentType === 'BOT' ? 'bot' : 'human'
+          opponent: get().opponentType === 'BOT' ? 'bot' : 'human',
+          playerCount: get().botPlayerCount
         });
         return { status: 'waiting' as const };
       }
@@ -238,7 +243,8 @@ export const useAppStore = create<AppStore>((set, get) => {
         body: JSON.stringify({
           mode: get().mode,
           buyIn: 100,
-          opponent: get().opponentType === 'BOT' ? 'bot' : 'human'
+          opponent: get().opponentType === 'BOT' ? 'bot' : 'human',
+          playerCount: get().botPlayerCount
         })
       });
       if (!res.ok) {

@@ -50,6 +50,25 @@ export const ensureSessionState = (
   return sessions.get(sessionId)!;
 };
 
+/** Seat all players then start one hand. */
+export const seatPlayersBatch = (
+  sessionId: string,
+  userIds: string[],
+  mode: SessionState['mode'],
+  buyIn: number
+) => {
+  let state = ensureSessionState(sessionId, mode, buyIn);
+  for (const userId of userIds) {
+    state = addPlayerToTable(state, userId);
+  }
+  if (state.players.length >= 2 && state.street === 'LOBBY') {
+    state = startNewHand(state);
+  }
+  sessions.set(sessionId, state);
+  save(state);
+  return state;
+};
+
 /** Add player; auto-start hand when 2+ seated in LOBBY. */
 export const joinTable = (sessionId: string, userId: string, mode: SessionState['mode'], buyIn: number) => {
   let state = ensureSessionState(sessionId, mode, buyIn);
@@ -105,19 +124,23 @@ export const requestNextHand = (sessionId: string, userId: string) => {
 
 export const enqueueMatchmaking = (
   ticket: import('@duopoker/shared-types/index').MatchmakingTicket,
-  opts?: { allowSoloQueue?: boolean; opponent?: 'human' | 'bot' }
+  opts?: { allowSoloQueue?: boolean; opponent?: 'human' | 'bot'; playerCount?: number }
 ) => {
   type Ticket = import('@duopoker/shared-types/index').MatchmakingTicket;
+  const clampCount = (n?: number) => Math.min(6, Math.max(2, n ?? 2));
+
   if (opts?.opponent === 'bot') {
     const idx = queue.findIndex((q) => q.userId === ticket.userId);
     if (idx >= 0) queue.splice(idx, 1);
-    const bot: Ticket = {
-      userId: `${BOT_PREFIX}-${Date.now()}`,
+    const count = clampCount(opts.playerCount);
+    const base = Date.now();
+    const bots: Ticket[] = Array.from({ length: count - 1 }, (_, i) => ({
+      userId: `${BOT_PREFIX}-${base}-${i}`,
       mode: ticket.mode,
       buyIn: ticket.buyIn,
       createdAt: Date.now()
-    };
-    return [ticket, bot];
+    }));
+    return [ticket, ...bots];
   }
 
   const allowSolo = opts?.opponent === 'human' ? false : opts?.allowSoloQueue === true;

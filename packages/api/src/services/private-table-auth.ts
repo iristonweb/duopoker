@@ -82,10 +82,14 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
   const byId = new Map(users.map((u) => [u.id, u]));
   return userIds.map((id) => {
     if (id.startsWith(BOT_PREFIX)) {
+      const botIndex = (() => {
+        const suffix = id.split('-').pop();
+        return suffix && /^\d+$/.test(suffix) ? Number(suffix) + 1 : 1;
+      })();
       return {
         userId: id,
-        nickname: 'DuoBot',
-        displayName: 'DuoBot',
+        nickname: `bot${botIndex}`,
+        displayName: botIndex > 1 ? `DuoBot ${botIndex}` : 'DuoBot',
         avatar: null,
         subscriptionTier: 'FREE' as SubscriptionTier,
         equipped: resolveEquipped({}, 'FREE', [])

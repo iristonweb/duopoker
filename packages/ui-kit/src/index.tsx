@@ -15,6 +15,7 @@ export {
   type OpponentKind,
   type OpponentSelectorOption
 } from './components/OpponentSelector';
+export { PlayerCountSelector } from './components/PlayerCountSelector';
 export { SectionHeader } from './components/SectionHeader';
 export { SkinSelector, type CosmeticItem } from './components/SkinSelector';
 export { TabGroup } from './components/TabGroup';

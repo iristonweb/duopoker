@@ -13,6 +13,7 @@ export {
   lobbyHeroBanner,
   clubsHeroBanner,
   appBackgroundUrl,
+  cardsBackgroundUrl,
   subscriptionBannerImages,
   organizerPlanBanners,
   chipPackImages,

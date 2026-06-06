@@ -16,7 +16,8 @@ import {
   joinTable,
   listSessionIdsForUser,
   processPlayerAction,
-  requestNextHand
+  requestNextHand,
+  seatPlayersBatch
 } from '../services/game-session.js';
 import { attachOptionalSocketAuth } from './socket-auth.js';
 
@@ -39,7 +40,8 @@ const matchmakingSchema = z.object({
   userId: z.string().min(1),
   mode: z.enum(['HOLDEM', 'RASPISNOY']),
   buyIn: z.number().int().positive(),
-  opponent: z.enum(['human', 'bot']).optional().default('human')
+  opponent: z.enum(['human', 'bot']).optional().default('human'),
+  playerCount: z.number().int().min(2).max(6).optional().default(2)
 });
 
 const BOT_PREFIX = 'duopoker-bot';
@@ -275,14 +277,18 @@ export const createRealtimeServer = (app: Express) => {
       }
       const userId = socket.data.userId ?? parsed.data.userId;
       registerUserSocket(userId, socket.id);
-      const { opponent, ...ticketFields } = parsed.data;
+      const { opponent, playerCount, ...ticketFields } = parsed.data;
       const ready = enqueueMatchmaking(
         {
           ...ticketFields,
           userId,
           createdAt: Date.now()
         },
-        { allowSoloQueue: config.allowSoloQueue, opponent }
+        {
+          allowSoloQueue: config.allowSoloQueue,
+          opponent,
+          playerCount: opponent === 'bot' ? playerCount : undefined
+        }
       );
       if (!ready) {
         socket.emit('matchmakingWaiting', {
@@ -297,9 +303,12 @@ export const createRealtimeServer = (app: Express) => {
         mode: parsed.data.mode,
         buyIn: parsed.data.buyIn
       };
-      for (const playerId of match.players) {
-        joinTable(match.sessionId, playerId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
-      }
+      seatPlayersBatch(
+        match.sessionId,
+        match.players,
+        match.mode as 'HOLDEM' | 'RASPISNOY',
+        match.buyIn
+      );
       const botState = await advanceBotTurns(match.sessionId);
       if (botState) {
         await broadcastSessionState(io, match.sessionId, botState);

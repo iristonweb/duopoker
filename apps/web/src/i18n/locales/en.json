@@ -120,6 +120,8 @@
     "opponentBot": "Vs bot",
     "opponentHumanHint": "Matchmaking with real players",
     "opponentBotHint": "Instant table, no waiting",
+    "botPlayerCount": "Players at table",
+    "botPlayerCountHint": "You plus bots — up to 6 seats for multi-way practice.",
     "heroPremium": "Premium play-money",
     "heroTitle": "Your table awaits",
     "heroDesc": "Queue for a match. No real money — pure skill & strategy.",
@@ -167,6 +169,9 @@
     "call": "Call {{amount}}",
     "raise": "Raise",
     "bet": "Bet",
+    "halfPot": "½ pot",
+    "potBet": "Pot",
+    "seats": "{{count}} seats",
     "voiceTitle": "Table voice chat",
     "voiceEyebrow": "Voice"
   },

@@ -17,6 +17,7 @@ import {
   LegalDisclaimer,
   ModeCard,
   OpponentSelector,
+  PlayerCountSelector,
   SectionHeader,
   SkinSelector,
   SubscriptionTierCard,
@@ -215,7 +216,7 @@ function AuthPanel() {
 export const Lobby = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { mode, setMode, opponentType, setOpponentType, connect, queue, pollQueueStatus, session, readyNextHand, fetchProfile } =
+  const { mode, setMode, opponentType, setOpponentType, botPlayerCount, setBotPlayerCount, connect, queue, pollQueueStatus, session, readyNextHand, fetchProfile } =
     useAppStore();
   const accessToken = useAppStore((s) => s.accessToken);
   const sessionError = useAppStore((s) => s.sessionError);
@@ -506,6 +507,15 @@ export const Lobby = () => {
                 ]}
                 className="mb-4"
               />
+              {opponentType === 'BOT' ? (
+                <PlayerCountSelector
+                  value={botPlayerCount}
+                  onChange={setBotPlayerCount}
+                  label={t('lobby.botPlayerCount')}
+                  hint={t('lobby.botPlayerCountHint')}
+                  className="mb-4"
+                />
+              ) : null}
               <Button
                 variant={opponentType === 'BOT' ? 'secondary' : 'primary'}
                 size="lg"

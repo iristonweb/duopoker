@@ -12,6 +12,7 @@ export function PlayerAvatar({
   folded = false,
   size = 'md',
   showTier = false,
+  isBot = false,
   className
 }: {
   name: string;
@@ -22,6 +23,7 @@ export function PlayerAvatar({
   folded?: boolean;
   size?: 'sm' | 'md' | 'lg';
   showTier?: boolean;
+  isBot?: boolean;
   className?: string;
 }) {
   const outer = size === 'sm' ? 'h-12 w-12' : size === 'lg' ? 'h-20 w-20' : 'h-16 w-16';
@@ -62,6 +64,11 @@ export function PlayerAvatar({
         )}
         {active ? (
           <span className="absolute -bottom-0.5 left-1/2 z-[2] h-2 w-2 -translate-x-1/2 rounded-full bg-emerald shadow-glow-emerald" />
+        ) : null}
+        {isBot ? (
+          <span className="absolute -right-0.5 -top-0.5 z-[3] rounded-md border border-emerald/40 bg-emerald/20 px-1 py-px text-[8px] font-bold uppercase tracking-wide text-emerald">
+            AI
+          </span>
         ) : null}
       </div>
       <p className={cn('mt-1 max-w-[88px] truncate text-center text-[11px]', active ? 'text-gold-light' : 'text-muted')}>

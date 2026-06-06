@@ -120,6 +120,8 @@
     "opponentBot": "С ботом",
     "opponentHumanHint": "Матчмейкинг с реальными игроками",
     "opponentBotHint": "Мгновенный стол, без ожидания",
+    "botPlayerCount": "Игроков за столом",
+    "botPlayerCountHint": "Вы + боты до 6 мест — идеально для тренировки мультипота.",
     "heroPremium": "Premium play-money",
     "heroTitle": "Стол ждёт",
     "heroDesc": "Войдите в очередь. Без реальных денег — только мастерство.",
@@ -167,6 +169,9 @@
     "call": "Колл {{amount}}",
     "raise": "Рейз",
     "bet": "Бет",
+    "halfPot": "½ банка",
+    "potBet": "Банк",
+    "seats": "{{count}} мест",
     "voiceTitle": "Голосовой чат за столом",
     "voiceEyebrow": "Голос"
   },

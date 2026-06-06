@@ -93,6 +93,41 @@ export const requestNextHand = async (sessionId: string, userId: string) => {
 export type MatchmakingOpts = {
   allowSoloQueue?: boolean;
   opponent?: 'human' | 'bot';
+  playerCount?: number;
+};
+
+const clampPlayerCount = (n?: number) => Math.min(6, Math.max(2, n ?? 2));
+
+const spawnBotTickets = (
+  human: MatchmakingTicket,
+  count: number
+): MatchmakingTicket[] => {
+  const base = Date.now();
+  const bots = Array.from({ length: count - 1 }, (_, i) => ({
+    userId: `${BOT_PREFIX}-${base}-${i}`,
+    mode: human.mode,
+    buyIn: human.buyIn,
+    createdAt: Date.now()
+  }));
+  return [human, ...bots];
+};
+
+/** Seat all players then start one hand (avoids partial multi-bot seating). */
+const seatPlayersBatch = async (
+  sessionId: string,
+  userIds: string[],
+  mode: SessionState['mode'],
+  buyIn: number
+) => {
+  let state = await ensureSessionState(sessionId, mode, buyIn);
+  for (const userId of userIds) {
+    state = addPlayerToTable(state, userId);
+  }
+  if (state.players.length >= 2 && state.street === 'LOBBY') {
+    state = startNewHand(state);
+  }
+  await persistGameSnapshot(state);
+  return state;
 };
 
 export const enqueueMatchmaking = async (
@@ -101,13 +136,7 @@ export const enqueueMatchmaking = async (
 ): Promise<MatchmakingTicket[] | null> => {
   if (opts?.opponent === 'bot') {
     await prisma.matchmakingTicket.deleteMany({ where: { userId: ticket.userId } });
-    const bot: MatchmakingTicket = {
-      userId: `${BOT_PREFIX}-${Date.now()}`,
-      mode: ticket.mode,
-      buyIn: ticket.buyIn,
-      createdAt: Date.now()
-    };
-    return [ticket, bot];
+    return spawnBotTickets(ticket, clampPlayerCount(opts.playerCount));
   }
 
   const allowSolo = opts?.opponent === 'human' ? false : opts?.allowSoloQueue === true;
@@ -212,10 +241,12 @@ export const createMatchFromQueue = async (
   buyIn: number
 ) => {
   const sessionId = `sess-${Date.now()}`;
-
-  for (const player of ready) {
-    await seatPlayer(sessionId, player.userId, mode, buyIn, false);
-  }
+  await seatPlayersBatch(
+    sessionId,
+    ready.map((r) => r.userId),
+    mode,
+    buyIn
+  );
   await advanceBotTurns(sessionId);
 
   return {
