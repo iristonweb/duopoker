@@ -14,14 +14,14 @@ export function PokerChipVisual({
   size?: 'sm' | 'md' | 'lg';
 }) {
   const resolvedChipId = gameChipId(chipId);
-  const dim = size === 'sm' ? 'h-8 w-8' : size === 'lg' ? 'h-14 w-14' : 'h-10 w-10';
+  const dim = size === 'sm' ? 'h-9 w-9' : size === 'lg' ? 'h-16 w-16' : 'h-11 w-11';
   return (
     <div className={cn('relative inline-flex flex-col items-center', className)}>
-      <div className={cn('relative', dim)}>
+      <div className={cn('relative flex items-center justify-center', dim)}>
         <img
           src={chipImageUrl(resolvedChipId)}
           alt=""
-          className="h-full w-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]"
+          className="h-full w-full max-h-full max-w-full object-contain object-center [background:transparent] drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]"
           draggable={false}
         />
       </div>
@@ -44,13 +44,13 @@ export function PokerChipStack({
   const resolvedChipId = gameChipId(chipId);
   const chips = Math.min(count, 5);
   return (
-    <div className={cn('relative h-10 w-10', className)}>
+    <div className={cn('relative h-11 w-11', className)}>
       {Array.from({ length: chips }, (_, i) => (
         <img
           key={i}
           src={chipImageUrl(resolvedChipId)}
           alt=""
-          className="absolute left-0 h-8 w-8 object-contain drop-shadow-md"
+          className="absolute left-1/2 h-9 w-9 -translate-x-1/2 object-contain object-center [background:transparent] drop-shadow-md"
           style={{ top: `${i * -3}px`, zIndex: i }}
           draggable={false}
         />

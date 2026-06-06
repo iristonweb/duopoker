@@ -33,7 +33,10 @@ const defaultSlotTabs: { id: CosmeticSlot; label: string }[] = [
 ];
 
 const previewStage =
-  'relative flex h-[7.25rem] w-full items-center justify-center overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-b from-[#0c141c] to-[#030508]';
+  'relative flex h-[7.5rem] w-full items-center justify-center overflow-visible rounded-xl border border-white/[0.06] bg-gradient-to-b from-[#0c141c] to-[#030508]';
+
+const cosmeticImg =
+  'relative z-[1] object-contain object-center [background:transparent] [image-rendering:auto]';
 
 const feltSpotlight =
   'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(13,61,40,0.45)_0%,rgba(3,5,8,0.15)_52%,transparent_72%)]';
@@ -48,7 +51,7 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
         <img
           src={src}
           alt=""
-          className="relative z-[1] h-[6.5rem] w-auto max-w-[88%] object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.55)]"
+          className={`${cosmeticImg} h-[6.5rem] w-auto max-w-[88%] drop-shadow-[0_8px_20px_rgba(0,0,0,0.55)]`}
           loading="lazy"
           decoding="async"
         />
@@ -63,7 +66,7 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
         <img
           src={src}
           alt=""
-          className="relative z-[1] h-[5.5rem] w-[5.5rem] object-contain object-center drop-shadow-[0_8px_18px_rgba(0,0,0,0.6)]"
+          className={`${cosmeticImg} h-[6.25rem] w-[6.25rem] max-w-[92%] drop-shadow-[0_8px_18px_rgba(0,0,0,0.6)]`}
           loading="lazy"
           decoding="async"
         />
@@ -83,7 +86,7 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
           <img
             src={src}
             alt=""
-            className="relative z-[1] h-[5.5rem] w-[5.5rem] object-contain object-center drop-shadow-[0_0_14px_rgba(232,197,71,0.18)]"
+            className={`${cosmeticImg} h-[6rem] w-[6rem] max-w-[92%] drop-shadow-[0_0_14px_rgba(232,197,71,0.18)]`}
             loading="lazy"
             decoding="async"
           />
@@ -99,7 +102,7 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
         <img
           src={src}
           alt=""
-          className="relative z-[1] max-h-[4.5rem] w-[94%] object-contain object-center drop-shadow-[0_4px_14px_rgba(0,0,0,0.65)]"
+          className={`${cosmeticImg} max-h-[4.75rem] w-[96%] drop-shadow-[0_4px_14px_rgba(0,0,0,0.65)]`}
           loading="lazy"
           decoding="async"
         />
