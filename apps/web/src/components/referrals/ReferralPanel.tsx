@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { nextReferralMilestone } from '@duopoker/shared-types';
@@ -39,6 +39,8 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
   const [applyCode, setApplyCode] = useState('');
   const [msg, setMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const urlRefApplied = useRef(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -51,23 +53,13 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
     void load();
   }, [load]);
 
-  if (!accessToken) {
-    if (!isLobby) return null;
-    return (
-      <GlassPanel glow="gold" className="flex h-full flex-col justify-between border-gold/15 p-6">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{t('referral.eyebrow')}</p>
-          <h2 className="mt-1 font-display text-xl font-semibold text-ivory">{t('referral.title')}</h2>
-          <p className="mt-2 text-sm text-muted">{t('referral.lobbyTeaser')}</p>
-        </div>
-      </GlassPanel>
-    );
-  }
-
   const shareUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/lobby?ref=${data?.code ?? ''}` : '';
 
   const milestoneLabel = (m: Milestone) => (i18n.language.startsWith('ru') ? m.labelRu : m.labelEn);
+
+  const referralStatus = (status: string) =>
+    t(`referral.status.${status}`, { defaultValue: status });
 
   const claim = async (level: number) => {
     setBusy(true);
@@ -86,14 +78,15 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
     }
   };
 
-  const apply = async () => {
-    if (!applyCode.trim()) return;
+  const apply = async (rawCode?: string) => {
+    const code = (rawCode ?? applyCode).trim();
+    if (!code) return;
     setBusy(true);
     setMsg(undefined);
     try {
       const res = await apiFetch('/referrals/apply', {
         method: 'POST',
-        body: JSON.stringify({ code: applyCode.trim() })
+        body: JSON.stringify({ code })
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string };
@@ -108,8 +101,62 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
     }
   };
 
+  const copyShareLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setMsg(t('referral.copyFailed'));
+    }
+  };
+
+  useEffect(() => {
+    if (!accessToken || !data || data.referredBy || urlRefApplied.current) return;
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (!ref) return;
+    urlRefApplied.current = true;
+    setApplyCode(ref.toUpperCase());
+    setBusy(true);
+    void apiFetch('/referrals/apply', {
+      method: 'POST',
+      body: JSON.stringify({ code: ref.trim() })
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as { error?: string };
+          setMsg(
+            t(`referral.errors.${err.error ?? 'unknown'}`, { defaultValue: t('referral.applyFailed') })
+          );
+          return;
+        }
+        setMsg(t('referral.applyOk'));
+        await load();
+      })
+      .finally(() => setBusy(false));
+  }, [accessToken, data, apiFetch, load, t]);
+
   const nextMilestone = data ? nextReferralMilestone(data.activeReferrals) : undefined;
   const claimable = data?.milestones.find((m) => m.claimable);
+
+  if (!accessToken) {
+    if (!isLobby) return null;
+    return (
+      <GlassPanel glow="gold" className="flex h-full flex-col justify-between border-gold/15 p-6">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{t('referral.eyebrow')}</p>
+          <h2 className="mt-1 font-display text-xl font-semibold text-ivory">{t('referral.title')}</h2>
+          <p className="mt-2 text-sm text-muted">{t('referral.lobbyTeaser')}</p>
+        </div>
+        <Link to="/lobby#auth" className="mt-4">
+          <Button variant="primary" size="md" className="w-full">
+            {t('referral.signInCta')}
+          </Button>
+        </Link>
+      </GlassPanel>
+    );
+  }
 
   if (isLobby) {
     return (
@@ -147,9 +194,9 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
             <button
               type="button"
               className="premium-btn premium-btn-ghost text-xs"
-              onClick={() => void navigator.clipboard.writeText(shareUrl)}
+              onClick={() => void copyShareLink()}
             >
-              {t('referral.copyLink')}
+              {copied ? t('referral.copied') : t('referral.copyLink')}
             </button>
           </div>
         </div>
@@ -222,9 +269,9 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
           <button
             type="button"
             className="premium-btn premium-btn-ghost text-xs"
-            onClick={() => void navigator.clipboard.writeText(shareUrl)}
+            onClick={() => void copyShareLink()}
           >
-            {t('referral.copyLink')}
+            {copied ? t('referral.copied') : t('referral.copyLink')}
           </button>
         </div>
         <p className="mt-2 text-[11px] text-muted">{t('referral.activeRule')}</p>
@@ -238,13 +285,16 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
             value={applyCode}
             onChange={(e) => setApplyCode(e.target.value.toUpperCase())}
           />
-          <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-sm" onClick={() => void apply()}>
+          <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-sm" onClick={() => void apply(undefined)}>
             {t('referral.apply')}
           </button>
         </div>
       ) : (
         <p className="mb-4 text-xs text-muted">
-          {t('referral.referredBy', { code: data.referredBy.code, status: data.referredBy.status })}
+          {t('referral.referredBy', {
+            code: data.referredBy.code,
+            status: referralStatus(data.referredBy.status)
+          })}
         </p>
       )}
 

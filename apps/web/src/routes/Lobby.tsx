@@ -36,7 +36,11 @@ import { PokerTable3D } from '../components/PokerTable3D';
 import { SubscriptionPerksMatrix } from '../components/subscriptions/SubscriptionPerksMatrix';
 import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { useAppStore } from '../store/useAppStore';
-import { translateAuthError, translateQueueError } from '../lib/translate-store-error';
+import {
+  isAuthReferralWarning,
+  translateAuthError,
+  translateQueueError
+} from '../lib/translate-store-error';
 import { resolveApiUrl, usesRealtimeSocket } from '../config/api';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
@@ -156,7 +160,7 @@ function AuthPanel() {
   }
 
   return (
-    <GlassPanel glow="gold" className="w-full max-w-sm border-gold/15 p-5 sm:max-w-md">
+    <GlassPanel id="auth" glow="gold" className="w-full max-w-sm border-gold/15 p-5 sm:max-w-md">
       <p className="mb-3 font-display text-lg font-semibold text-ivory">{t('auth.joinTable')}</p>
       <TabGroup
         tabs={[
@@ -176,7 +180,13 @@ function AuthPanel() {
         </p>
       ) : null}
       {authNotice ? (
-        <p className="mb-3 rounded-lg border border-emerald/20 bg-emerald/10 px-3 py-2 text-xs text-emerald">
+        <p
+          className={`mb-3 rounded-lg px-3 py-2 text-xs ${
+            isAuthReferralWarning(authNotice)
+              ? 'border border-amber-500/20 bg-amber-500/10 text-amber-200'
+              : 'border border-emerald/20 bg-emerald/10 text-emerald'
+          }`}
+        >
           {translateAuthError(authNotice)}
         </p>
       ) : null}

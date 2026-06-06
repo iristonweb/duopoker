@@ -56,7 +56,7 @@ export const REFERRAL_MILESTONES: ReferralMilestone[] = [
     subscriptionTier: 'GOLD',
     subscriptionDays: 30,
     labelRu: '50 активных — 30 000 фишек + Gold 30 дней',
-    labelEn: '50 active — 50,000 chips + Gold 30 days'
+    labelEn: '50 active — 30,000 chips + Gold 30 days'
   },
   {
     level: 5,

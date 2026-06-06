@@ -1,4 +1,6 @@
+import { TIER_RANK } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
+import { resolveUserSubscriptionTier } from './subscription-tier.js';
 
 const DAILY_BONUS_PROVIDER = 'STRIPE' as const;
 
@@ -20,6 +22,15 @@ export const activateSubscription = async (userId: string, tier: PaidSubscriptio
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
     }
   });
+};
+
+/** Base daily bonus; SILVER+ gets +50% per catalog perk. */
+export const resolveDailyBonusAmount = async (userId: string, baseAmount: number): Promise<number> => {
+  const tier = await resolveUserSubscriptionTier(userId);
+  if (TIER_RANK[tier] >= TIER_RANK.SILVER) {
+    return Math.round(baseAmount * 1.5);
+  }
+  return baseAmount;
 };
 
 export const claimDailyBonus = async (

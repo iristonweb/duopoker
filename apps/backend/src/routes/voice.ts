@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { TIER_RANK } from '@duopoker/shared-types';
 import { verifyAccessToken } from '../auth/jwt.js';
 import { config } from '../config.js';
 import { createVoiceRoomToken, isLiveKitConfigured } from '../services/livekit.js';
+import { getUserSubscriptionTier } from '../services/subscription-tier.js';
 
 const tokenSchema = z.object({
   sessionId: z.string().min(1),
@@ -56,6 +58,14 @@ voiceRouter.post('/token', async (req, res) => {
   if (!isLiveKitConfigured(cfg)) {
     return res.status(503).json({
       error: 'LiveKit not configured. Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL on the server.'
+    });
+  }
+
+  const tier = await getUserSubscriptionTier(parsed.data.userId);
+  if (TIER_RANK[tier] < TIER_RANK.GOLD) {
+    return res.status(403).json({
+      error: 'Voice chat requires Gold subscription or higher',
+      code: 'TIER_REQUIRED'
     });
   }
 

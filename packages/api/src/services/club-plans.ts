@@ -63,3 +63,18 @@ export const grantOrganizerPlan = async (
 
   return { ok: true as const, clubId, tier, lifetime, clubName: club.name };
 };
+
+export const revokeOrganizerPlan = async (clubId: string) => {
+  const club = await prisma.club.findUnique({
+    where: { id: clubId },
+    select: { id: true, name: true }
+  });
+  if (!club) return { ok: false as const, error: 'CLUB_NOT_FOUND' };
+
+  await prisma.organizerSubscription.updateMany({
+    where: { clubId, status: 'ACTIVE' },
+    data: { status: 'CANCELLED', tier: 'BASIC', expiresAt: new Date() }
+  });
+
+  return { ok: true as const, clubId, clubName: club.name };
+};

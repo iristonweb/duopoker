@@ -98,6 +98,7 @@ export function AdminPage() {
   const userRole = useAppStore((s) => s.userRole);
   const apiFetch = useAppStore((s) => s.apiFetch);
   const accessToken = useAppStore((s) => s.accessToken);
+  const userId = useAppStore((s) => s.userId);
   const fetchProfile = useAppStore((s) => s.fetchProfile);
   const joinSession = useAppStore((s) => s.joinSession);
 
@@ -224,6 +225,22 @@ export function AdminPage() {
         return;
       }
       setActionMsg(t('admin.clubPlanOk'));
+      if (selected) await openUser(selected.id);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revokeClubPlan = async (clubId: string) => {
+    setBusy(true);
+    setActionMsg(undefined);
+    try {
+      const res = await apiFetch(`/admin/clubs/${clubId}/plan/revoke`, { method: 'POST' });
+      if (!res.ok) {
+        setActionMsg(t('admin.actionFailed'));
+        return;
+      }
+      setActionMsg(t('admin.clubPlanRevoked'));
       if (selected) await openUser(selected.id);
     } finally {
       setBusy(false);
@@ -494,6 +511,10 @@ export function AdminPage() {
                       <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/role', { role: 'SUPERADMIN' })}>
                         {t('admin.makeAdmin')}
                       </button>
+                    ) : selected.id !== userId ? (
+                      <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/role', { role: 'USER' })}>
+                        {t('admin.demoteAdmin')}
+                      </button>
                     ) : null}
                   </div>
                 </section>
@@ -528,9 +549,16 @@ export function AdminPage() {
                                 {club.activeTables}/{club.limits.maxActiveTables} {t('admin.tables')}
                               </p>
                             </div>
-                            <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantClubPlan(club.id)}>
-                              {t('admin.applyClubPlan')}
-                            </button>
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantClubPlan(club.id)}>
+                                {t('admin.applyClubPlan')}
+                              </button>
+                              {club.organizerTier !== 'BASIC' ? (
+                                <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void revokeClubPlan(club.id)}>
+                                  {t('admin.revokeClubPlan')}
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                         </li>
                       ))}

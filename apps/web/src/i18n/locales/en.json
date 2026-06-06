@@ -40,7 +40,8 @@
       "network": "Could not reach the server. Check your connection.",
       "invalidCredentials": "Invalid email or password",
       "registrationFailed": "Registration failed",
-      "verificationRequired": "Account created. Check your email for a verification link."
+      "verificationRequired": "Account created. Check your email for a verification link.",
+      "referralSkipped": "Account created, but the referral code could not be applied."
     }
   },
   "profile": {
@@ -66,6 +67,14 @@
     "fileTooLarge": "Image must be under 450 KB.",
     "uploadFailed": "Could not read the file.",
     "hint": "Avatar and status are shown to everyone at your poker table. GIFs supported.",
+    "dailyBonusEyebrow": "Daily reward",
+    "dailyBonusTitle": "Daily chip bonus",
+    "dailyBonusDesc": "Claim free chips once per day. Silver+ subscribers get +50% bonus.",
+    "dailyBonusClaim": "Claim bonus",
+    "dailyBonusClaiming": "Claiming…",
+    "dailyBonusOk": "+{{amount}} chips added to your balance.",
+    "dailyBonusClaimed": "Already claimed today — come back tomorrow.",
+    "dailyBonusFailed": "Could not claim daily bonus.",
     "errors": {
       "notSignedIn": "Sign in to save your profile.",
       "saveFailed": "Could not save profile.",
@@ -398,6 +407,9 @@
     "tables": "tables",
     "applyClubPlan": "Apply plan",
     "clubPlanOk": "Club plan updated",
+    "clubPlanRevoked": "Club plan downgraded to Basic",
+    "revokeClubPlan": "Revoke plan",
+    "demoteAdmin": "Remove superadmin",
     "actionOk": "Done",
     "actionFailed": "Action failed",
     "statVipPending": "VIP invites",
@@ -428,6 +440,13 @@
     "total": "Total",
     "yourCode": "Your code",
     "copyLink": "Copy link",
+    "copied": "Copied!",
+    "copyFailed": "Could not copy link",
+    "signInCta": "Sign in to invite friends",
+    "status": {
+      "PENDING": "pending",
+      "ACTIVE": "active"
+    },
     "activeRule": "Active referral: verified email, account at least 3 days old, 20+ hands played.",
     "applyPlaceholder": "Inviter code",
     "apply": "Apply code",

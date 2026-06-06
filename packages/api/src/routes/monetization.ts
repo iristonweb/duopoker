@@ -21,7 +21,12 @@ import {
 } from '../services/yookassa.js';
 import { config, allowDevMockCheckout } from '../config.js';
 import { authGuard } from '../middleware/auth.js';
-import { activateSubscription, claimDailyBonus, recordPurchase } from '../services/monetization.js';
+import {
+  activateSubscription,
+  claimDailyBonus,
+  recordPurchase,
+  resolveDailyBonusAmount
+} from '../services/monetization.js';
 import { prisma } from '../lib/prisma.js';
 
 const purchaseSchema = z.object({
@@ -302,7 +307,8 @@ monetizationRoutes.post('/mock-subscribe', async (c) => {
 
 monetizationRoutes.post('/bonus', async (c) => {
   const uid = c.get('auth').userId;
-  const result = await claimDailyBonus(uid, config.dailyBonusChips);
+  const amount = await resolveDailyBonusAmount(uid, config.dailyBonusChips);
+  const result = await claimDailyBonus(uid, amount);
   if (!result.ok) {
     return c.json({ error: result.error }, 409);
   }

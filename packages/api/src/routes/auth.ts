@@ -15,7 +15,11 @@ import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
 import { decryptProfileRow } from '../lib/profile-privacy.js';
 import { jsonError } from '../lib/http-error.js';
 import { resolveUserRole } from '../services/admin-access.js';
-import { attachReferralOnSignup, ensureReferralCode } from '../services/referrals.js';
+import {
+  activatePendingReferralsForUser,
+  attachReferralOnSignup,
+  ensureReferralCode
+} from '../services/referrals.js';
 import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
 
 const authSchema = z.object({
@@ -102,8 +106,10 @@ authRoutes.post('/register', async (c) => {
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
     await ensureReferralCode(user.id, user.nickname);
+    let referralWarning: string | undefined;
     if (parsed.data.referralCode) {
-      await attachReferralOnSignup(user.id, parsed.data.referralCode);
+      const refResult = await attachReferralOnSignup(user.id, parsed.data.referralCode);
+      if (!refResult.ok) referralWarning = refResult.error;
     }
     const role =
       (await resolveUserRole(user.id, user.email, { bootstrapFounder: true })) ?? user.role;
@@ -118,7 +124,8 @@ authRoutes.post('/register', async (c) => {
           emailVerified: user.emailVerified,
           role
         },
-        verificationRequired: verify && !user.emailVerified
+        verificationRequired: verify && !user.emailVerified,
+        referralWarning
       },
       201
     );
@@ -190,6 +197,7 @@ authRoutes.get('/verify-email', async (c) => {
       verificationTokenExpiresAt: null
     }
   });
+  await activatePendingReferralsForUser(user.id);
   return c.json({ ok: true, email: user.email });
 });
 

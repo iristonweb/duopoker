@@ -40,7 +40,8 @@
       "network": "Не удалось связаться с сервером. Проверьте соединение.",
       "invalidCredentials": "Неверный email или пароль",
       "registrationFailed": "Ошибка регистрации",
-      "verificationRequired": "Аккаунт создан. Проверьте email для подтверждения."
+      "verificationRequired": "Аккаунт создан. Проверьте email для подтверждения.",
+      "referralSkipped": "Аккаунт создан, но реферальный код не применился."
     }
   },
   "profile": {
@@ -66,6 +67,14 @@
     "fileTooLarge": "Изображение должно быть меньше 450 КБ.",
     "uploadFailed": "Не удалось прочитать файл.",
     "hint": "Аватар и статус видны всем за вашим покерным столом. Поддерживаются GIF.",
+    "dailyBonusEyebrow": "Ежедневная награда",
+    "dailyBonusTitle": "Ежедневный бонус фишек",
+    "dailyBonusDesc": "Бесплатные фишки раз в сутки. Подписчики Silver+ получают +50% к бонусу.",
+    "dailyBonusClaim": "Забрать бонус",
+    "dailyBonusClaiming": "Получение…",
+    "dailyBonusOk": "+{{amount}} фишек на баланс.",
+    "dailyBonusClaimed": "Бонус уже получен сегодня — возвращайтесь завтра.",
+    "dailyBonusFailed": "Не удалось получить бонус.",
     "errors": {
       "notSignedIn": "Войдите, чтобы сохранить профиль.",
       "saveFailed": "Не удалось сохранить профиль.",
@@ -398,6 +407,9 @@
     "tables": "столов",
     "applyClubPlan": "Применить план",
     "clubPlanOk": "План клуба обновлён",
+    "clubPlanRevoked": "План клуба сброшен на Basic",
+    "revokeClubPlan": "Отозвать план",
+    "demoteAdmin": "Снять superadmin",
     "actionOk": "Готово",
     "actionFailed": "Не удалось выполнить",
     "statVipPending": "VIP-приглашения",
@@ -428,6 +440,13 @@
     "total": "Всего",
     "yourCode": "Ваш код",
     "copyLink": "Скопировать ссылку",
+    "copied": "Скопировано!",
+    "copyFailed": "Не удалось скопировать ссылку",
+    "signInCta": "Войти и приглашать друзей",
+    "status": {
+      "PENDING": "ожидает",
+      "ACTIVE": "активен"
+    },
     "activeRule": "Активный реферал: подтверждённый email, аккаунт от 3 дней, не менее 20 раздач за столом.",
     "applyPlaceholder": "Код пригласившего",
     "apply": "Применить код",

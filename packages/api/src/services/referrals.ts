@@ -10,7 +10,6 @@ import {
   type ReferralMilestone
 } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
-import { grantCosmeticItems, grantSubscription } from './admin-grants.js';
 import { BOT_PREFIX } from './game-session.js';
 
 const normalizeCode = (raw: string) => raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -78,6 +77,24 @@ const cosmeticsUpToTier = (tier: PaidSubscriptionTier) =>
     .filter((c) => TIER_RANK[c.requiredTier] <= TIER_RANK[tier])
     .map((c) => c.id);
 
+/** Re-check pending referral after email verification (hands/age may already be satisfied). */
+export const activatePendingReferralsForUser = async (userId: string) => {
+  const ref = await prisma.referral.findUnique({
+    where: { referredId: userId },
+    include: { referred: { select: { emailVerified: true, createdAt: true } } }
+  });
+  if (!ref || ref.status !== 'PENDING') return;
+
+  const ageOk = Date.now() - ref.referred.createdAt.getTime() >= REFERRAL_ACTIVE_MIN_AGE_MS;
+  const handsOk = ref.handsPlayed >= REFERRAL_ACTIVE_MIN_HANDS;
+  if (ageOk && handsOk && ref.referred.emailVerified) {
+    await prisma.referral.update({
+      where: { id: ref.id },
+      data: { status: 'ACTIVE', activatedAt: new Date() }
+    });
+  }
+};
+
 export const recordReferralHands = async (playerIds: string[]) => {
   const humans = playerIds.filter((id) => id && !id.startsWith(BOT_PREFIX) && !id.startsWith('guest-'));
   if (!humans.length) return;
@@ -141,23 +158,60 @@ export const getReferralDashboard = async (userId: string) => {
   };
 };
 
-const applyMilestoneRewards = async (userId: string, milestone: ReferralMilestone) => {
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+const applyMilestoneRewardsInTx = async (tx: Tx, userId: string, milestone: ReferralMilestone) => {
   if (milestone.chips > 0) {
-    await prisma.user.update({
+    await tx.user.update({
       where: { id: userId },
       data: { chips: { increment: milestone.chips } }
     });
   }
   if (milestone.cosmeticsTier) {
-    await grantCosmeticItems(userId, cosmeticsUpToTier(milestone.cosmeticsTier));
+    const itemIds = cosmeticsUpToTier(milestone.cosmeticsTier);
+    const defs = itemIds
+      .map((id) => allCosmetics.find((c) => c.id === id))
+      .filter((d): d is NonNullable<typeof d> => Boolean(d));
+    if (defs.length) {
+      const existing = await tx.userItem.findMany({
+        where: { userId, itemId: { in: defs.map((d) => d.id) } },
+        select: { itemId: true }
+      });
+      const owned = new Set(existing.map((row) => row.itemId));
+      const missing = defs.filter((d) => !owned.has(d.id));
+      if (missing.length) {
+        await tx.userItem.createMany({
+          data: missing.map((d) => ({
+            userId,
+            itemId: d.id,
+            rarity: d.rarity,
+            equipped: false
+          })),
+          skipDuplicates: true
+        });
+      }
+    }
   }
   if (milestone.subscriptionTier) {
-    await grantSubscription(
-      userId,
-      milestone.subscriptionTier,
-      false,
-      milestone.subscriptionDays ?? 30
+    const subId = `${userId}-${milestone.subscriptionTier}`;
+    const expiresAt = new Date(
+      Date.now() + 1000 * 60 * 60 * 24 * (milestone.subscriptionDays ?? 30)
     );
+    await tx.subscription.upsert({
+      where: { id: subId },
+      create: {
+        id: subId,
+        userId,
+        tier: milestone.subscriptionTier,
+        status: 'ACTIVE',
+        expiresAt
+      },
+      update: {
+        tier: milestone.subscriptionTier,
+        status: 'ACTIVE',
+        expiresAt
+      }
+    });
   }
 };
 
@@ -172,17 +226,23 @@ export const claimReferralMilestone = async (userId: string, level: number) => {
     return { ok: false as const, error: 'NOT_ENOUGH_ACTIVE' };
   }
 
-  const existing = await prisma.referralRewardClaim.findUnique({
-    where: { userId_level: { userId, level } }
-  });
-  if (existing) return { ok: false as const, error: 'ALREADY_CLAIMED' };
-
-  await prisma.$transaction(async (tx) => {
-    await tx.referralRewardClaim.create({
-      data: { userId, level, chips: milestone.chips }
+  try {
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.referralRewardClaim.findUnique({
+        where: { userId_level: { userId, level } }
+      });
+      if (existing) throw new Error('ALREADY_CLAIMED');
+      await applyMilestoneRewardsInTx(tx, userId, milestone);
+      await tx.referralRewardClaim.create({
+        data: { userId, level, chips: milestone.chips }
+      });
     });
-  });
-  await applyMilestoneRewards(userId, milestone);
+  } catch (err) {
+    if (err instanceof Error && err.message === 'ALREADY_CLAIMED') {
+      return { ok: false as const, error: 'ALREADY_CLAIMED' };
+    }
+    throw err;
+  }
 
   return { ok: true as const, milestone, chips: milestone.chips };
 };

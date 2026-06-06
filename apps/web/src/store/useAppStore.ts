@@ -522,6 +522,7 @@ export const useAppStore = create<AppStore>((set, get) => {
           role?: 'USER' | 'SUPERADMIN';
         };
         verificationRequired?: boolean;
+        referralWarning?: string;
       };
       localStorage.setItem(LS_ACCESS, data.accessToken);
       localStorage.setItem(LS_REFRESH, data.refreshToken);
@@ -535,7 +536,11 @@ export const useAppStore = create<AppStore>((set, get) => {
         nickname: data.user.nickname,
         userRole: data.user.role ?? 'USER',
         authError: undefined,
-        authNotice: data.verificationRequired ? 'verificationRequired' : undefined
+        authNotice: data.verificationRequired
+          ? 'verificationRequired'
+          : data.referralWarning
+            ? `referralWarning:${data.referralWarning}`
+            : undefined
       });
       get().socket?.disconnect();
       set({ socket: undefined });

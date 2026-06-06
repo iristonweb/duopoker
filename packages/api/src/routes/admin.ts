@@ -12,7 +12,7 @@ import {
   grantTierCosmetics,
   revokeUserSubscriptions
 } from '../services/admin-grants.js';
-import { grantOrganizerPlan } from '../services/club-plans.js';
+import { grantOrganizerPlan, revokeOrganizerPlan } from '../services/club-plans.js';
 import {
   cancelVipTable,
   createVipTableInvite,
@@ -260,6 +260,12 @@ adminRoutes.post('/clubs/:id/plan', async (c) => {
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const result = await grantOrganizerPlan(c.req.param('id'), parsed.data.tier, parsed.data.lifetime);
+  if (!result.ok) return c.json({ error: result.error }, 404);
+  return c.json(result);
+});
+
+adminRoutes.post('/clubs/:id/plan/revoke', async (c) => {
+  const result = await revokeOrganizerPlan(c.req.param('id'));
   if (!result.ok) return c.json({ error: result.error }, 404);
   return c.json(result);
 });
