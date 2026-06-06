@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Button } from './Button';
 import { GlassPanel } from './GlassPanel';
 import { cn } from '../cn';
 
@@ -65,6 +66,11 @@ export function SubscriptionTierCard({
   perks,
   active = false,
   featured = false,
+  expanded = false,
+  onToggleExpand,
+  expandLabel = 'View details',
+  collapseLabel = 'Hide details',
+  detailsContent,
   children,
   className
 }: {
@@ -77,6 +83,11 @@ export function SubscriptionTierCard({
   perks?: string[];
   active?: boolean;
   featured?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+  expandLabel?: string;
+  collapseLabel?: string;
+  detailsContent?: ReactNode;
   children?: ReactNode;
   className?: string;
 }) {
@@ -144,7 +155,7 @@ export function SubscriptionTierCard({
           <p className="shrink-0 text-base font-semibold text-gold sm:text-lg">{price}</p>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted">{summary}</p>
-        {featureBullets?.length ? (
+        {expanded && featureBullets?.length ? (
           <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
             {featureBullets.map((bullet) => (
               <li key={bullet} className="flex items-start gap-2 text-xs text-ivory/90">
@@ -156,8 +167,11 @@ export function SubscriptionTierCard({
             ))}
           </ul>
         ) : null}
-        {perks?.length ? (
-          <ul className={cn('space-y-1.5', featureBullets?.length ? 'mt-2' : 'mt-3 border-t border-white/10 pt-3')}>
+        {expanded && detailsContent ? (
+          <div className="mt-4 border-t border-white/10 pt-4">{detailsContent}</div>
+        ) : null}
+        {expanded && perks?.length && !detailsContent ? (
+          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
             {perks.map((perk) => (
               <li key={perk} className="flex items-start gap-2 text-xs text-ivory/85">
                 <span className="mt-0.5 text-gold" aria-hidden>
@@ -168,7 +182,14 @@ export function SubscriptionTierCard({
             ))}
           </ul>
         ) : null}
-        {children ? <div className="mt-4 border-t border-white/10 pt-4">{children}</div> : null}
+        {onToggleExpand ? (
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+            <Button variant="ghost" size="sm" type="button" onClick={onToggleExpand}>
+              {expanded ? collapseLabel : expandLabel}
+            </Button>
+          </div>
+        ) : null}
+        {children ? <div className={cn('mt-4', !onToggleExpand && 'border-t border-white/10 pt-4')}>{children}</div> : null}
       </div>
     </GlassPanel>
   );

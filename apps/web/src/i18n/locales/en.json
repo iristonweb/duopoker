@@ -245,7 +245,12 @@
     "subscriptionActivatedTier": "{{tier}} activated — equip your new cosmetics below.",
     "subscriptionActive": "Active plan",
     "subscribing": "Activating…",
-    "checkoutCancelled": "Checkout cancelled."
+    "checkoutCancelled": "Checkout cancelled.",
+    "subscriptionsEyebrow": "DP CLUB",
+    "subscriptionsTitle": "Subscriptions",
+    "subscriptionsDesc": "Pick a tier — tap View details to see the cosmetic bundle and perks.",
+    "subscriptionViewDetails": "View details",
+    "subscriptionHideDetails": "Hide details"
   },
   "table": {
     "liveTable": "Live table",

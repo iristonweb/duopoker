@@ -8,8 +8,7 @@ import {
   clubsHeroBanner,
   lobbyHeroBanner,
   lobbyPreviewBanner,
-  subscriptionBannerImages,
-  subscriptionCosmetics
+  subscriptionBannerImages
 } from '@duopoker/shared-types';
 import {
   AppBackground,
@@ -33,7 +32,7 @@ import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { PokerTable3D } from '../components/PokerTable3D';
-import { SubscriptionPerksMatrix } from '../components/subscriptions/SubscriptionPerksMatrix';
+import { SubscriptionCosmeticBundle } from '../components/subscriptions/SubscriptionCosmeticBundle';
 import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { useAppStore } from '../store/useAppStore';
 import {
@@ -286,6 +285,7 @@ export const Lobby = () => {
   const [catalogYookassaConfigured, setCatalogYookassaConfigured] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
+  const [expandedSubTier, setExpandedSubTier] = useState<PaidSubscriptionTier | null>(null);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
   const [queueBusy, setQueueBusy] = useState(false);
   const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -479,6 +479,13 @@ export const Lobby = () => {
     return Array.isArray(bullets) ? (bullets as string[]) : [];
   };
 
+  const cosmeticSlotLabels = {
+    deck: t('cosmetics.tabs.deck'),
+    chip: t('cosmetics.tabs.chip'),
+    frame: t('cosmetics.tabs.frame'),
+    title: t('cosmetics.tabs.title')
+  };
+
   const subscriptionPriceLabel = (tier: PaidSubscriptionTier) => {
     const fromCatalog = catalogSubs.find((s) => s.tier === tier)?.priceRubMonthly;
     if (typeof fromCatalog === 'number') {
@@ -487,11 +494,6 @@ export const Lobby = () => {
     const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}`;
     return t(priceKey);
   };
-
-  const tierPerks = (tier: PaidSubscriptionTier) =>
-    subscriptionCosmetics
-      .filter((c) => c.requiredTier === tier)
-      .map((c) => c.name);
 
   const kettle = session
     ? session.pot +
@@ -781,41 +783,55 @@ export const Lobby = () => {
             {checkoutMsg ? (
               <p className="rounded-xl border border-gold/25 bg-gold/10 px-4 py-3 text-sm text-gold-light">{checkoutMsg}</p>
             ) : null}
-            <div className="mb-6">
-              <SubscriptionPerksMatrix />
-            </div>
-            <div id="subscriptions" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {PAID_TIERS.map((tier) => {
-                const active = subscriptionTier === tier;
-                return (
-                  <SubscriptionTierCard
-                    key={tier}
-                    tier={tier}
-                    price={subscriptionPriceLabel(tier)}
-                    tierName={t(`subscriptions.${tier.toLowerCase()}`)}
-                    perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}`)}
-                    featureBullets={tierPerkBullets(tier)}
-                    perks={tierPerks(tier)}
-                    active={active}
-                    featured={tier === 'BLACK'}
-                    bannerUrl={subBanner(tier)}
-                  >
-                    <Button
-                      variant={active ? 'ghost' : 'secondary'}
-                      size="sm"
-                      className="w-full"
-                      disabled={active || checkoutBusy === tier}
-                      onClick={() => void startSubscription(tier)}
+            <div id="subscriptions" className="mb-6">
+              <SectionHeader
+                eyebrow={t('lobby.subscriptionsEyebrow')}
+                title={t('lobby.subscriptionsTitle')}
+                description={t('lobby.subscriptionsDesc')}
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {PAID_TIERS.map((tier) => {
+                  const active = subscriptionTier === tier;
+                  const expanded = expandedSubTier === tier;
+                  return (
+                    <SubscriptionTierCard
+                      key={tier}
+                      tier={tier}
+                      className={expanded ? 'sm:col-span-2 lg:col-span-3' : undefined}
+                      price={subscriptionPriceLabel(tier)}
+                      tierName={t(`subscriptions.${tier.toLowerCase()}`)}
+                      perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}`)}
+                      featureBullets={expanded ? tierPerkBullets(tier) : undefined}
+                      active={active}
+                      featured={tier === 'BLACK'}
+                      expanded={expanded}
+                      expandLabel={t('lobby.subscriptionViewDetails')}
+                      collapseLabel={t('lobby.subscriptionHideDetails')}
+                      onToggleExpand={() => setExpandedSubTier(expanded ? null : tier)}
+                      detailsContent={
+                        expanded ? (
+                          <SubscriptionCosmeticBundle tier={tier} labels={cosmeticSlotLabels} />
+                        ) : undefined
+                      }
+                      bannerUrl={subBanner(tier)}
                     >
-                      {active
-                        ? t('lobby.subscriptionActive')
-                        : checkoutBusy === tier
-                          ? t('lobby.subscribing')
-                          : t('lobby.subscribe')}
-                    </Button>
-                  </SubscriptionTierCard>
-                );
-              })}
+                      <Button
+                        variant={active ? 'ghost' : 'secondary'}
+                        size="sm"
+                        className="w-full"
+                        disabled={active || checkoutBusy === tier}
+                        onClick={() => void startSubscription(tier)}
+                      >
+                        {active
+                          ? t('lobby.subscriptionActive')
+                          : checkoutBusy === tier
+                            ? t('lobby.subscribing')
+                            : t('lobby.subscribe')}
+                      </Button>
+                    </SubscriptionTierCard>
+                  );
+                })}
+              </div>
             </div>
           </motion.div>
         </div>

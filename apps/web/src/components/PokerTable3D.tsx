@@ -200,10 +200,6 @@ export function PokerTable3D({
                 showTier={tier === 'BLACK' || tier === 'DIAMOND' || tier === 'PLATINUM'}
               />
 
-              <p className="relative z-[1] max-w-[5.5rem] truncate text-center text-[10px] font-medium text-zinc-200 sm:max-w-[7rem] sm:text-xs">
-                {player.name}
-              </p>
-
               <div className="relative z-[1] flex items-center gap-1.5 rounded-xl border border-white/10 bg-black/55 px-2 py-0.5 shadow-lg backdrop-blur-sm sm:px-2.5 sm:py-1">
                 <PokerChipStack chipId={seatChipId} count={Math.min(4, 2 + Math.floor(player.stack / 5000))} />
                 <span className="font-mono text-[10px] font-semibold text-emerald">{player.stack.toLocaleString()}</span>

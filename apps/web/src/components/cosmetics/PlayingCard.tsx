@@ -9,10 +9,13 @@ const isRed = (s: string) => s === 'H' || s === 'D';
 const isFace = (r: string) => r === 'A' || r === 'K' || r === 'Q' || r === 'J';
 
 const sizeMap = {
-  sm: { box: 'h-[4.5rem] w-[3.15rem]', radius: 'rounded-[0.45rem]', pip: 'text-lg', corner: 'text-[0.62rem]', face: 'text-xl' },
-  md: { box: 'h-[5.75rem] w-[4rem]', radius: 'rounded-[0.55rem]', pip: 'text-2xl', corner: 'text-[0.72rem]', face: 'text-2xl' },
-  lg: { box: 'h-[7.5rem] w-[5.25rem]', radius: 'rounded-[0.65rem]', pip: 'text-3xl', corner: 'text-sm', face: 'text-3xl' }
+  sm: { height: 'h-[4.5rem]', radius: 'rounded-[0.45rem]', pip: 'text-lg', corner: 'text-[0.62rem]', face: 'text-xl' },
+  md: { height: 'h-[5.75rem]', radius: 'rounded-[0.55rem]', pip: 'text-2xl', corner: 'text-[0.72rem]', face: 'text-2xl' },
+  lg: { height: 'h-[7.5rem]', radius: 'rounded-[0.65rem]', pip: 'text-3xl', corner: 'text-sm', face: 'text-3xl' }
 } as const;
+
+const cardShell = (size: keyof typeof sizeMap, className?: string) =>
+  cn('relative aspect-[5/7] w-auto overflow-hidden', sizeMap[size].height, sizeMap[size].radius, className);
 
 function CardFace({
   rank,
@@ -32,11 +35,12 @@ function CardFace({
 
   return (
     <div
-      className={cn(
-        'relative overflow-hidden bg-[#fdfbf7] shadow-[0_10px_28px_rgba(0,0,0,0.45)] ring-1 ring-black/10',
-        s.box,
-        s.radius,
-        className
+      className={cardShell(
+        size,
+        cn(
+          'bg-[#fdfbf7] shadow-[0_10px_28px_rgba(0,0,0,0.45)] ring-1 ring-black/10',
+          className
+        )
       )}
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/80 via-transparent to-black/[0.04]" />
@@ -90,24 +94,19 @@ export function PlayingCard({
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const s = sizeMap[size];
-
   if (!faceUp || !card) {
     const effectClass = deckBackEffectClass(deckId);
     return (
       <div
-        className={cn(
-          'relative overflow-hidden ring-1 ring-white/15',
-          s.box,
-          s.radius,
-          effectClass,
-          className
+        className={cardShell(
+          size,
+          cn('relative ring-1 ring-white/15', effectClass, className)
         )}
       >
         <img
           src={deckBackUrl(deckId)}
           alt=""
-          className="h-full w-full object-contain object-center"
+          className="h-full w-full object-cover object-center"
           draggable={false}
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-black/10" />

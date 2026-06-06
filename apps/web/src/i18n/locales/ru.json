@@ -245,7 +245,12 @@
     "subscriptionActivatedTier": "{{tier}} активирован — наденьте новую косметику ниже.",
     "subscriptionActive": "Активный план",
     "subscribing": "Активация…",
-    "checkoutCancelled": "Оплата отменена."
+    "checkoutCancelled": "Оплата отменена.",
+    "subscriptionsEyebrow": "DP CLUB",
+    "subscriptionsTitle": "Подписки",
+    "subscriptionsDesc": "Выберите тариф — нажмите «Подробнее», чтобы увидеть набор косметики и привилегии.",
+    "subscriptionViewDetails": "Подробнее",
+    "subscriptionHideDetails": "Свернуть"
   },
   "table": {
     "liveTable": "Живой стол",
