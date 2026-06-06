@@ -25,7 +25,13 @@ type Props = {
   events: GameFeedEvent[];
   pulseKey: number;
   soundOn: boolean;
+  musicOn: boolean;
   onSoundToggle: () => void;
+  onMusicToggle: () => void;
+  soundOnLabel: string;
+  soundOffLabel: string;
+  musicOnLabel: string;
+  musicOffLabel: string;
   title: string;
   openLabel: string;
   closeLabel: string;
@@ -37,7 +43,13 @@ export function GameStoryPanel({
   events,
   pulseKey,
   soundOn,
+  musicOn,
   onSoundToggle,
+  onMusicToggle,
+  soundOnLabel,
+  soundOffLabel,
+  musicOnLabel,
+  musicOffLabel,
   title,
   openLabel,
   closeLabel,
@@ -97,10 +109,30 @@ export function GameStoryPanel({
         <button
           type="button"
           onClick={onSoundToggle}
-          className="rounded-full border border-white/10 bg-black/45 px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-subtle backdrop-blur-sm transition hover:text-muted"
-          aria-label={soundOn ? 'Sound on' : 'Sound off'}
+          className={cn(
+            'rounded-full border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] backdrop-blur-sm transition',
+            soundOn
+              ? 'border-gold/30 bg-gold/10 text-gold-light'
+              : 'border-white/10 bg-black/45 text-subtle hover:text-muted'
+          )}
+          aria-label={soundOn ? soundOnLabel : soundOffLabel}
+          title={soundOn ? soundOnLabel : soundOffLabel}
         >
           {soundOn ? '🔊' : '🔇'}
+        </button>
+        <button
+          type="button"
+          onClick={onMusicToggle}
+          className={cn(
+            'rounded-full border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] backdrop-blur-sm transition',
+            musicOn
+              ? 'border-violet-400/35 bg-violet-500/15 text-violet-200'
+              : 'border-white/10 bg-black/45 text-subtle hover:text-muted'
+          )}
+          aria-label={musicOn ? musicOnLabel : musicOffLabel}
+          title={musicOn ? musicOnLabel : musicOffLabel}
+        >
+          {musicOn ? '🎵' : '🎶'}
         </button>
       </div>
 

@@ -54,10 +54,10 @@ test('clubs SPA route does not 404', async ({ page }) => {
   await expect(page.locator('body')).not.toContainText('404: NOT_FOUND');
 });
 
-test('lobby shows cosmetics section', async ({ page }) => {
+test('lobby shows subscriptions section', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
-  await expect(page.getByRole('heading', { name: /Стиль за столом/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Открыть профиль/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Подписки/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Подробнее/i }).first()).toBeVisible();
 });
 
 test('legal terms route is reachable', async ({ page }) => {

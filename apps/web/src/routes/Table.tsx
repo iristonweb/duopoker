@@ -17,6 +17,8 @@ import { JokerNotebookPanel } from '../components/table/JokerNotebookPanel';
 import { BustedPlayerOverlay } from '../components/table/BustedPlayerOverlay';
 import { useCommunityCardSounds, useTableGameFeed } from '../hooks/useTableGameFeed';
 import { useTableSessionTick } from '../hooks/useTableSessionTick';
+import { loadTableMusicPref, loadTableSfxPref, saveTableSfxPref, useTableMusic } from '../hooks/useTableMusic';
+import { saveTableMusicPref } from '../lib/table-music';
 import { useAppStore } from '../store/useAppStore';
 import { usesRealtimeSocket } from '../config/api';
 import { rotatePlayersForHero } from '../lib/table-layout';
@@ -124,7 +126,8 @@ export const Table = () => {
   const [jokerBid, setJokerBid] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [leaving, setLeaving] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
+  const [soundOn, setSoundOn] = useState(() => loadTableSfxPref());
+  const [musicOn, setMusicOn] = useState(() => loadTableMusicPref());
   const [bustedDismissed, setBustedDismissed] = useState(false);
   const [ghostBoardVisible, setGhostBoardVisible] = useState(false);
 
@@ -164,6 +167,7 @@ export const Table = () => {
 
   const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(session, label, t, soundOn);
   useCommunityCardSounds(session?.communityCards?.length ?? 0, soundOn);
+  useTableMusic(musicOn);
 
   const sid = session?.sessionId;
   const matchRoute = sid && routeSessionId && sid === routeSessionId;
@@ -480,7 +484,23 @@ export const Table = () => {
               events={feedEvents}
               pulseKey={feedPulseKey}
               soundOn={soundOn}
-              onSoundToggle={() => setSoundOn((v) => !v)}
+              musicOn={musicOn}
+              onSoundToggle={() =>
+                setSoundOn((v) => {
+                  saveTableSfxPref(!v);
+                  return !v;
+                })
+              }
+              onMusicToggle={() =>
+                setMusicOn((v) => {
+                  saveTableMusicPref(!v);
+                  return !v;
+                })
+              }
+              soundOnLabel={t('table.soundOn')}
+              soundOffLabel={t('table.soundOff')}
+              musicOnLabel={t('table.musicOn')}
+              musicOffLabel={t('table.musicOff')}
               title={t('table.feedTitle')}
               openLabel={t('table.feedOpenHistory')}
               closeLabel={t('table.feedCloseHistory')}

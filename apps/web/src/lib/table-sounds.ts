@@ -2,7 +2,8 @@
 
 let ctx: AudioContext | null = null;
 
-const getCtx = (): AudioContext | null => {
+/** Shared Web Audio context for table SFX and ambient music. */
+export const getAudioContext = (): AudioContext | null => {
   if (typeof window === 'undefined') return null;
   if (!ctx) {
     try {
@@ -14,6 +15,8 @@ const getCtx = (): AudioContext | null => {
   if (ctx.state === 'suspended') void ctx.resume().catch(() => undefined);
   return ctx;
 };
+
+const getCtx = getAudioContext;
 
 const tone = (freq: number, durationMs: number, type: OscillatorType = 'sine', gain = 0.08) => {
   const audio = getCtx();

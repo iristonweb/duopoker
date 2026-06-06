@@ -15,7 +15,7 @@ export function GameTableShell({
   className?: string;
 }) {
   return (
-    <div className={cn('relative h-dvh w-full overflow-hidden', className)}>
+    <div className={cn('relative h-dvh w-full overflow-hidden overscroll-none touch-pan-y', className)}>
       <AppBackground />
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         {hud}
