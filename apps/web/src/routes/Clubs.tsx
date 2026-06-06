@@ -49,15 +49,16 @@ export const Clubs = () => {
       title={t('clubs.title')}
       description={t('clubs.desc')}
     >
-      <div className="glass-shine relative mb-8 overflow-hidden rounded-2xl border border-white/10">
+      <div className="glass-shine relative mb-8 overflow-hidden rounded-2xl border border-white/10 ring-1 ring-white/5">
         <img
           src={clubsHeroBanner}
           alt=""
-          className="h-32 w-full object-cover sm:h-40"
+          className="block h-40 w-full object-cover object-center sm:h-48"
           loading="lazy"
           decoding="async"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/50 via-background/10 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
       </div>
 
       {!accessToken ? (

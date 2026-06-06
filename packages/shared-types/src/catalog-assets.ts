@@ -25,7 +25,7 @@ export type OrganizerPlanTier = 'BASIC' | 'PRO' | 'NETWORK';
 
 export const lobbyHeroBanner = '/assets/banners/lobby-hero.svg';
 export const lobbyPreviewBanner = '/assets/banners/lobby-preview.png';
-export const clubsHeroBanner = '/assets/banners/clubs-hero.svg';
+export const clubsHeroBanner = '/assets/banners/clubs-hero.png';
 export const appBackgroundUrl = '/assets/banners/app-background.svg';
 export const cardsBackgroundUrl = '/assets/banners/cards-background.png';
 
@@ -61,10 +61,10 @@ export const catalogGameModes: CatalogGameMode[] = [
 ];
 
 export const subscriptionBannerImages: Record<CatalogSubscription['tier'], string> = {
-  SILVER: '/assets/subscriptions/silver.svg',
-  GOLD: '/assets/subscriptions/gold.svg',
-  PLATINUM: '/assets/subscriptions/platinum.svg',
-  ROYAL: '/assets/subscriptions/royal.svg'
+  SILVER: '/assets/subscriptions/silver.png',
+  GOLD: '/assets/subscriptions/gold.png',
+  PLATINUM: '/assets/subscriptions/platinum.png',
+  ROYAL: '/assets/subscriptions/royal.png'
 };
 
 export const organizerPlanBanners: Record<OrganizerPlanTier, string> = {

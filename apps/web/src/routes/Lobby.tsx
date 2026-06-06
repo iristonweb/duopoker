@@ -481,14 +481,24 @@ export const Lobby = () => {
             </div>
             <GlassPanel
               glow={opponentType === 'BOT' ? 'emerald' : 'gold'}
-              className="mt-2 border-white/10 p-4 sm:p-5"
+              className="relative mt-2 overflow-hidden border-white/10 p-0"
             >
-              <SectionHeader
-                eyebrow={t('lobby.opponentEyebrow')}
-                title={t('lobby.opponentTitle')}
-                description={t('lobby.opponentDesc')}
-                className="mb-4"
+              <div
+                className={cn(
+                  'h-1 w-full',
+                  opponentType === 'BOT'
+                    ? 'bg-gradient-to-r from-transparent via-emerald to-transparent'
+                    : 'bg-gradient-to-r from-transparent via-gold to-transparent'
+                )}
               />
+              <div className="border-b border-white/10 bg-black/20 px-4 py-4 sm:px-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
+                  {t('lobby.opponentEyebrow')}
+                </p>
+                <h3 className="mt-1 font-display text-lg font-semibold text-ivory">{t('lobby.opponentTitle')}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-subtle">{t('lobby.opponentDesc')}</p>
+              </div>
+              <div className="space-y-4 p-4 sm:p-5">
               <OpponentSelector
                 value={opponentType}
                 onChange={setOpponentType}
@@ -505,7 +515,7 @@ export const Lobby = () => {
                     hint: t('lobby.opponentBotHint')
                   }
                 ]}
-                className="mb-4"
+                className="mb-0"
               />
               {opponentType === 'BOT' ? (
                 <PlayerCountSelector
@@ -513,7 +523,6 @@ export const Lobby = () => {
                   onChange={setBotPlayerCount}
                   label={t('lobby.botPlayerCount')}
                   hint={t('lobby.botPlayerCountHint')}
-                  className="mb-4"
                 />
               ) : null}
               <Button
@@ -555,6 +564,7 @@ export const Lobby = () => {
                   </Button>
                 </Link>
               ) : null}
+              </div>
             </GlassPanel>
           </motion.div>
 
@@ -692,20 +702,22 @@ export const Lobby = () => {
         </div>
 
         <motion.div
-          className="glass-shine relative mt-12 overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-panel"
+          className="glass-shine relative mt-12 overflow-hidden rounded-3xl border border-white/10 shadow-panel ring-1 ring-white/5"
           variants={reduceMotion ? undefined : section}
           custom={2.5}
         >
           <img
             src={clubsBannerUrl}
             alt=""
-            className="block h-36 w-full object-cover object-center sm:h-44"
+            className="block h-44 w-full object-cover object-center sm:h-52"
             loading="lazy"
+            decoding="async"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/70 via-background/20 to-transparent" />
-          <div className="relative flex flex-col gap-4 border-t border-white/10 bg-black/40 p-5 backdrop-blur-glass sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/55 via-background/15 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/85 via-background/25 to-transparent" />
+          <div className="absolute bottom-0 left-0 flex w-full flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-8">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/70">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/80">
                 {t('lobby.clubsEyebrow')}
               </p>
               <h2 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">{t('lobby.clubsTitle')}</h2>
