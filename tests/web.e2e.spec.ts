@@ -21,14 +21,14 @@ test('metrics endpoint is available', async ({ request }, testInfo) => {
 test('lobby defaults to Russian queue button', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
   await page.getByRole('radio', { name: /С людьми/i }).click();
-  await expect(page.getByRole('button', { name: /Играть Hold'em/i })).toBeVisible();
+  await expect(page.getByTestId('lobby-queue-button')).toBeVisible();
 });
 
 test('lobby language switch toggles queue button to English', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
   await page.getByRole('button', { name: 'EN' }).click();
   await page.getByRole('radio', { name: /Vs players/i }).click();
-  await expect(page.getByRole('button', { name: /Queue Hold'em/i })).toBeVisible();
+  await expect(page.getByTestId('lobby-queue-button')).toHaveText(/Queue Hold'em/i);
 });
 
 test('lobby page renders title', async ({ page }) => {

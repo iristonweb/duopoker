@@ -26,6 +26,10 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw-push.ts',
+        injectRegister: 'auto',
         includeAssets: ['manifest.webmanifest', 'favicon.png', 'apple-touch-icon.png', 'assets/**/*'],
         manifest: {
           name: 'DP CLUB — Duo Poker Club',
@@ -50,7 +54,7 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        workbox: {
+        injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,svg,webmanifest,png,webp,jpg,jpeg}'],
           globIgnores: ['**/assets/cosmetics/**/_sources/**', '**/assets/**/_sources/**'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024

@@ -114,9 +114,14 @@ type AppStore = {
   equipCosmetic: (itemId: string) => Promise<{ ok: boolean; error?: string }>;
   vipInvites: VipInvite[];
   vipLiveSession: VipLiveSession | null;
+  tableInvites: TableInvite[];
+  tableLiveSessions: TableLiveSession[];
   fetchVipInvites: () => Promise<void>;
+  fetchTableInvites: () => Promise<void>;
   acceptVipInvite: (duelId: string) => Promise<void>;
   declineVipInvite: (duelId: string) => Promise<void>;
+  acceptTableInvite: (inviteCode: string) => Promise<{ clubId: string; tableId: string }>;
+  declineTableInvite: (seatId: string) => Promise<void>;
 };
 
 export type VipInvite = {
@@ -132,6 +137,28 @@ export type VipInvite = {
 export type VipLiveSession = {
   duelId: string;
   sessionId: string;
+  mode: string;
+  buyIn: number;
+  host: { id: string; displayName: string; nickname: string };
+};
+
+export type TableInvite = {
+  id: string;
+  clubId: string;
+  tableId: string;
+  tableName: string;
+  clubName: string;
+  mode: string;
+  virtualBuyIn: number;
+  inviteCode: string;
+  host: { id: string; displayName: string; nickname: string };
+};
+
+export type TableLiveSession = {
+  clubId: string;
+  tableId: string;
+  sessionId: string;
+  tableName: string;
   mode: string;
   buyIn: number;
   host: { id: string; displayName: string; nickname: string };
@@ -186,6 +213,8 @@ export const useAppStore = create<AppStore>((set, get) => {
     botPlayerCount: 2,
     vipInvites: [],
     vipLiveSession: null,
+    tableInvites: [],
+    tableLiveSessions: [],
     setMode: (mode) =>
       set({
         mode,
@@ -860,6 +889,35 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       if (!res.ok) throw new Error('decline failed');
       await get().fetchVipInvites();
+    },
+    fetchTableInvites: async () => {
+      if (!get().accessToken) {
+        set({ tableInvites: [], tableLiveSessions: [] });
+        return;
+      }
+      try {
+        const res = await get().apiFetch('/game/table-invites');
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          invites: TableInvite[];
+          liveTables: TableLiveSession[];
+        };
+        set({ tableInvites: data.invites ?? [], tableLiveSessions: data.liveTables ?? [] });
+      } catch {
+        /* ignore */
+      }
+    },
+    acceptTableInvite: async (inviteCode) => {
+      const data = await get().acceptInviteByCode(inviteCode);
+      await get().fetchTableInvites();
+      return data;
+    },
+    declineTableInvite: async (seatId) => {
+      const res = await get().apiFetch(`/game/table-invites/${encodeURIComponent(seatId)}/decline`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('decline failed');
+      await get().fetchTableInvites();
     }
   };
 });

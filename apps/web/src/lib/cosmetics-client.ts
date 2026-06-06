@@ -96,6 +96,28 @@ export const tableFeltVisual = (tableId: string): TableFeltVisual => {
       ambientGlow: 'rgba(139, 92, 246, 0.28)'
     };
   }
+  if (tableId === 'table_platinum') {
+    return {
+      url,
+      className: 'table-felt-platinum',
+      backgroundImage: `radial-gradient(ellipse at center, rgba(196,181,253,0.14) 0%, transparent 55%), url(${url})`,
+      backgroundSize: 'cover, 280px 280px',
+      meshColor: '#1a1530',
+      rimColor: '#a78bfa',
+      ambientGlow: 'rgba(167, 139, 250, 0.22)'
+    };
+  }
+  if (tableId === 'table_diamond') {
+    return {
+      url,
+      className: 'table-felt-diamond',
+      backgroundImage: `radial-gradient(ellipse at center, rgba(34,211,238,0.12) 0%, transparent 55%), url(${url})`,
+      backgroundSize: 'cover, 280px 280px',
+      meshColor: '#061820',
+      rimColor: '#22d3ee',
+      ambientGlow: 'rgba(34, 211, 238, 0.2)'
+    };
+  }
   return {
     url,
     className: 'table-felt-classic',

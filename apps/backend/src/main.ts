@@ -15,6 +15,7 @@ import { usersRouter } from './routes/users.js';
 import { gameRouter } from './routes/game.js';
 import { voiceRouter } from './routes/voice.js';
 import { createRealtimeServer } from './socket/server.js';
+import { internalNotifyRouter } from './routes/internal-notify.js';
 import { renderMetrics } from './services/metrics.js';
 import { isMongoReady, tryConnectMongo } from './services/mongo.js';
 
@@ -45,6 +46,7 @@ app.use('/oauth', oauthRouter);
 app.use('/users', usersRouter);
 app.use('/game', gameRouter);
 app.use('/voice', voiceRouter);
+app.use('/internal', internalNotifyRouter);
 app.use(errorHandler);
 
 const { httpServer } = createRealtimeServer(app);

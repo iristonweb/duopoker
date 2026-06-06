@@ -187,6 +187,21 @@ const tierTitleMeta: Record<
   }
 };
 
+const tierTableMeta: Partial<
+  Record<(typeof paidTiers)[number], { name: string; rarity: CosmeticDefinition['rarity']; description: string }>
+> = {
+  PLATINUM: {
+    name: 'Platinum Felt',
+    rarity: 'EPIC',
+    description: 'Iridescent violet platinum felt with soft rim glow.'
+  },
+  DIAMOND: {
+    name: 'Diamond Felt',
+    rarity: 'LEGENDARY',
+    description: 'Crystalline cyan diamond felt — DP CLUB prestige table.'
+  }
+};
+
 const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] => {
   const t = tier.toLowerCase();
   const deck = tierDeckMeta[tier];
@@ -233,7 +248,21 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       gameImageUrl: asset(`titles/title_${t}_game.png`),
       rarity: title.rarity,
       description: title.description
-    }
+    },
+    ...(tierTableMeta[tier]
+      ? [
+          {
+            id: `table_${t}`,
+            name: tierTableMeta[tier]!.name,
+            slot: 'table' as const,
+            requiredTier: tier,
+            imageUrl: '/assets/table-felt.png',
+            gameImageUrl: '/assets/table-felt.png',
+            rarity: tierTableMeta[tier]!.rarity,
+            description: tierTableMeta[tier]!.description
+          }
+        ]
+      : [])
   ];
 };
 

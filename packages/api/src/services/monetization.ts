@@ -69,37 +69,43 @@ export const recordPurchase = async (
   provider: 'stripe' | 'apple_iap' | 'google_play',
   amount: number,
   providerEventId: string
-) => {
-  await prisma.paymentEvent.upsert({
-    where: { providerEventId },
-    update: { status: 'SUCCEEDED' },
-    create: {
-      userId,
-      provider: provider.toUpperCase() as 'STRIPE' | 'APPLE_IAP' | 'GOOGLE_PLAY',
-      providerEventId,
-      amount,
-      status: 'SUCCEEDED',
-      metadata: { itemId }
-    }
-  });
-  const CHIP_PACKS: Record<string, number> = {
-    chips_2500: 2500,
-    chips_10000: 10000
-  };
-  const chipGrant = CHIP_PACKS[itemId];
-  if (chipGrant) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { chips: { increment: chipGrant } }
-    });
-  } else {
-    await prisma.userItem.create({
+): Promise<{ duplicate: boolean }> => {
+  const existing = await prisma.paymentEvent.findUnique({ where: { providerEventId } });
+  if (existing) return { duplicate: true };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.paymentEvent.create({
       data: {
         userId,
-        itemId,
-        rarity: 'COMMON',
-        equipped: false
+        provider: provider.toUpperCase() as 'STRIPE' | 'APPLE_IAP' | 'GOOGLE_PLAY',
+        providerEventId,
+        amount,
+        status: 'SUCCEEDED',
+        metadata: { itemId }
       }
     });
-  }
+
+    const CHIP_PACKS: Record<string, number> = {
+      chips_2500: 2500,
+      chips_10000: 10000
+    };
+    const chipGrant = CHIP_PACKS[itemId];
+    if (chipGrant) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { chips: { increment: chipGrant } }
+      });
+    } else {
+      await tx.userItem.create({
+        data: {
+          userId,
+          itemId,
+          rarity: 'COMMON',
+          equipped: false
+        }
+      });
+    }
+  });
+
+  return { duplicate: false };
 };

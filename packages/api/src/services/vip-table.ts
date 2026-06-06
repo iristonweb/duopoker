@@ -1,6 +1,7 @@
 import { normalizeNicknameInput } from '../lib/nickname.js';
 import { prisma } from '../lib/prisma.js';
 import { recordMatchForPlayers, createVipSession } from './game-session.js';
+import { notifyVipInvite, notifyVipTableLive } from './notifications/dispatch.js';
 
 const VIP_EXPIRY_MS = 1000 * 60 * 60 * 2;
 
@@ -72,6 +73,17 @@ export const createVipTableInvite = async (
       }
     }
   });
+
+  void notifyVipInvite(
+    users.map((u) => u.id),
+    {
+      hostName: host?.displayName ?? 'Admin',
+      hostNick: host?.nickname ?? 'admin',
+      mode: opts.mode,
+      buyIn: opts.buyIn,
+      message: opts.message
+    }
+  );
 
   return {
     ok: true as const,
@@ -209,6 +221,12 @@ export const startVipTable = async (hostId: string, duelId: string) => {
 
   const humans = accepted.map((i) => i.userId);
   await recordMatchForPlayers(sessionId, humans, duel.mode, duel.buyIn);
+
+  void notifyVipTableLive(humans.filter((id) => id !== hostId), {
+    sessionId,
+    mode: duel.mode,
+    buyIn: duel.buyIn
+  });
 
   return { ok: true as const, sessionId, players: humans };
 };

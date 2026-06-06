@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { cn } from '@duopoker/ui-kit';
+import { GlassPanel, cn } from '@duopoker/ui-kit';
 import type { GameFeedEvent } from '../../hooks/useTableGameFeed';
 
 const kindStyle: Record<GameFeedEvent['kind'], string> = {
@@ -77,13 +77,12 @@ export function GameStoryPanel({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.28, ease: 'easeOut' }}
-            className={cn(
-              'rounded-xl border border-white/10 bg-black/70 px-3 py-2.5 text-xs leading-relaxed shadow-lg backdrop-blur-md sm:text-sm',
-              kindStyle[latest.kind]
-            )}
+            className={cn('text-xs leading-relaxed sm:text-sm', kindStyle[latest.kind])}
           >
-            <span className="mr-1.5 opacity-60">{kindIcon[latest.kind]}</span>
-            {latest.text}
+            <GlassPanel glow="emerald" className="px-3 py-2.5">
+              <span className="mr-1.5 opacity-60">{kindIcon[latest.kind]}</span>
+              {latest.text}
+            </GlassPanel>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -145,9 +144,9 @@ export function GameStoryPanel({
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="rounded-2xl border border-white/10 bg-black/75 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+            <GlassPanel glow="gold" className="overflow-hidden">
               <div className="border-b border-white/10 px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/70">{title}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{title}</p>
               </div>
               <div
                 ref={listRef}
@@ -179,7 +178,7 @@ export function GameStoryPanel({
                   ))
                 )}
               </div>
-            </div>
+            </GlassPanel>
           </motion.div>
         ) : null}
       </AnimatePresence>

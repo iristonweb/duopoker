@@ -59,6 +59,11 @@ Project → **Settings → Environment Variables** (Production + Preview):
 | `LIVEKIT_API_KEY` | из cloud.livekit.io |
 | `LIVEKIT_API_SECRET` | из cloud.livekit.io |
 | `LIVEKIT_URL` | `wss://xxx.livekit.cloud` |
+| `VAPID_PUBLIC_KEY` | Web Push public key (`npx web-push generate-vapid-keys`) |
+| `VAPID_PRIVATE_KEY` | Web Push private key |
+| `VAPID_SUBJECT` | `mailto:your@email.com` |
+
+Подробнее: [PUSH_SETUP.md](./PUSH_SETUP.md).
 
 **Не добавляй** `VITE_API_URL` — API на том же домене через `/api/*` (см. `vercel.json`).
 

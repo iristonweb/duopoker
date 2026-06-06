@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
-import type { EquippedCosmetics, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
+import type { EquippedCosmetics, PlayerAction, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
 import { GHOST_BOARD_MIN_TIER, JOKER_TOTAL_HANDS, NEXT_HAND_DELAY_MS, defaultEquipped, gameChipId, tierMeetsRequirement } from '@duopoker/shared-types';
 import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
 import { GameTableShell } from '../components/table/GameTableShell';
@@ -16,12 +16,15 @@ import { GameStoryPanel } from '../components/table/GameStoryPanel';
 import { JokerNotebookPanel } from '../components/table/JokerNotebookPanel';
 import { BustedPlayerOverlay } from '../components/table/BustedPlayerOverlay';
 import { useCommunityCardSounds, useTableGameFeed } from '../hooks/useTableGameFeed';
+import { useTableAnimationQueue } from '../hooks/useTableAnimationQueue';
+import { useTableDisplayState } from '../hooks/useTableDisplayState';
 import { useTableSessionTick } from '../hooks/useTableSessionTick';
 import { loadTableMusicPref, loadTableSfxPref, saveTableSfxPref, useTableMusic } from '../hooks/useTableMusic';
 import { saveTableMusicPref } from '../lib/table-music';
 import { useAppStore } from '../store/useAppStore';
 import { usesRealtimeSocket } from '../config/api';
 import { rotatePlayersForHero } from '../lib/table-layout';
+import { formatCardLabel } from '../lib/joker-labels';
 
 const maxRoundBet = (s: SessionState) =>
   s.players.reduce((m, p) => Math.max(m, s.playerRoundBet[p] ?? 0), 0);
@@ -165,8 +168,49 @@ export const Table = () => {
     [playerProfiles]
   );
 
-  const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(session, label, t, soundOn);
-  useCommunityCardSounds(session?.communityCards?.length ?? 0, soundOn);
+  const reduceMotion = useReducedMotion() ?? false;
+
+  const formatDisplayAction = useCallback(
+    (action: PlayerAction) => {
+      const name = label(action.userId);
+      switch (action.type) {
+        case 'fold':
+          return t('table.feedFold', { name });
+        case 'check':
+          return t('table.feedCheck', { name });
+        case 'call':
+          return t('table.feedCall', { name, amount: action.amount ?? 0 });
+        case 'bet':
+          return t('table.feedBet', { name, amount: action.amount ?? 0 });
+        case 'raise':
+          return t('table.feedRaise', { name, amount: action.amount ?? 0 });
+        case 'bid':
+          return t('table.feedJokerBid', { name, amount: action.amount ?? 0 });
+        case 'playCard':
+          return t('table.feedJokerPlay', {
+            name,
+            card: action.card ? formatCardLabel(action.card, t) : '?'
+          });
+        default:
+          return `${name}: ${action.type}`;
+      }
+    },
+    [label, t]
+  );
+
+  const viewSession = useTableDisplayState(session, userId, formatDisplayAction, reduceMotion) ?? session;
+
+  const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(viewSession, label, t, soundOn, {
+    actionSounds: false
+  });
+  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, dealTick } = useTableAnimationQueue(
+    viewSession,
+    label,
+    t,
+    soundOn,
+    reduceMotion
+  );
+  useCommunityCardSounds(viewSession?.communityCards?.length ?? 0, false);
   useTableMusic(musicOn);
 
   const sid = session?.sessionId;
@@ -174,43 +218,52 @@ export const Table = () => {
   useTableSessionTick(matchRoute ? session : undefined, routeSessionId);
 
   const tablePlayers = useMemo((): TablePlayerVisual[] => {
-    if (!session) return [];
-    const dealerUid = session.players[session.dealerIndex];
-    const visuals = session.players.map((uid) => {
+    if (!viewSession) return [];
+    const dealerUid = viewSession.players[viewSession.dealerIndex];
+    const visualActiveId =
+      viewSession.players.length > 0 ? viewSession.players[viewSession.activePlayerIndex] : undefined;
+    const atShowdown = viewSession.street === 'SHOWDOWN' || viewSession.street === 'COMPLETE';
+    const inHandStreet = viewSession.street && viewSession.street !== 'LOBBY';
+    const visuals = viewSession.players.map((uid) => {
       const profile = playerProfiles[uid];
       const hero = uid === userId;
-      const rawCards = session.playerCards[uid] ?? [];
+      const rawCards = viewSession.playerCards[uid] ?? [];
+      const folded = viewSession.foldedPlayerIds.includes(uid);
+      const inHand = inHandStreet && !folded;
+      const showHiddenBacks = !hero && inHand && rawCards.length === 0 && viewSession.mode !== 'JOKER';
       return {
         userId: uid,
         name: profile?.name ?? uid.slice(0, 8),
         stack:
-          session.mode === 'JOKER'
-            ? (session.joker?.scores[uid] ?? 0)
-            : (session.stacks[uid] ?? 0),
-        roundBet: session.playerRoundBet[uid] ?? 0,
+          viewSession.mode === 'JOKER'
+            ? (viewSession.joker?.scores[uid] ?? 0)
+            : (viewSession.stacks[uid] ?? 0),
+        roundBet: viewSession.playerRoundBet[uid] ?? 0,
         isDealer: uid === dealerUid,
         avatar: hero ? (avatarUrl ?? profile?.avatar) : profile?.avatar,
         tableStatus: hero ? heroTableStatus : profile?.tableStatus,
         tier: hero ? subscriptionTier : (profile?.subscriptionTier ?? 'FREE'),
         equipped: hero ? equipped : profile?.equipped,
         inventory: hero ? inventory : undefined,
-        holeCards: session.mode === 'JOKER' && hero ? [] : rawCards,
-        revealCards: session.mode === 'JOKER' ? false : hero,
-        isActive: uid === activeId,
-        isFolded: session.foldedPlayerIds.includes(uid)
+        holeCards: viewSession.mode === 'JOKER' && hero ? [] : rawCards,
+        hiddenCardCount: showHiddenBacks ? 2 : 0,
+        revealCards:
+          viewSession.mode === 'JOKER' ? false : hero || (atShowdown && !folded && rawCards.length > 0),
+        isActive: uid === visualActiveId,
+        isFolded: folded,
+        isHero: hero
       };
     });
     return rotatePlayersForHero(visuals, userId);
   }, [
-    session,
+    viewSession,
     playerProfiles,
     userId,
     subscriptionTier,
     equipped,
     inventory,
     heroTableStatus,
-    avatarUrl,
-    activeId
+    avatarUrl
   ]);
 
   useEffect(() => {
@@ -327,6 +380,8 @@ export const Table = () => {
     );
   }
 
+  const tableView = viewSession ?? session;
+
   const need = amountToCall(session, userId);
   const myTurn = activeId === userId && session.street !== 'LOBBY' && session.street !== 'COMPLETE';
   const secondsLeft =
@@ -369,24 +424,30 @@ export const Table = () => {
   const halfPotRaise = Math.max(minRaise, Math.floor(kettle / 2));
   const potRaise = Math.max(minRaise, kettle);
   const holeCards = session.playerCards[userId] ?? [];
+  const viewKettle =
+    tableView.pot +
+    Object.values(tableView.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
+
   const jokerBoardCards =
-    session.mode !== 'JOKER'
-      ? (session.communityCards ?? [])
-      : session.street === 'TRICKS' && session.joker
-        ? session.joker.currentTrick.map((p) => p.card)
-        : session.street === 'BIDDING'
-          ? (session.communityCards ?? [])
+    tableView.mode !== 'JOKER'
+      ? (tableView.communityCards ?? [])
+      : tableView.street === 'TRICKS' && tableView.joker
+        ? tableView.joker.currentTrick.map((p) => p.card)
+        : tableView.street === 'BIDDING'
+          ? (tableView.communityCards ?? [])
           : [];
   const jokerBoardKeys =
-    session.mode === 'JOKER' && session.street === 'TRICKS' && session.joker
-      ? session.joker.currentTrick.map(
-          (p, i) => `trick-${session.joker!.trickNumber}-${p.userId}-${i}`
+    tableView.mode === 'JOKER' && tableView.street === 'TRICKS' && tableView.joker
+      ? tableView.joker.currentTrick.map(
+          (p, i) => `h${tableView.handNumber}-trick-${tableView.joker!.trickNumber}-${p.userId}-${i}`
         )
-      : undefined;
+      : tableView.mode !== 'JOKER'
+        ? (tableView.communityCards ?? []).map((c, i) => `h${tableView.handNumber}-board-${c}-${i}`)
+        : undefined;
   const activeLabel = activeId
     ? `${label(activeId)}${activeId === userId ? ` ${t('table.you')}` : ''}`
     : '—';
-  const winnerNames = (session.winners ?? []).map(label).join(', ') || '—';
+  const winnerNames = (tableView.winners ?? []).map(label).join(', ') || '—';
   const jokerHandSummary =
     isJoker && session.joker?.handPoints
       ? session.players
@@ -421,15 +482,15 @@ export const Table = () => {
     <GameTableShell
       hud={
         <TableTopHUD
-          mode={session.mode}
-          pot={kettle}
-          street={session.street}
-          seatCount={session.players.length}
-          smallBlind={session.smallBlind}
-          bigBlind={session.bigBlind}
-          handNumber={session.handNumber}
+          mode={tableView.mode}
+          pot={viewKettle}
+          street={tableView.street}
+          seatCount={tableView.players.length}
+          smallBlind={tableView.smallBlind}
+          bigBlind={tableView.bigBlind}
+          handNumber={tableView.handNumber}
           chipId={gameChipId(equipped.chip)}
-          joker={session.mode === 'JOKER' ? session.joker : null}
+          joker={tableView.mode === 'JOKER' ? tableView.joker : null}
           onLeaveTable={() => void handleLeaveTable()}
           leaving={leaving}
         />
@@ -445,20 +506,26 @@ export const Table = () => {
             <PokerTable3D
               communityCards={jokerBoardCards}
               boardCardKeys={jokerBoardKeys}
-              showBoardSlots={session.mode !== 'JOKER'}
+              handNumber={tableView.handNumber}
+              showBoardSlots={tableView.mode !== 'JOKER'}
               ghostCommunityCards={
-                ghostBoardVisible && canPeekGhostBoard ? (session.ghostCommunityCards ?? []) : []
+                ghostBoardVisible && canPeekGhostBoard ? (tableView.ghostCommunityCards ?? []) : []
               }
-              pot={kettle}
-              street={session.street === 'LOBBY' ? 'COMPLETE' : session.street}
+              pot={viewKettle}
+              street={tableView.street === 'LOBBY' ? 'COMPLETE' : tableView.street}
               players={tablePlayers}
               heroDeckId={equipped.deck}
               heroChipId={equipped.chip}
               heroTableFeltId={equipped.table}
+              seatBubbles={seatBubbles}
+              chipFlights={chipFlights}
+              jokerFlights={jokerFlights}
+              potPulseKey={potPulseKey}
+              dealTick={dealTick}
               className="h-full"
             />
             <HandResultOverlay
-              visible={session.street === 'COMPLETE' && !showBustedOverlay}
+              visible={tableView.street === 'COMPLETE' && !showBustedOverlay}
               winners={isJoker ? undefined : winnerNames}
               summaryText={
                 isJoker && jokerHandSummary

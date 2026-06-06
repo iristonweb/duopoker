@@ -78,12 +78,30 @@ type JokerSnap = {
   cardsThisDeal: number;
 };
 
+type FeedSoundOptions = {
+  /** Action chip/card SFX — disabled when animation queue handles them */
+  actionSounds?: boolean;
+  /** Street transition SFX */
+  streetSounds?: boolean;
+  /** Hand start / blind SFX */
+  handSounds?: boolean;
+  /** Winner SFX */
+  winSounds?: boolean;
+};
+
 export function useTableGameFeed(
   session: SessionState | undefined,
   label: (uid: string) => string,
   t: (key: string, opts?: Record<string, unknown>) => string,
-  soundEnabled = true
+  soundEnabled = true,
+  soundOptions: FeedSoundOptions = {}
 ) {
+  const {
+    actionSounds = true,
+    streetSounds = true,
+    handSounds = true,
+    winSounds = true
+  } = soundOptions;
   const [events, setEvents] = useState<GameFeedEvent[]>([]);
   const [pulseKey, setPulseKey] = useState(0);
   const prevRef = useRef<{
@@ -146,19 +164,19 @@ export function useTableGameFeed(
       } else {
         push('hand', t('table.feedNewHand', { num: session.handNumber }));
         push('blinds', t('table.feedBlinds', { sb: session.smallBlind, bb: session.bigBlind }));
-        if (soundEnabled) playBlindSound();
+        if (soundEnabled && handSounds) playBlindSound();
       }
     }
 
     if (session.street !== prev.street && session.street !== 'LOBBY' && session.street !== 'COMPLETE') {
       push('street', streetFeedText(session.street, session.mode, t));
-      if (soundEnabled) playStreetSound();
+      if (soundEnabled && streetSounds) playStreetSound();
     }
 
     const newActions = (session.actionLog ?? []).slice(prev.logLen);
     for (const action of newActions) {
       push('action', formatAction(action, label, t));
-      if (soundEnabled) playForAction(action, session.mode);
+      if (soundEnabled && actionSounds) playForAction(action, session.mode);
     }
 
     if (
@@ -174,11 +192,11 @@ export function useTableGameFeed(
           total: session.joker.cardsThisDeal
         })
       );
-      if (soundEnabled) playChipSound();
+      if (soundEnabled && actionSounds) playChipSound();
     }
 
     if (snap.pot > prev.pot + 0 && newActions.some((a) => a.type !== 'check' && a.type !== 'fold')) {
-      if (soundEnabled && session.mode !== 'JOKER') playChipSound();
+      if (soundEnabled && actionSounds && session.mode !== 'JOKER') playChipSound();
     }
 
     if (session.street === 'COMPLETE' && prev.street !== 'COMPLETE') {
@@ -196,7 +214,7 @@ export function useTableGameFeed(
         const winners = (session.winners ?? []).map(label).join(', ') || '—';
         push('winner', t('table.feedWinner', { names: winners }));
       }
-      if (soundEnabled) playWinSound();
+      if (soundEnabled && winSounds) playWinSound();
     }
 
     prevRef.current = snap;

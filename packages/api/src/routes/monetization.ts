@@ -29,6 +29,7 @@ import {
   recordPurchase,
   resolveDailyBonusAmount
 } from '../services/monetization.js';
+import { claimWebhookEvent, stripeEventClaimId } from '../services/webhook-dedup.js';
 import { prisma } from '../lib/prisma.js';
 
 const purchaseSchema = z.object({
@@ -182,7 +183,19 @@ monetizationRoutes.post('/stripe/webhook', async (c) => {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.client_reference_id ?? (session.metadata?.userId as string | undefined);
-      if (userId && session.mode === 'subscription') {
+      if (!userId) {
+        return c.json({ received: true, skipped: 'no_user' });
+      }
+
+      const claimed = await claimWebhookEvent('STRIPE', stripeEventClaimId(event.id), userId, {
+        stripeEventType: event.type,
+        sessionId: session.id
+      });
+      if (!claimed) {
+        return c.json({ received: true, duplicate: true });
+      }
+
+      if (session.mode === 'subscription') {
         const full = await stripe.checkout.sessions.retrieve(session.id, {
           expand: ['line_items.data.price']
         });
@@ -191,7 +204,7 @@ monetizationRoutes.post('/stripe/webhook', async (c) => {
         if (tier) {
           await activateSubscription(userId, tier);
         }
-      } else if (userId && session.mode === 'payment') {
+      } else if (session.mode === 'payment') {
         const itemId = (session.metadata?.itemId as string | undefined) ?? 'chips_pack';
         await recordPurchase(userId, itemId, 'stripe', session.amount_total ?? 0, session.id);
       }

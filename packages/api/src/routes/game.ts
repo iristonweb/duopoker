@@ -20,6 +20,8 @@ import {
   getUserVipNotifications,
   respondVipInvite
 } from '../services/vip-table.js';
+import { listLiveTableInvites, listPendingTableInvites } from '../services/table-invites.js';
+import { prisma } from '../lib/prisma.js';
 
 const queueSchema = z.object({
   mode: z.enum(['HOLDEM', 'JOKER']),
@@ -80,6 +82,15 @@ gameRoutes.get('/vip-invites', async (c) => {
   });
 });
 
+gameRoutes.get('/table-invites', async (c) => {
+  const userId = c.get('auth').userId;
+  const [invites, liveTables] = await Promise.all([
+    listPendingTableInvites(userId),
+    listLiveTableInvites(userId)
+  ]);
+  return c.json({ invites, liveTables });
+});
+
 gameRoutes.post('/vip-invites/:duelId/accept', async (c) => {
   const result = await respondVipInvite(c.get('auth').userId, c.req.param('duelId'), true);
   if (!result.ok) return c.json({ error: result.error }, 400);
@@ -89,6 +100,23 @@ gameRoutes.post('/vip-invites/:duelId/accept', async (c) => {
 gameRoutes.post('/vip-invites/:duelId/decline', async (c) => {
   const result = await respondVipInvite(c.get('auth').userId, c.req.param('duelId'), false);
   if (!result.ok) return c.json({ error: result.error }, 400);
+  return c.json({ ok: true });
+});
+
+gameRoutes.post('/table-invites/:seatId/decline', async (c) => {
+  const userId = c.get('auth').userId;
+  const seatId = c.req.param('seatId');
+
+  const seat = await prisma.privateTableSeat.findFirst({
+    where: { id: seatId, userId, status: 'INVITED' }
+  });
+  if (!seat) return c.json({ error: 'Invite not found' }, 404);
+
+  await prisma.privateTableSeat.update({
+    where: { id: seatId },
+    data: { status: 'DECLINED' }
+  });
+
   return c.json({ ok: true });
 });
 

@@ -212,6 +212,23 @@ const emitMatchFoundToPlayers = (
   }
 };
 
+let globalIo: Server | null = null;
+
+export const emitNotificationToUsers = (
+  userIds: string[],
+  event: string,
+  payload: unknown
+) => {
+  if (!globalIo) return;
+  for (const userId of userIds) {
+    const set = userToSockets.get(userId);
+    if (!set) continue;
+    for (const socketId of set) {
+      globalIo.to(socketId).emit(event, payload);
+    }
+  }
+};
+
 export const createRealtimeServer = (app: Express) => {
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
@@ -220,6 +237,7 @@ export const createRealtimeServer = (app: Express) => {
       credentials: true
     }
   });
+  globalIo = io;
   attachSocketAuth(io);
   const replayCollection = getMongoDb().collection('replays');
 

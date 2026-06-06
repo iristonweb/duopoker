@@ -70,7 +70,12 @@ export const config = {
   dataEncryptionKey: process.env.DATA_ENCRYPTION_KEY?.trim() ?? '',
   dailyBonusChips: 500,
   founderGrantSecret: process.env.FOUNDER_GRANT_SECRET?.trim() ?? '',
-  founderEmail: (process.env.FOUNDER_EMAIL?.trim() || 'iristonweb@gmail.com').toLowerCase()
+  founderEmail: (process.env.FOUNDER_EMAIL?.trim() || 'iristonweb@gmail.com').toLowerCase(),
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY?.trim() ?? '',
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY?.trim() ?? '',
+  vapidSubject: process.env.VAPID_SUBJECT?.trim() || 'mailto:support@duopoker.app',
+  backendInternalUrl: process.env.BACKEND_INTERNAL_URL?.trim() ?? (isProduction ? '' : 'http://localhost:4000'),
+  notifyInternalSecret: process.env.NOTIFY_INTERNAL_SECRET?.trim() ?? (isProduction ? '' : 'dev-notify-secret')
 };
 
 export const allowDevMockCheckout = (): boolean =>

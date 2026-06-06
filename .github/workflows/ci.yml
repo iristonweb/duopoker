@@ -28,6 +28,7 @@ jobs:
       - run: pnpm --filter @duopoker/game-engine test
       - run: pnpm --filter @duopoker/db-schema build && pnpm --filter @duopoker/shared-types build
       - run: pnpm --filter @duopoker/game-engine build
+      - run: node scripts/bundle-vercel-api.mjs
       - run: pnpm --filter @duopoker/backend build
       - run: pnpm --filter @duopoker/web build
 

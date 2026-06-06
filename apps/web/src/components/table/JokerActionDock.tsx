@@ -88,8 +88,8 @@ export function JokerActionDock({
       initial={false}
       animate={{ y: 0, opacity: 1 }}
       className={cn(
-        'relative z-40 shrink-0 border-t bg-background/90 backdrop-blur-xl',
-        showActions ? 'border-gold/30 shadow-[0_-8px_40px_rgba(232,197,71,0.14)]' : 'border-white/10'
+        'glass-shine relative z-40 shrink-0 border-t bg-background/90 backdrop-blur-xl',
+        showActions ? 'border-gold/30 shadow-glow-gold' : 'border-white/10'
       )}
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >

@@ -84,6 +84,18 @@
     "dailyBonusOk": "+{{amount}} chips added to your balance.",
     "dailyBonusClaimed": "Already claimed today — come back tomorrow.",
     "dailyBonusFailed": "Could not claim daily bonus.",
+    "pushEyebrow": "Notifications",
+    "pushTitle": "Invite alerts",
+    "pushDesc": "Get browser push when a VIP duel or club table invite arrives — even when the tab is in the background.",
+    "pushEnable": "Enable push",
+    "pushDisable": "Disable push",
+    "pushEnabled": "Push notifications enabled",
+    "pushDisabled": "Push notifications disabled",
+    "pushUnsupported": "Push is not supported in this browser.",
+    "pushDenied": "Notifications blocked — allow them in browser settings.",
+    "pushBusy": "Updating…",
+    "pushVapidMissing": "Server push is not configured — add VAPID keys on Vercel and redeploy.",
+    "pushFailed": "Could not update push subscription.",
     "errors": {
       "notSignedIn": "Sign in to save your profile.",
       "saveFailed": "Could not save profile.",
@@ -255,7 +267,21 @@
     "subscriptionViewDetails": "View details",
     "subscriptionModalClose": "Close",
     "subscriptionModalPerks": "Perks",
-    "subscriptionModalCosmetics": "Included cosmetics"
+    "subscriptionModalCosmetics": "Included cosmetics",
+    "enablePush": "Enable invite notifications"
+  },
+  "tableInvite": {
+    "eyebrow": "Club invitation",
+    "liveEyebrow": "Live table",
+    "from": "From {{name}} (@{{nick}})",
+    "joinTable": "Join table",
+    "view": "View invite",
+    "accept": "Accept",
+    "decline": "Decline",
+    "accepting": "Accepting…",
+    "declining": "Declining…",
+    "acceptFailed": "Could not accept invite",
+    "declineFailed": "Could not decline invite"
   },
   "table": {
     "liveTable": "Live table",

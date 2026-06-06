@@ -84,6 +84,18 @@
     "dailyBonusOk": "+{{amount}} фишек на баланс.",
     "dailyBonusClaimed": "Бонус уже получен сегодня — возвращайтесь завтра.",
     "dailyBonusFailed": "Не удалось получить бонус.",
+    "pushEyebrow": "Уведомления",
+    "pushTitle": "Приглашения за стол",
+    "pushDesc": "Браузерные push при VIP-дуэли или приглашении в клубный стол — даже когда вкладка в фоне.",
+    "pushEnable": "Включить push",
+    "pushDisable": "Отключить push",
+    "pushEnabled": "Push-уведомления включены",
+    "pushDisabled": "Push-уведомления отключены",
+    "pushUnsupported": "Push не поддерживается в этом браузере.",
+    "pushDenied": "Уведомления заблокированы — разрешите их в настройках браузера.",
+    "pushBusy": "Обновление…",
+    "pushVapidMissing": "Push на сервере не настроен — добавьте VAPID-ключи в Vercel и redeploy.",
+    "pushFailed": "Не удалось обновить подписку push.",
     "errors": {
       "notSignedIn": "Войдите, чтобы сохранить профиль.",
       "saveFailed": "Не удалось сохранить профиль.",
@@ -255,7 +267,21 @@
     "subscriptionViewDetails": "Подробнее",
     "subscriptionModalClose": "Закрыть",
     "subscriptionModalPerks": "Привилегии",
-    "subscriptionModalCosmetics": "Косметика в подписке"
+    "subscriptionModalCosmetics": "Косметика в подписке",
+    "enablePush": "Включить уведомления о приглашениях"
+  },
+  "tableInvite": {
+    "eyebrow": "Приглашение в клуб",
+    "liveEyebrow": "Стол в эфире",
+    "from": "От {{name}} (@{{nick}})",
+    "joinTable": "Зайти за стол",
+    "view": "Открыть приглашение",
+    "accept": "Принять",
+    "decline": "Отклонить",
+    "accepting": "Принимаем…",
+    "declining": "Отклоняем…",
+    "acceptFailed": "Не удалось принять приглашение",
+    "declineFailed": "Не удалось отклонить приглашение"
   },
   "table": {
     "liveTable": "Живой стол",

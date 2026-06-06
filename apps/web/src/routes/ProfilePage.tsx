@@ -19,6 +19,7 @@ import {
   type CosmeticItem
 } from '@duopoker/ui-kit';
 import { ProfileEditor } from '../components/ProfileEditor';
+import { PushSettingsPanel } from '../components/PushSettingsPanel';
 import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
@@ -207,6 +208,15 @@ export const ProfilePage = () => {
           className="mb-8 grid gap-4 lg:grid-cols-2"
         >
           <ReferralPanel />
+          <PushSettingsPanel />
+        </motion.div>
+
+        <motion.div
+          initial={reduceMotion ? false : 'hidden'}
+          animate="show"
+          variants={reduceMotion ? undefined : fade}
+          className="mb-8"
+        >
           <GlassPanel glow="emerald" className="flex flex-col justify-between border-emerald/20 p-5">
             <SectionHeader
               eyebrow={t('profile.dailyBonusEyebrow')}

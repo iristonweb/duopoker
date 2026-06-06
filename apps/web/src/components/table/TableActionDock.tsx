@@ -64,8 +64,8 @@ export function TableActionDock({
       initial={false}
       animate={{ y: 0, opacity: 1 }}
       className={cn(
-        'relative z-40 shrink-0 border-t bg-background/90 backdrop-blur-xl',
-        showActions ? 'border-gold/30 shadow-[0_-8px_40px_rgba(232,197,71,0.14)]' : 'border-white/10'
+        'glass-shine relative z-40 shrink-0 border-t bg-background/90 backdrop-blur-xl',
+        showActions ? 'border-gold/30 shadow-glow-gold' : 'border-white/10'
       )}
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
@@ -104,7 +104,7 @@ export function TableActionDock({
             ) : null}
             <div className="min-w-0">
               {showActions ? (
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold/85 sm:text-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold/85 sm:text-sm">
                   {t('table.yourAction', { amount: need })}
                   {secondsLeft !== null ? (
                     <span className="ml-1.5 font-mono normal-case tracking-normal text-subtle">

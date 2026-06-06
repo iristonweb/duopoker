@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Button, cn } from '@duopoker/ui-kit';
+import { Button, GlassPanel, cn } from '@duopoker/ui-kit';
 
 type Props = {
   visible: boolean;
@@ -52,7 +52,7 @@ export function HandResultOverlay({
             className
           )}
         >
-          <div className="max-w-lg rounded-2xl border border-gold/30 bg-black/70 px-5 py-3 text-center shadow-[0_8px_40px_rgba(232,197,71,0.2)] backdrop-blur-xl">
+          <GlassPanel glow="gold" className="max-w-lg px-5 py-3 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold/70">
               {summaryHeading ?? t('table.handResult')}
             </p>
@@ -95,7 +95,7 @@ export function HandResultOverlay({
             ) : (
               <p className="mt-2 text-xs text-subtle">{t('table.dealingNext')}</p>
             )}
-          </div>
+          </GlassPanel>
         </motion.div>
       ) : null}
     </AnimatePresence>

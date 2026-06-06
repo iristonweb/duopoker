@@ -9,6 +9,8 @@ Local-first monorepo for cross-platform poker platform with dual modes (Hold'em 
 - Data: PostgreSQL (required); Redis/Mongo optional for legacy stack
 
 ## Quick start (Vercel-style local dev)
+**Node.js 24.x** (same as CI). Recommended: [fnm](https://github.com/Schniz/fnm) — repo includes [`.nvmrc`](.nvmrc); run `fnm install && fnm use`.
+
 1. Install dependencies: `pnpm install`
 2. Postgres: `docker compose -f infra/docker-compose.yml up postgres -d`
 3. Build schema: `pnpm --filter @duopoker/db-schema build` then `pnpm db:push`
@@ -38,6 +40,8 @@ pnpm --filter @duopoker/db-schema seed
 Vercel: **не задавай** `VITE_API_URL`. Import `.env.vercel.local` → Redeploy.
 
 See [docs/DEPLOY.md](docs/DEPLOY.md).
+
+Push notifications: [docs/PUSH_SETUP.md](docs/PUSH_SETUP.md).
 
 ## Compliance
 - No real-money gambling.

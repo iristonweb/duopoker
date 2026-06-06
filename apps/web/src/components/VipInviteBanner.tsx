@@ -18,8 +18,6 @@ export function VipInviteBanner() {
   useEffect(() => {
     if (!accessToken) return;
     void fetchVipInvites();
-    const timer = setInterval(() => void fetchVipInvites(), 45_000);
-    return () => clearInterval(timer);
   }, [accessToken, fetchVipInvites]);
 
   if (!accessToken) return null;
@@ -76,11 +74,17 @@ export function VipInviteBanner() {
         {invite.mode} · {invite.buyIn.toLocaleString()} {t('admin.chips')}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" className="premium-btn premium-btn-primary text-sm" onClick={() => void acceptVipInvite(invite.duelId).then(() => fetchVipInvites())}>
+        <button
+          type="button"
+          data-testid="vip-invite-accept"
+          className="premium-btn premium-btn-primary text-sm"
+          onClick={() => void acceptVipInvite(invite.duelId).then(() => fetchVipInvites())}
+        >
           {t('vipInvite.accept')}
         </button>
         <button
           type="button"
+          data-testid="vip-invite-decline"
           className="premium-btn premium-btn-ghost text-sm"
           onClick={() => void declineVipInvite(invite.duelId).then(() => fetchVipInvites())}
         >

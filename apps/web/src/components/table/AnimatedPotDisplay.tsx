@@ -6,15 +6,23 @@ type Props = {
   pot: number;
   chipId: string;
   street?: string;
+  pulseKey?: number;
   className?: string;
 };
 
-export function AnimatedPotDisplay({ pot, chipId, street, className }: Props) {
+export function AnimatedPotDisplay({ pot, chipId, street, pulseKey = 0, className }: Props) {
   const chipCount = Math.min(6, Math.max(2, 2 + Math.floor(Math.log10(Math.max(10, pot)) * 1.2)));
 
   return (
     <motion.div
       layout
+      key={pulseKey}
+      animate={
+        pulseKey > 0
+          ? { boxShadow: ['0 8px 32px rgba(0,0,0,0.5)', '0 0 40px rgba(232,197,71,0.45)', '0 8px 32px rgba(0,0,0,0.5)'] }
+          : undefined
+      }
+      transition={{ duration: 0.6 }}
       className={cn(
         'flex items-center gap-2.5 rounded-full border border-gold/30 bg-black/60 px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_24px_rgba(232,197,71,0.15)] backdrop-blur-md',
         className

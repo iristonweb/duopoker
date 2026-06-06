@@ -28,6 +28,9 @@ import {
 import { AppLogo } from '../components/AppLogo';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { VipInviteBanner } from '../components/VipInviteBanner';
+import { TableInviteBanner } from '../components/TableInviteBanner';
+import { useInviteNotifications } from '../hooks/useInviteNotifications';
+import { usePushLoginPrompt, usePushNotifications } from '../hooks/usePushNotifications';
 import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
@@ -43,6 +46,23 @@ import {
 import { resolveApiUrl, usesRealtimeSocket } from '../config/api';
 
 const LobbyChipPreview = lazy(() => import('../components/LobbyChipPreview'));
+
+function PushNotifyPrompt() {
+  const { t } = useTranslation();
+  const { supported, permission, vapidConfigured, busy, subscribe } = usePushNotifications();
+  if (!supported || permission === 'granted' || vapidConfigured === false) return null;
+  return (
+    <button
+      type="button"
+      data-testid="lobby-enable-push"
+      disabled={busy}
+      className="premium-btn premium-btn-ghost w-full text-xs uppercase tracking-[0.28em]"
+      onClick={() => void subscribe()}
+    >
+      {t('lobby.enablePush')}
+    </button>
+  );
+}
 
 const section = {
   hidden: { opacity: 0, y: 12 },
@@ -270,6 +290,8 @@ function AuthPanel() {
 export const Lobby = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  useInviteNotifications();
+  usePushLoginPrompt();
   const { mode, setMode, opponentType, setOpponentType, botPlayerCount, setBotPlayerCount, connect, queue, pollQueueStatus, session, fetchProfile } =
     useAppStore();
   const accessToken = useAppStore((s) => s.accessToken);
@@ -559,8 +581,10 @@ export const Lobby = () => {
         </motion.header>
 
         {accessToken ? (
-          <motion.div className="mb-8" variants={reduceMotion ? undefined : section} custom={0.6}>
+          <motion.div className="mb-8 flex flex-col gap-4" variants={reduceMotion ? undefined : section} custom={0.6}>
             <VipInviteBanner />
+            <TableInviteBanner />
+            <PushNotifyPrompt />
           </motion.div>
         ) : null}
 
@@ -687,6 +711,7 @@ export const Lobby = () => {
                 size="lg"
                 className="w-full"
                 disabled={queueBusy}
+                data-testid="lobby-queue-button"
                 onClick={() => void startQueue()}
               >
                 {opponentType === 'BOT'

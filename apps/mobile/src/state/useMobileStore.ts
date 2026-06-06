@@ -1,31 +1,69 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { io, Socket } from 'socket.io-client';
+import { registerMobilePushToken } from '../notifications/register';
+import { loginRequest, type AuthUser } from '../lib/api';
+
+const LS_ACCESS = 'duopoker_mobile_access';
+const LS_REFRESH = 'duopoker_mobile_refresh';
+const LS_USER = 'duopoker_mobile_user';
 
 type MobileStore = {
   userId: string;
+  user?: AuthUser;
   accessToken?: string;
   refreshToken?: string;
-  socket?: Socket;
-  setTokens: (access: string, refresh: string) => Promise<void>;
-  connectSocket: () => void;
+  ready: boolean;
+  authError?: string;
+  bootstrap: () => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  setTokens: (access: string, refresh: string, user: AuthUser) => Promise<void>;
 };
 
 export const useMobileStore = create<MobileStore>((set, get) => ({
-  userId: `mobile-${Math.random().toString(16).slice(2, 8)}`,
-  setTokens: async (access, refresh) => {
-    await SecureStore.setItemAsync('refreshToken', refresh);
-    set({ accessToken: access, refreshToken: refresh });
-    get().socket?.disconnect();
-    set({ socket: undefined });
-    get().connectSocket();
+  userId: '',
+  ready: false,
+  bootstrap: async () => {
+    try {
+      const access = await SecureStore.getItemAsync(LS_ACCESS);
+      const refresh = await SecureStore.getItemAsync(LS_REFRESH);
+      const userRaw = await SecureStore.getItemAsync(LS_USER);
+      if (access && refresh && userRaw) {
+        const user = JSON.parse(userRaw) as AuthUser;
+        await get().setTokens(access, refresh, user);
+      }
+    } finally {
+      set({ ready: true });
+    }
   },
-  connectSocket: () => {
-    if (get().socket) return;
-    const token = get().accessToken;
-    const socket = io('http://localhost:4000', {
-      auth: token ? { token } : undefined
+  setTokens: async (access, refresh, user) => {
+    await SecureStore.setItemAsync(LS_ACCESS, access);
+    await SecureStore.setItemAsync(LS_REFRESH, refresh);
+    await SecureStore.setItemAsync(LS_USER, JSON.stringify(user));
+    set({
+      accessToken: access,
+      refreshToken: refresh,
+      userId: user.id,
+      user,
+      authError: undefined
     });
-    set({ socket });
+    void registerMobilePushToken(access);
+  },
+  login: async (email, password) => {
+    set({ authError: undefined });
+    try {
+      const data = await loginRequest(email, password);
+      await get().setTokens(data.accessToken, data.refreshToken, data.user);
+      return true;
+    } catch {
+      set({ authError: 'login_failed' });
+      return false;
+    }
+  },
+  logout: async () => {
+    await SecureStore.deleteItemAsync(LS_ACCESS);
+    await SecureStore.deleteItemAsync(LS_REFRESH);
+    await SecureStore.deleteItemAsync(LS_USER);
+    set({ accessToken: undefined, refreshToken: undefined, user: undefined, userId: '' });
   }
 }));

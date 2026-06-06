@@ -1,0 +1,58 @@
+export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001/api').replace(/\/$/, '');
+
+export async function apiFetch(
+  path: string,
+  init: RequestInit = {},
+  accessToken?: string
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (!headers.has('Content-Type') && init.body) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+  return fetch(`${API_BASE}${path.startsWith('/') ? path : `/${path}`}`, { ...init, headers });
+}
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  nickname?: string | null;
+};
+
+export type LoginResponse = {
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUser;
+};
+
+export async function loginRequest(email: string, password: string): Promise<LoginResponse> {
+  const res = await apiFetch('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
+  });
+  if (!res.ok) throw new Error('login_failed');
+  return res.json() as Promise<LoginResponse>;
+}
+
+export async function acceptInviteRequest(accessToken: string, code: string) {
+  const res = await apiFetch(`/clubs/invite/${encodeURIComponent(code)}/accept`, { method: 'POST' }, accessToken);
+  if (!res.ok) throw new Error('accept_failed');
+  return res.json() as Promise<{ clubId: string; tableId: string }>;
+}
+
+export async function joinSessionRequest(
+  accessToken: string,
+  sessionId: string,
+  mode: 'HOLDEM' | 'JOKER' = 'HOLDEM',
+  buyIn = 100
+) {
+  const res = await apiFetch(
+    '/game/join',
+    { method: 'POST', body: JSON.stringify({ sessionId, mode, buyIn }) },
+    accessToken
+  );
+  if (!res.ok) throw new Error('join_failed');
+}

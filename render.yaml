@@ -32,3 +32,5 @@ services:
       # - LIVEKIT_API_KEY
       # - LIVEKIT_API_SECRET
       # - LIVEKIT_URL   (wss://xxx.livekit.cloud)
+      # Push socket bridge — MUST match Vercel NOTIFY_INTERNAL_SECRET:
+      # - NOTIFY_INTERNAL_SECRET

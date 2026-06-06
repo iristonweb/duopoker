@@ -14,6 +14,7 @@ import {
 } from '../services/club-plans.js';
 import { createOrganizerPayment } from '../services/yookassa.js';
 import { config } from '../config.js';
+import { notifyTableInvite, notifyTableLive } from '../services/notifications/dispatch.js';
 import { organizerPlanBanners } from '@duopoker/shared-types';
 
 const createClubSchema = z.object({
@@ -475,8 +476,25 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/invite', async (c) => {
       invitedByUserId: actorId
     },
     include: {
-      user: { select: { id: true, nickname: true, displayName: true } }
+      user: { select: { id: true, nickname: true, displayName: true } },
+      table: {
+        include: {
+          club: { select: { name: true } }
+        }
+      }
     }
+  });
+
+  const host = await prisma.user.findUnique({
+    where: { id: seat.table.hostUserId },
+    select: { nickname: true }
+  });
+
+  void notifyTableInvite(targetUserId, {
+    clubName: seat.table.club.name,
+    tableName: seat.table.name,
+    inviteCode: seat.table.inviteCode,
+    hostNick: host?.nickname ?? 'host'
   });
 
   return c.json({ seat }, 201);
@@ -561,7 +579,23 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/start', async (c) => {
     }
   });
 
-  const updated = await prisma.privateTable.findUnique({ where: { id: tableId } });
+  const updated = await prisma.privateTable.findUnique({
+    where: { id: tableId },
+    include: {
+      seats: { where: { status: { in: ['INVITED', 'ACCEPTED', 'SEATED'] } }, select: { userId: true } }
+    }
+  });
+
+  if (updated) {
+    const notifyIds = updated.seats.map((s) => s.userId).filter((id) => id !== actorId);
+    void notifyTableLive(notifyIds, {
+      sessionId,
+      tableName: updated.name,
+      clubId,
+      tableId
+    });
+  }
+
   return c.json({ table: updated, sessionId, disclaimer: NON_GAMBLING_DISCLAIMER });
 });
 

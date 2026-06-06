@@ -68,5 +68,6 @@ export const config = {
   corsOrigin: splitOrigins(process.env.CORS_ORIGIN ?? process.env.PUBLIC_WEB_URL),
   livekitApiKey: process.env.LIVEKIT_API_KEY ?? '',
   livekitApiSecret: process.env.LIVEKIT_API_SECRET ?? '',
-  livekitUrl: process.env.LIVEKIT_URL ?? ''
+  livekitUrl: process.env.LIVEKIT_URL ?? '',
+  notifyInternalSecret: process.env.NOTIFY_INTERNAL_SECRET?.trim() ?? 'dev-notify-secret'
 };
