@@ -43,21 +43,44 @@ export function HandResultOverlay({
     <AnimatePresence>
       {visible ? (
         <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 0, y: -16, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -12, scale: 0.98 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
             'absolute inset-x-0 top-16 z-20 flex justify-center px-4 sm:top-[4.5rem]',
             className
           )}
         >
-          <GlassPanel glow="gold" className="max-w-lg px-5 py-3 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold/70">
+          <GlassPanel
+            glow="gold"
+            className="relative max-w-lg overflow-hidden px-6 py-4 text-center shadow-[0_0_48px_rgba(232,197,71,0.2)]"
+          >
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <motion.span
+                  key={i}
+                  className="absolute h-1 w-1 rounded-full bg-gold/60"
+                  initial={{
+                    x: `${20 + i * 15}%`,
+                    y: '50%',
+                    opacity: 0.8,
+                    scale: 1
+                  }}
+                  animate={{
+                    y: ['50%', `${20 + i * 8}%`, '80%'],
+                    opacity: [0.8, 0.4, 0],
+                    scale: [1, 0.5, 0]
+                  }}
+                  transition={{ duration: 1.8, delay: i * 0.15, repeat: Infinity, repeatDelay: 2 }}
+                />
+              ))}
+            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
               {summaryHeading ?? t('table.handResult')}
             </p>
-            <p className="mt-1 font-display text-lg font-semibold text-gradient-gold">{t('table.handComplete')}</p>
-            <p className="mt-1 text-sm text-muted">{resultLine}</p>
+            <p className="mt-1 font-display text-2xl font-semibold text-gradient-gold">{t('table.handComplete')}</p>
+            <p className="mt-2 text-sm text-muted">{resultLine}</p>
             {canPeekGhostBoard && onToggleGhostBoard ? (
               <div className="pointer-events-auto mt-3">
                 <Button

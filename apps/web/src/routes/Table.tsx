@@ -203,13 +203,8 @@ export const Table = () => {
   const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(viewSession, label, t, soundOn, {
     actionSounds: false
   });
-  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, dealTick } = useTableAnimationQueue(
-    viewSession,
-    label,
-    t,
-    soundOn,
-    reduceMotion
-  );
+  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, dealTick, foldingUsers, checkRippleUsers } =
+    useTableAnimationQueue(session, label, t, soundOn, reduceMotion);
   useCommunityCardSounds(viewSession?.communityCards?.length ?? 0, false);
   useTableMusic(musicOn);
 
@@ -218,10 +213,10 @@ export const Table = () => {
   useTableSessionTick(matchRoute ? session : undefined, routeSessionId);
 
   const tablePlayers = useMemo((): TablePlayerVisual[] => {
-    if (!viewSession) return [];
+    if (!viewSession || !session) return [];
     const dealerUid = viewSession.players[viewSession.dealerIndex];
     const visualActiveId =
-      viewSession.players.length > 0 ? viewSession.players[viewSession.activePlayerIndex] : undefined;
+      session.players.length > 0 ? session.players[session.activePlayerIndex] : undefined;
     const atShowdown = viewSession.street === 'SHOWDOWN' || viewSession.street === 'COMPLETE';
     const inHandStreet = viewSession.street && viewSession.street !== 'LOBBY';
     const visuals = viewSession.players.map((uid) => {
@@ -257,6 +252,7 @@ export const Table = () => {
     return rotatePlayersForHero(visuals, userId);
   }, [
     viewSession,
+    session,
     playerProfiles,
     userId,
     subscriptionTier,
@@ -282,17 +278,38 @@ export const Table = () => {
     return () => stopPolling();
   }, [routeSessionId, tableVoluntaryLeave, joinSession, pollSession, stopPolling, mode, socket]);
 
-  useEffect(() => {
-    if (session?.bigBlind) setRaiseAmount(session.bigBlind * 2);
-  }, [session?.bigBlind, session?.handNumber]);
+  const raiseBounds = useMemo(() => {
+    if (!session || session.mode === 'JOKER' || !userId) {
+      return { minTotal: 0, maxTotal: 0, canRaise: false, need: 0, roundBet: 0 };
+    }
+    const roundBet = session.playerRoundBet[userId] ?? 0;
+    const need = amountToCall(session, userId);
+    const heroStack = session.stacks[userId] ?? 0;
+    const minIncrement = session.bigBlind;
+    const minTotal =
+      need > 0
+        ? roundBet + need + minIncrement
+        : Math.max(session.bigBlind, roundBet + minIncrement);
+    const maxTotal = roundBet + heroStack;
+    return { minTotal, maxTotal, canRaise: minTotal <= maxTotal, need, roundBet };
+  }, [session, userId]);
 
   useEffect(() => {
-    if (session?.mode === 'JOKER') {
-      setJokerBid(0);
-      return;
+    if (!session || session.mode === 'JOKER') return;
+    setRaiseAmount((v) =>
+      Math.min(raiseBounds.maxTotal, Math.max(raiseBounds.minTotal, v || raiseBounds.minTotal))
+    );
+  }, [session?.handNumber, session?.street, raiseBounds.minTotal, raiseBounds.maxTotal, session?.mode]);
+
+  useEffect(() => {
+    if (session?.mode === 'JOKER') setJokerBid(0);
+  }, [session?.mode, session?.handNumber, session?.joker?.matchHandIndex]);
+
+  useEffect(() => {
+    if (session?.mode !== 'JOKER' && (session?.stacks[userId] ?? 0) > 0) {
+      setBustedDismissed(false);
     }
-    if ((session?.stacks[userId] ?? 0) > 0) setBustedDismissed(false);
-  }, [session?.mode, session?.stacks, userId, session?.handNumber, session?.joker?.cardsThisDeal]);
+  }, [session?.mode, session?.stacks, userId]);
 
   useEffect(() => {
     setGhostBoardVisible(false);
@@ -414,15 +431,15 @@ export const Table = () => {
   const kettle =
     session.pot +
     Object.values(session.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
-  const minRaise = Math.max(
-    session.bigBlind,
-    session.currentBet > 0
-      ? session.currentBet * 2 - (session.playerRoundBet[userId] ?? 0)
-      : session.bigBlind
+  const { minTotal, maxTotal, canRaise, roundBet } = raiseBounds;
+  const halfPotRaise = Math.max(
+    minTotal,
+    need > 0 ? roundBet + need + Math.floor(kettle / 2) : roundBet + Math.floor(kettle / 2)
   );
-  const maxRaise = heroStack;
-  const halfPotRaise = Math.max(minRaise, Math.floor(kettle / 2));
-  const potRaise = Math.max(minRaise, kettle);
+  const potRaise = Math.max(
+    minTotal,
+    need > 0 ? roundBet + need + kettle : roundBet + kettle
+  );
   const holeCards = session.playerCards[userId] ?? [];
   const viewKettle =
     tableView.pot +
@@ -447,6 +464,11 @@ export const Table = () => {
   const activeLabel = activeId
     ? `${label(activeId)}${activeId === userId ? ` ${t('table.you')}` : ''}`
     : '—';
+  const lastActionText = useMemo(() => {
+    const log = session?.actionLog;
+    if (!log?.length) return undefined;
+    return formatDisplayAction(log[log.length - 1]);
+  }, [session?.actionLog, formatDisplayAction]);
   const winnerNames = (tableView.winners ?? []).map(label).join(', ') || '—';
   const jokerHandSummary =
     isJoker && session.joker?.handPoints
@@ -470,11 +492,13 @@ export const Table = () => {
     isPreflopMuckWin && !tierMeetsRequirement(subscriptionTier, GHOST_BOARD_MIN_TIER);
 
   const handleRaise = () => {
-    const amount = Math.min(maxRaise, Math.max(minRaise, raiseAmount || minRaise));
+    if (!canRaise) return;
+    const total = Math.min(maxTotal, Math.max(minTotal, raiseAmount || minTotal));
+    const increment = total - roundBet - need;
     playerAction({
       sessionId: sid,
       type: session.currentBet > 0 ? 'raise' : 'bet',
-      amount
+      amount: increment
     });
   };
 
@@ -522,6 +546,8 @@ export const Table = () => {
               jokerFlights={jokerFlights}
               potPulseKey={potPulseKey}
               dealTick={dealTick}
+              foldingUsers={foldingUsers}
+              checkRippleUsers={checkRippleUsers}
               className="h-full"
             />
             <HandResultOverlay
@@ -588,13 +614,21 @@ export const Table = () => {
                 pointsLabel={t('table.notebookPoints')}
                 totalLabel={t('table.notebookTotal')}
                 liveLabel={t('table.notebookLive')}
+                modeLabel={t('table.joker')}
               />
             ) : null}
             <VoiceChatPill />
             {waitingForPlayers ? (
-              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/45 px-6 backdrop-blur-[2px]">
-                <GlassPanel glow="gold" className="pointer-events-auto max-w-md border-gold/15 p-6 text-center">
-                  <p className="font-display text-lg text-ivory">
+              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/50 px-6 backdrop-blur-sm">
+                <GlassPanel glow="emerald" className="pointer-events-auto max-w-md border-emerald/20 p-8 text-center shadow-[0_0_48px_rgba(74,222,128,0.15)]">
+                  <motion.div
+                    animate={{ scale: [1, 1.06, 1] }}
+                    transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+                    className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-emerald/40 bg-emerald/10 text-xl"
+                  >
+                    ♠
+                  </motion.div>
+                  <p className="font-display text-xl text-gradient-gold">
                     {isJoker ? t('table.waitingForPlayersJoker') : t('table.waitingOpponent')}
                   </p>
                 </GlassPanel>
@@ -617,9 +651,14 @@ export const Table = () => {
             secondsLeft={secondsLeft}
             activeLabel={activeLabel}
             isHeroActive={activeId === userId}
+            lastActionText={lastActionText}
             sessionError={sessionError}
             actionLogLen={session.actionLog?.length ?? 0}
-            onBid={() => playerAction({ sessionId: sid, type: 'bid', amount: jokerBid })}
+            onBid={() => {
+              const max = Math.min(9, session.joker!.cardsThisDeal);
+              const bid = Math.min(max, Math.max(0, jokerBid));
+              playerAction({ sessionId: sid, type: 'bid', amount: bid });
+            }}
             onPlayCard={(card) => playerAction({ sessionId: sid, type: 'playCard', card })}
           />
         ) : (
@@ -627,18 +666,20 @@ export const Table = () => {
             myTurn={myTurn}
             need={need}
             currentBet={session.currentBet}
-            minRaise={minRaise}
-            maxRaise={maxRaise}
+            minTotal={minTotal}
+            maxTotal={maxTotal}
+            canRaise={canRaise}
             raiseAmount={raiseAmount}
             onRaiseAmountChange={setRaiseAmount}
-            halfPotRaise={halfPotRaise}
-            potRaise={potRaise}
+            halfPotRaise={Math.min(maxTotal, halfPotRaise)}
+            potRaise={Math.min(maxTotal, potRaise)}
             kettle={kettle}
             secondsLeft={secondsLeft}
             holeCards={holeCards}
             deckId={equipped.deck}
             activeLabel={activeLabel}
             isHeroActive={activeId === userId}
+            lastActionText={lastActionText}
             heroSpectating={heroSpectating}
             street={session.street}
             sessionError={sessionError}

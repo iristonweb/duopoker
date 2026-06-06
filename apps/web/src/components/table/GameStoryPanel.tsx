@@ -73,15 +73,19 @@ export function GameStoryPanel({
         {latest && !open ? (
           <motion.div
             key={`${latest.id}-${pulseKey}`}
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ opacity: 0, y: -10, scale: 0.96 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: [0.96, 1.02, 1],
+              transition: { duration: 0.35, ease: 'easeOut' }
+            }}
             exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-            className={cn('text-xs leading-relaxed sm:text-sm', kindStyle[latest.kind])}
+            className={cn('text-sm leading-relaxed sm:text-base', kindStyle[latest.kind])}
           >
-            <GlassPanel glow="emerald" className="px-3 py-2.5">
-              <span className="mr-1.5 opacity-60">{kindIcon[latest.kind]}</span>
-              {latest.text}
+            <GlassPanel glow="gold" className="px-3.5 py-3 shadow-[0_0_24px_rgba(232,197,71,0.12)] ring-1 ring-gold/20">
+              <span className="mr-2 text-sm opacity-70">{kindIcon[latest.kind]}</span>
+              <span className="font-medium">{latest.text}</span>
             </GlassPanel>
           </motion.div>
         ) : null}

@@ -5,6 +5,7 @@ const ERROR_KEY_MAP: Record<string, string> = {
   INVALID_ACTION: 'table.errors.invalidAction',
   NO_JOKER_STATE: 'table.errors.noJokerState',
   ILLEGAL_CARD: 'table.errors.illegalCard',
+  ILLEGAL_RAISE: 'table.errors.illegalRaise',
   action_rejected: 'table.errors.actionRejected',
   NOT_SEATED: 'table.errors.notSeated',
   NOT_ASSIGNED: 'table.errors.notAssigned',

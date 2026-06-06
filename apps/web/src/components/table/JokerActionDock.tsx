@@ -24,6 +24,7 @@ type Props = {
   secondsLeft: number | null;
   activeLabel: string;
   isHeroActive: boolean;
+  lastActionText?: string;
   sessionError?: string | null;
   actionLogLen: number;
   onBid: () => void;
@@ -42,6 +43,7 @@ export function JokerActionDock({
   secondsLeft,
   activeLabel,
   isHeroActive,
+  lastActionText,
   sessionError,
   actionLogLen,
   onBid,
@@ -54,6 +56,7 @@ export function JokerActionDock({
   const bidding = street === 'BIDDING';
   const showHand = street === 'BIDDING' || street === 'TRICKS';
   const trump = jokerTrumpDisplay(joker, t);
+  const clampedBid = Math.min(maxBid, Math.max(0, bidAmount));
 
   const legalCards = useMemo(() => {
     if (bidding || !showActions) return new Set<string>();
@@ -88,11 +91,14 @@ export function JokerActionDock({
       initial={false}
       animate={{ y: 0, opacity: 1 }}
       className={cn(
-        'glass-shine relative z-40 shrink-0 border-t bg-background/90 backdrop-blur-xl',
-        showActions ? 'border-gold/30 shadow-glow-gold' : 'border-white/10'
+        'glass-shine relative z-40 shrink-0 border-t bg-background/92 backdrop-blur-xl',
+        showActions ? 'border-gradient-gold border-gold/35 shadow-glow-gold' : 'border-white/10'
       )}
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
+      {showActions ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
+      ) : null}
       <div className="mx-auto max-w-6xl px-3 py-3 sm:px-5 sm:py-4">
         {sessionError ? (
           <p className="mb-2 rounded-lg border border-rose/30 bg-rose/10 px-3 py-1.5 text-xs text-rose">
@@ -122,12 +128,27 @@ export function JokerActionDock({
                 {bidding ? t('table.jokerBidPrompt') : t('table.jokerPlayPrompt')}
               </p>
             ) : (
-              <p className="truncate text-sm text-muted">
-                {t('table.toAct')}{' '}
-                <span className={cn('font-medium', isHeroActive ? 'text-gold-light' : 'text-zinc-200')}>
-                  {activeLabel}
-                </span>
-              </p>
+              <div className="space-y-1">
+                <p className="truncate text-sm text-muted">
+                  {t('table.toAct')}{' '}
+                  <span className={cn('font-medium', isHeroActive ? 'text-gold-light' : 'text-zinc-200')}>
+                    {activeLabel}
+                  </span>
+                </p>
+                {lastActionText ? (
+                  <motion.p
+                    key={lastActionText}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="truncate text-sm font-medium text-ivory sm:text-base"
+                  >
+                    <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300/70">
+                      {t('table.lastAction')}:
+                    </span>
+                    {lastActionText}
+                  </motion.p>
+                ) : null}
+              </div>
             )}
           </div>
           {secondsLeft !== null && showActions ? (
@@ -142,25 +163,25 @@ export function JokerActionDock({
               min={0}
               max={maxBid}
               step={1}
-              value={bidAmount}
+              value={clampedBid}
               aria-label={t('table.bidSliderLabel')}
               aria-valuemin={0}
               aria-valuemax={maxBid}
-              aria-valuenow={bidAmount}
-              aria-valuetext={t('table.jokerBid', { amount: bidAmount })}
+              aria-valuenow={clampedBid}
+              aria-valuetext={t('table.jokerBid', { amount: clampedBid })}
               onChange={(e) => onBidAmountChange(Number(e.target.value))}
-              className="h-2 min-w-[8rem] flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-gold"
+              className="h-2 min-w-[8rem] flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-gold [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gold"
             />
-            <span className="w-8 font-mono text-lg font-bold text-gold-light">{bidAmount}</span>
-            <Button variant="primary" size="lg" className="min-h-12" onClick={onBid}>
-              {t('table.jokerBid', { amount: bidAmount })}
+            <span className="w-8 font-mono text-lg font-bold text-gold-light">{clampedBid}</span>
+            <Button variant="primary" size="lg" className="min-h-12 border border-gold/30 shadow-glow-gold" onClick={onBid}>
+              {t('table.jokerBid', { amount: clampedBid })}
             </Button>
           </div>
         ) : null}
 
         {showHand ? (
           <div className="flex flex-col gap-2">
-            {!showActions && street !== 'COMPLETE' && street !== 'LOBBY' ? (
+            {!showActions && !lastActionText ? (
               <p className="text-center text-sm text-subtle">{t('table.waitingOpponent')}</p>
             ) : null}
             <div className="flex flex-wrap gap-2">
@@ -176,8 +197,9 @@ export function JokerActionDock({
                       deckId={deckId}
                       size="md"
                       className={cn(
-                        'shadow-lg transition',
-                        playable && !pendingCard ? 'hover:scale-105' : '',
+                        'shadow-lg transition duration-200',
+                        playable && !pendingCard ? 'hover:-translate-y-1 hover:scale-105' : '',
+                        playable && !pendingCard ? 'ring-2 ring-gold/50' : '',
                         !playable && showActions && !bidding ? 'opacity-40 grayscale' : ''
                       )}
                     />

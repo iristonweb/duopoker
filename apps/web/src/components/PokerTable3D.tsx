@@ -2,6 +2,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { ContactShadows, Environment } from '@react-three/drei';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PointLight } from 'three';
 import type { Card, EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types/index';
 import { resolveEquipped, gameChipId } from '@duopoker/shared-types';
@@ -53,6 +54,8 @@ type Props = {
   jokerFlights?: JokerCardFlight[];
   potPulseKey?: number;
   dealTick?: number;
+  foldingUsers?: string[];
+  checkRippleUsers?: string[];
   className?: string;
 };
 
@@ -83,8 +86,11 @@ export function PokerTable3D({
   jokerFlights = [],
   potPulseKey = 0,
   dealTick = 0,
+  foldingUsers = [],
+  checkRippleUsers = [],
   className
 }: Props) {
+  const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const felt = tableFeltVisual(heroTableFeltId);
   const potChipId = gameChipId(heroChipId);
@@ -92,7 +98,8 @@ export function PokerTable3D({
   const boardCards = showGhostBoard ? ghostCommunityCards : communityCards;
   const motionDelay = reduceMotion ? 0 : undefined;
   const playerIndex = new Map(players.map((p, i) => [p.userId, i]));
-  const bubbleByUser = new Map(seatBubbles.map((b) => [b.userId, b.text]));
+  const bubbleByUser = new Map(seatBubbles.map((b) => [b.userId, b]));
+  const foldingSet = new Set(foldingUsers);
 
   return (
     <div className={cn('relative h-full min-h-0 w-full overflow-hidden', className)}>
@@ -129,7 +136,7 @@ export function PokerTable3D({
 
       <div
         className={cn(
-          'pointer-events-none absolute left-1/2 top-[12%] h-[68%] w-[88%] max-w-[52rem] -translate-x-1/2 overflow-hidden rounded-[50%] border-[3px] shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]',
+          'pointer-events-none absolute left-1/2 top-[12%] h-[68%] w-[88%] max-w-[52rem] -translate-x-1/2 overflow-hidden rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)]',
           felt.className,
           heroTableFeltId === 'table_void'
             ? 'border-violet-500/50 shadow-[inset_0_0_100px_rgba(88,28,135,0.45),0_0_56px_rgba(139,92,246,0.25)]'
@@ -137,12 +144,13 @@ export function PokerTable3D({
               ? 'border-cyan-400/45 shadow-[inset_0_0_90px_rgba(34,211,238,0.2),0_0_48px_rgba(34,211,238,0.18)]'
               : heroTableFeltId === 'table_platinum'
                 ? 'border-violet-300/40 shadow-[inset_0_0_80px_rgba(167,139,250,0.18),0_0_44px_rgba(196,181,253,0.15)]'
-                : 'border-[#8b6914]/80 shadow-[0_0_48px_rgba(232,197,71,0.15)]'
+                : 'border-[#c9a227]/70 shadow-[0_0_64px_rgba(232,197,71,0.22),inset_0_0_60px_rgba(0,0,0,0.5)]'
         )}
         style={{ backgroundImage: felt.backgroundImage, backgroundSize: felt.backgroundSize }}
       >
-        <div className="absolute inset-[10%] rounded-[50%] border border-white/[0.06]" />
-        <div className="absolute inset-0 rounded-[50%] bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(0,0,0,0.38)_100%)]" />
+        <div className="absolute inset-[10%] rounded-[50%] border border-white/[0.08]" />
+        <div className="absolute inset-[6%] rounded-[50%] border border-gold/10" />
+        <div className="absolute inset-0 rounded-[50%] bg-[radial-gradient(ellipse_at_center,_transparent_35%,_rgba(0,0,0,0.42)_100%)]" />
       </div>
 
       {/* Virtual deck position for deal animation origin */}
@@ -228,7 +236,9 @@ export function PokerTable3D({
           const hiddenCount = player.hiddenCardCount ?? 0;
           const isHeroSeat = player.isHero ?? index === players.length - 1;
           const roundBet = player.roundBet ?? 0;
-          const bubbleText = bubbleByUser.get(player.userId);
+          const bubble = bubbleByUser.get(player.userId);
+          const isFolding = foldingSet.has(player.userId);
+          const hasCheckRipple = checkRippleUsers.includes(player.userId);
 
           return (
             <div
@@ -236,18 +246,35 @@ export function PokerTable3D({
               className={cn(
                 'absolute flex flex-col items-center gap-1 transition-all duration-300',
                 seatLayout(index, players.length),
-                player.isActive && 'z-20 scale-[1.05]',
-                player.isFolded && 'opacity-45 grayscale-[0.35]'
+                player.isActive && 'z-20 scale-[1.06]',
+                player.isFolded && 'opacity-50 grayscale-[0.4]'
               )}
             >
               {player.isActive ? (
-                <span className="absolute -inset-3 animate-pulse-glow rounded-3xl border-2 border-emerald/50 bg-emerald/[0.07] shadow-[0_0_28px_rgba(74,222,128,0.35)] sm:-inset-4" />
+                <>
+                  <span className="absolute -inset-4 animate-pulse-glow rounded-3xl border-2 border-emerald/55 bg-emerald/[0.08] shadow-[0_0_32px_rgba(74,222,128,0.4)] sm:-inset-5" />
+                  <span className="absolute -inset-2 rounded-3xl border border-gold/25 sm:-inset-3" />
+                </>
+              ) : null}
+              {hasCheckRipple ? (
+                <motion.span
+                  initial={{ opacity: 0.7, scale: 0.85 }}
+                  animate={{ opacity: 0, scale: 1.35 }}
+                  transition={{ duration: 0.55, ease: 'easeOut' }}
+                  className="absolute -inset-3 rounded-3xl border-2 border-emerald/60 sm:-inset-4"
+                />
               ) : null}
               {isHeroSeat ? (
-                <span className="absolute -inset-2 rounded-3xl border border-gold/25 shadow-[inset_0_0_20px_rgba(232,197,71,0.12)]" />
+                <span className="absolute -inset-2 rounded-3xl border border-gold/30 shadow-[inset_0_0_24px_rgba(232,197,71,0.14)]" />
               ) : null}
 
-              {bubbleText ? <SeatActionBubble text={bubbleText} /> : null}
+              {bubble ? <SeatActionBubble text={bubble.text} kind={bubble.kind} /> : null}
+
+              {player.isFolded ? (
+                <span className="absolute -bottom-1 z-[4] rounded-full border border-rose/40 bg-rose/20 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-rose sm:text-[9px]">
+                  {t('table.seatOut')}
+                </span>
+              ) : null}
 
               {player.isDealer ? (
                 <span className="absolute -right-1 -top-1 z-[2] flex h-5 w-5 items-center justify-center rounded-full border border-gold/40 bg-gold/20 text-[10px] font-bold text-gold-light shadow-glow-gold">
@@ -300,7 +327,11 @@ export function PokerTable3D({
                             : { opacity: 0, y: -28, x: 0, scale: 0.75, rotate: -6 }
                         }
                         animate={{ opacity: 1, y: 0, x: 0, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0, y: -18, scale: 0.7, transition: { duration: 0.25 } }}
+                        exit={
+                          isFolding
+                            ? { opacity: 0, y: 28, scale: 0.6, rotate: 12, transition: { duration: 0.4 } }
+                            : { opacity: 0, y: -18, scale: 0.7, transition: { duration: 0.25 } }
+                        }
                         transition={{ delay: motionDelay ?? ci * 0.05, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                         className={cn(
                           isHeroSeat && ci === 0 && '-rotate-[8deg]',

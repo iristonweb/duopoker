@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
-import { playCardSound, playChipSound } from '../lib/table-sounds';
+import { formatCardLabel } from '../lib/joker-labels';
+import {
+  formatSeatActionShort,
+  type SeatActionKind
+} from '../lib/seat-action-format';
+import {
+  playBlindSound,
+  playCardSound,
+  playCheckSound,
+  playChipSound,
+  playFoldSound
+} from '../lib/table-sounds';
 import {
   TABLE_STEP_MS,
   buildTableSessionSteps,
@@ -13,6 +24,7 @@ export type SeatActionBubble = {
   id: string;
   userId: string;
   text: string;
+  kind: SeatActionKind;
 };
 
 export type ChipFlight = {
@@ -28,7 +40,7 @@ export type JokerCardFlight = {
   card: Card;
 };
 
-const BUBBLE_MS = 2600;
+const BUBBLE_MS = 3800;
 
 const formatActionText = (
   action: PlayerAction,
@@ -50,7 +62,10 @@ const formatActionText = (
     case 'bid':
       return t('table.feedJokerBid', { name, amount: action.amount ?? 0 });
     case 'playCard':
-      return t('table.feedJokerPlay', { name, card: action.card ?? '?' });
+      return t('table.feedJokerPlay', {
+        name,
+        card: action.card ? formatCardLabel(action.card, t) : '?'
+      });
     default:
       return `${name}: ${action.type}`;
   }
@@ -73,15 +88,31 @@ export function useTableAnimationQueue(
   const [jokerFlights, setJokerFlights] = useState<JokerCardFlight[]>([]);
   const [potPulseKey, setPotPulseKey] = useState(0);
   const [dealTick, setDealTick] = useState(0);
+  const [foldingUsers, setFoldingUsers] = useState<string[]>([]);
+  const [checkRippleUsers, setCheckRippleUsers] = useState<string[]>([]);
+
+  const cardFmt = (c: Card) => formatCardLabel(c, t);
+
+  const pushBubble = (id: string, userId: string, text: string, kind: SeatActionKind) => {
+    setSeatBubbles((prev) => [...prev.filter((b) => b.userId !== userId), { id, userId, text, kind }]);
+    setTimeout(() => setSeatBubbles((prev) => prev.filter((b) => b.id !== id)), BUBBLE_MS);
+  };
+
+  const pushChipFlight = (flightId: string, userId: string, amount: number, kind: 'toPot' | 'toWinner') => {
+    setChipFlights((prev) => [...prev, { id: flightId, userId, amount, kind }]);
+    setTimeout(() => setChipFlights((prev) => prev.filter((f) => f.id !== flightId)), kind === 'toWinner' ? 900 : 700);
+  };
 
   const enqueue = (steps: TableSessionStep[]) => {
     if (reduceMotion) {
       for (const step of steps) {
         if (step.kind === 'action') {
-          setSeatBubbles((prev) => [
-            ...prev.filter((b) => b.userId !== step.userId),
-            { id: `${step.action.at}-${step.userId}`, userId: step.userId, text: step.text }
-          ]);
+          const short = formatSeatActionShort(step.action, t, cardFmt);
+          pushBubble(`${step.action.at}-${step.userId}`, step.userId, short.label, short.kind);
+        }
+        if (step.kind === 'postBlind') {
+          const kind = step.blindType === 'SB' ? 'blindSB' : 'blindBB';
+          pushBubble(`blind-${step.userId}-${step.amount}`, step.userId, step.text, kind);
         }
         if (step.kind === 'potPulse') setPotPulseKey((k) => k + 1);
       }
@@ -108,17 +139,38 @@ export function useTableAnimationQueue(
     switch (step.kind) {
       case 'action': {
         const id = `${step.action.at}-${step.userId}`;
-        setSeatBubbles((prev) => [...prev.filter((b) => b.userId !== step.userId), { id, userId: step.userId, text: step.text }]);
+        const short = formatSeatActionShort(step.action, t, cardFmt);
+        pushBubble(id, step.userId, short.label, short.kind);
+
         if (soundOn) {
           if (step.action.type === 'playCard' || step.action.type === 'bid') playCardSound();
+          else if (step.action.type === 'fold') playFoldSound();
+          else if (step.action.type === 'check') playCheckSound();
           else if (['bet', 'call', 'raise'].includes(step.action.type)) playChipSound();
         }
-        if (['bet', 'call', 'raise'].includes(step.action.type) && (step.action.amount ?? 0) > 0) {
-          const flightId = `chip-${step.action.at}-${step.userId}`;
-          setChipFlights((prev) => [...prev, { id: flightId, userId: step.userId, amount: step.action.amount ?? 0, kind: 'toPot' }]);
-          setTimeout(() => setChipFlights((prev) => prev.filter((f) => f.id !== flightId)), 700);
+
+        if (step.action.type === 'fold') {
+          setFoldingUsers((prev) => [...prev, step.userId]);
+          setTimeout(() => setFoldingUsers((prev) => prev.filter((u) => u !== step.userId)), 450);
         }
-        setTimeout(() => setSeatBubbles((prev) => prev.filter((b) => b.id !== id)), BUBBLE_MS);
+        if (step.action.type === 'check') {
+          setCheckRippleUsers((prev) => [...prev, step.userId]);
+          setTimeout(() => setCheckRippleUsers((prev) => prev.filter((u) => u !== step.userId)), 600);
+        }
+
+        if (['bet', 'call', 'raise'].includes(step.action.type) && (step.action.amount ?? 0) > 0) {
+          pushChipFlight(`chip-${step.action.at}-${step.userId}`, step.userId, step.action.amount ?? 0, 'toPot');
+        }
+        break;
+      }
+      case 'postBlind': {
+        const id = `blind-${step.userId}-${step.amount}`;
+        const kind = step.blindType === 'SB' ? 'blindSB' : 'blindBB';
+        pushBubble(id, step.userId, step.text, kind);
+        if (soundOn) playBlindSound();
+        if (step.amount > 0) {
+          pushChipFlight(`blind-chip-${step.userId}`, step.userId, step.amount, 'toPot');
+        }
         break;
       }
       case 'collectBets':
@@ -143,16 +195,10 @@ export function useTableAnimationQueue(
       case 'potPulse':
         setPotPulseKey((k) => k + 1);
         break;
-      case 'winnerChips': {
-        const flightId = `win-${step.handNumber}-${step.userId}`;
-        setChipFlights((prev) => [
-          ...prev,
-          { id: flightId, userId: step.userId, amount: step.amount, kind: 'toWinner' }
-        ]);
+      case 'winnerChips':
+        pushChipFlight(`win-${step.handNumber}-${step.userId}`, step.userId, step.amount, 'toWinner');
         if (soundOn) playChipSound();
-        setTimeout(() => setChipFlights((prev) => prev.filter((f) => f.id !== flightId)), 900);
         break;
-      }
       default:
         break;
     }
@@ -172,7 +218,17 @@ export function useTableAnimationQueue(
       return;
     }
 
-    const steps = buildTableSessionSteps(prev, session, (action) => formatActionText(action, label, t));
+    const formatBlind = (type: 'SB' | 'BB', amount: number) =>
+      type === 'SB'
+        ? t('table.postsBlindSB', { amount })
+        : t('table.postsBlindBB', { amount });
+
+    const steps = buildTableSessionSteps(
+      prev,
+      session,
+      (action) => formatActionText(action, label, t),
+      formatBlind
+    );
 
     if (steps.length) enqueue(steps);
     prevRef.current = snap;
@@ -185,5 +241,5 @@ export function useTableAnimationQueue(
     []
   );
 
-  return { seatBubbles, chipFlights, jokerFlights, potPulseKey, dealTick };
+  return { seatBubbles, chipFlights, jokerFlights, potPulseKey, dealTick, foldingUsers, checkRippleUsers };
 }

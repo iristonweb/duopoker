@@ -1,9 +1,10 @@
 import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 
-export const TABLE_STEP_MS = 420;
+export const TABLE_STEP_MS = 300;
 
 export type TableSessionStep =
   | { kind: 'action'; userId: string; text: string; action: PlayerAction }
+  | { kind: 'postBlind'; userId: string; amount: number; blindType: 'SB' | 'BB'; text: string }
   | { kind: 'collectBets' }
   | { kind: 'dealHole'; userId: string; cardIndex: number }
   | { kind: 'dealBoard'; cardIndex: number }
@@ -36,7 +37,8 @@ export const sessionSnap = (session: SessionState): SessionSnap => {
 export const buildTableSessionSteps = (
   prev: SessionSnap | null,
   session: SessionState,
-  formatAction: (action: PlayerAction) => string
+  formatAction: (action: PlayerAction) => string,
+  formatBlind?: (type: 'SB' | 'BB', amount: number) => string
 ): TableSessionStep[] => {
   if (!prev) return [];
 
@@ -50,6 +52,25 @@ export const buildTableSessionSteps = (
         steps.push({ kind: 'dealHole', userId: uid, cardIndex: i });
       }
     }
+
+    if (session.mode === 'HOLDEM' && formatBlind) {
+      const bb = session.bigBlind ?? 0;
+      const posted = new Set<string>();
+      for (const uid of session.players) {
+        const bet = session.playerRoundBet?.[uid] ?? 0;
+        if (bet <= 0 || posted.has(uid)) continue;
+        const blindType: 'SB' | 'BB' = bet >= bb ? 'BB' : 'SB';
+        steps.push({
+          kind: 'postBlind',
+          userId: uid,
+          amount: bet,
+          blindType,
+          text: formatBlind(blindType, bet)
+        });
+        posted.add(uid);
+      }
+    }
+
     return steps;
   }
 
@@ -127,8 +148,14 @@ export const applyDisplayStep = (
         };
       }
       break;
+    case 'postBlind': {
+      next.playerRoundBet = { ...(next.playerRoundBet ?? {}), [step.userId]: step.amount };
+      next.activePlayerIndex = target.activePlayerIndex;
+      break;
+    }
     case 'action': {
       next.actionLog = [...(next.actionLog ?? []), step.action];
+      next.activePlayerIndex = target.activePlayerIndex;
       const logLen = next.actionLog.length;
       const targetLen = target.actionLog?.length ?? 0;
       if (logLen >= targetLen) {
@@ -137,7 +164,19 @@ export const applyDisplayStep = (
         next.pot = target.pot;
         next.foldedPlayerIds = [...(target.foldedPlayerIds ?? [])];
         next.currentBet = target.currentBet;
-        next.activePlayerIndex = target.activePlayerIndex;
+      } else {
+        const uid = step.action.userId;
+        if (step.action.type === 'fold') {
+          next.foldedPlayerIds = [...(next.foldedPlayerIds ?? []), uid].filter(
+            (id, i, arr) => arr.indexOf(id) === i
+          );
+        }
+        if (['bet', 'call', 'raise'].includes(step.action.type)) {
+          next.playerRoundBet = {
+            ...(next.playerRoundBet ?? {}),
+            [uid]: step.action.amount ?? next.playerRoundBet?.[uid] ?? 0
+          };
+        }
       }
       break;
     }
