@@ -24,8 +24,7 @@ import {
   PlayerCountSelector,
   SectionHeader,
   SubscriptionTierCard,
-  TabGroup,
-  VoiceChatPanel
+  TabGroup
 } from '@duopoker/ui-kit';
 import { AppLogo } from '../components/AppLogo';
 import { LanguageSwitch } from '../components/LanguageSwitch';
@@ -35,7 +34,7 @@ import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { PokerTable3D } from '../components/PokerTable3D';
 import { SubscriptionPerksMatrix } from '../components/subscriptions/SubscriptionPerksMatrix';
-import { VoiceRoom } from '../components/VoiceRoom';
+import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { useAppStore } from '../store/useAppStore';
 import { translateAuthError, translateQueueError } from '../lib/translate-store-error';
 import { resolveApiUrl, usesRealtimeSocket } from '../config/api';
@@ -859,14 +858,7 @@ export const Lobby = () => {
               </Button>
             </Link>
           </GlassPanel>
-          <VoiceChatPanel
-            eyebrow={t('voice.eyebrow')}
-            title={t('voice.title')}
-            description={t('voice.desc')}
-            betaLabel={t('voice.beta')}
-          >
-            <VoiceRoom />
-          </VoiceChatPanel>
+          <ReferralPanel variant="lobby" />
         </motion.div>
 
         <motion.footer

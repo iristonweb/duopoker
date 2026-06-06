@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, SectionHeader } from '@duopoker/ui-kit';
+import { nextReferralMilestone } from '@duopoker/shared-types';
+import { Button, GlassPanel, SectionHeader } from '@duopoker/ui-kit';
 import { useAppStore } from '../../store/useAppStore';
 
 type Milestone = {
@@ -22,11 +24,16 @@ type ReferralDashboard = {
   milestones: Milestone[];
 };
 
-export function ReferralPanel() {
+type ReferralPanelProps = {
+  variant?: 'full' | 'lobby';
+};
+
+export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
   const { t, i18n } = useTranslation();
   const apiFetch = useAppStore((s) => s.apiFetch);
   const accessToken = useAppStore((s) => s.accessToken);
   const fetchProfile = useAppStore((s) => s.fetchProfile);
+  const isLobby = variant === 'lobby';
 
   const [data, setData] = useState<ReferralDashboard>();
   const [applyCode, setApplyCode] = useState('');
@@ -44,12 +51,21 @@ export function ReferralPanel() {
     void load();
   }, [load]);
 
-  if (!accessToken) return null;
+  if (!accessToken) {
+    if (!isLobby) return null;
+    return (
+      <GlassPanel glow="gold" className="flex h-full flex-col justify-between border-gold/15 p-6">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{t('referral.eyebrow')}</p>
+          <h2 className="mt-1 font-display text-xl font-semibold text-ivory">{t('referral.title')}</h2>
+          <p className="mt-2 text-sm text-muted">{t('referral.lobbyTeaser')}</p>
+        </div>
+      </GlassPanel>
+    );
+  }
 
   const shareUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/lobby?ref=${data?.code ?? ''}`
-      : '';
+    typeof window !== 'undefined' ? `${window.location.origin}/lobby?ref=${data?.code ?? ''}` : '';
 
   const milestoneLabel = (m: Milestone) => (i18n.language.startsWith('ru') ? m.labelRu : m.labelEn);
 
@@ -91,6 +107,85 @@ export function ReferralPanel() {
       setBusy(false);
     }
   };
+
+  const nextMilestone = data ? nextReferralMilestone(data.activeReferrals) : undefined;
+  const claimable = data?.milestones.find((m) => m.claimable);
+
+  if (isLobby) {
+    return (
+      <GlassPanel glow="gold" className="flex h-full flex-col border-gold/15 p-6">
+        <SectionHeader
+          eyebrow={t('referral.eyebrow')}
+          title={t('referral.title')}
+          description={t('referral.lobbyDesc')}
+          className="mb-4"
+        />
+
+        {data ? (
+          <div className="mb-4 grid grid-cols-3 gap-2 text-center text-sm">
+            <div className="rounded-lg bg-white/5 px-2 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.active')}</p>
+              <p className="font-display text-lg font-semibold text-gold-light">{data.activeReferrals}</p>
+            </div>
+            <div className="rounded-lg bg-white/5 px-2 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.pending')}</p>
+              <p className="font-display text-lg font-semibold text-ivory">{data.pendingReferrals}</p>
+            </div>
+            <div className="rounded-lg bg-white/5 px-2 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.total')}</p>
+              <p className="font-display text-lg font-semibold text-ivory">{data.totalReferrals}</p>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mb-3">
+          <p className="mb-1 text-xs text-subtle">{t('referral.yourCode')}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="rounded-lg bg-gold/10 px-3 py-1.5 font-mono text-base font-semibold text-gold-light">
+              {data?.code ?? '…'}
+            </code>
+            <button
+              type="button"
+              className="premium-btn premium-btn-ghost text-xs"
+              onClick={() => void navigator.clipboard.writeText(shareUrl)}
+            >
+              {t('referral.copyLink')}
+            </button>
+          </div>
+        </div>
+
+        {claimable ? (
+          <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm">
+            <p className="text-emerald-200">{milestoneLabel(claimable)}</p>
+            <button
+              type="button"
+              disabled={busy}
+              className="premium-btn premium-btn-primary mt-2 text-xs"
+              onClick={() => void claim(claimable.level)}
+            >
+              {t('referral.claim')}
+            </button>
+          </div>
+        ) : nextMilestone ? (
+          <p className="mb-3 text-xs text-muted">
+            {t('referral.nextGoal', {
+              current: data?.activeReferrals ?? 0,
+              target: nextMilestone.activeReferralsRequired
+            })}
+          </p>
+        ) : null}
+
+        <p className="mb-4 text-[11px] text-muted">{t('referral.activeRule')}</p>
+
+        <Link to="/profile" className="mt-auto">
+          <Button variant="secondary" size="md" className="w-full">
+            {t('referral.openProfile')}
+          </Button>
+        </Link>
+        {msg ? <p className="mt-2 text-xs text-gold-light">{msg}</p> : null}
+      </GlassPanel>
+    );
+  }
 
   return (
     <GlassPanel className="border-white/10 p-5">

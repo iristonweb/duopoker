@@ -11,9 +11,13 @@ export const LIFETIME_EXPIRES = new Date('2099-12-31T23:59:59.999Z');
 export const grantSubscription = async (
   userId: string,
   tier: PaidTier,
-  lifetime = false
+  lifetime = false,
+  days = 32
 ) => {
   const subId = `${userId}-${tier}`;
+  const expiresAt = lifetime
+    ? LIFETIME_EXPIRES
+    : new Date(Date.now() + 1000 * 60 * 60 * 24 * days);
   await prisma.subscription.upsert({
     where: { id: subId },
     create: {
@@ -21,12 +25,12 @@ export const grantSubscription = async (
       userId,
       tier,
       status: 'ACTIVE',
-      expiresAt: lifetime ? LIFETIME_EXPIRES : new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+      expiresAt
     },
     update: {
       tier,
       status: 'ACTIVE',
-      expiresAt: lifetime ? LIFETIME_EXPIRES : new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+      expiresAt
     }
   });
 };

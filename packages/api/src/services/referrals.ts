@@ -155,7 +155,8 @@ const applyMilestoneRewards = async (userId: string, milestone: ReferralMileston
     await grantSubscription(
       userId,
       milestone.subscriptionTier,
-      Boolean(milestone.subscriptionLifetime)
+      false,
+      milestone.subscriptionDays ?? 30
     );
   }
 };
