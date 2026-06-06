@@ -3,6 +3,67 @@ import { PrismaClient } from '@duopoker/db-schema';
 
 const prisma = new PrismaClient();
 
+const LIFETIME_EXPIRES = new Date('2099-12-31T23:59:59.999Z');
+const FOUNDER_EMAIL = 'iristonweb@gmail.com';
+
+const ALL_COSMETIC_ITEMS = [
+  { id: 'deck_classic', rarity: 'COMMON' as const },
+  { id: 'deck_silver', rarity: 'RARE' as const },
+  { id: 'deck_gold', rarity: 'EPIC' as const },
+  { id: 'deck_platinum', rarity: 'EPIC' as const },
+  { id: 'deck_royal', rarity: 'LEGENDARY' as const },
+  { id: 'deck_neon', rarity: 'RARE' as const },
+  { id: 'chip_classic', rarity: 'COMMON' as const },
+  { id: 'chip_silver', rarity: 'RARE' as const },
+  { id: 'chip_gold', rarity: 'EPIC' as const },
+  { id: 'chip_platinum', rarity: 'EPIC' as const },
+  { id: 'chip_royal', rarity: 'LEGENDARY' as const },
+  { id: 'table_void', rarity: 'EPIC' as const },
+  { id: 'frame_none', rarity: 'COMMON' as const },
+  { id: 'frame_silver', rarity: 'RARE' as const },
+  { id: 'frame_gold', rarity: 'EPIC' as const },
+  { id: 'frame_platinum', rarity: 'EPIC' as const },
+  { id: 'frame_royal', rarity: 'LEGENDARY' as const }
+];
+
+async function grantFounder(email: string) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    console.log(`Founder ${email} not registered yet — sign up on duopoker.ru first, then re-run seed.`);
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { role: 'SUPERADMIN', emailVerified: true, chips: Math.max(user.chips, 999_999) }
+  });
+
+  await prisma.subscription.upsert({
+    where: { id: `${user.id}-ROYAL` },
+    create: {
+      id: `${user.id}-ROYAL`,
+      userId: user.id,
+      tier: 'ROYAL',
+      status: 'ACTIVE',
+      expiresAt: LIFETIME_EXPIRES
+    },
+    update: { tier: 'ROYAL', status: 'ACTIVE', expiresAt: LIFETIME_EXPIRES }
+  });
+
+  for (const item of ALL_COSMETIC_ITEMS) {
+    const existing = await prisma.userItem.findFirst({
+      where: { userId: user.id, itemId: item.id }
+    });
+    if (!existing) {
+      await prisma.userItem.create({
+        data: { userId: user.id, itemId: item.id, rarity: item.rarity, equipped: false }
+      });
+    }
+  }
+
+  console.log(`Founder package granted: ${email} — SUPERADMIN, ROYAL lifetime, all cosmetics`);
+}
+
 async function seedSuperAdmin() {
   const email = process.env.ADMIN_EMAIL?.trim();
   const password = process.env.ADMIN_PASSWORD;
@@ -58,6 +119,7 @@ async function main() {
   });
 
   await seedSuperAdmin();
+  await grantFounder(FOUNDER_EMAIL);
 }
 
 main()

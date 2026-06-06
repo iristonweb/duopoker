@@ -17,6 +17,7 @@
     "db:migrate": "pnpm --filter @duopoker/db-schema migrate:deploy",
     "db:push": "pnpm --filter @duopoker/db-schema db:push",
     "db:generate": "pnpm --filter @duopoker/db-schema build",
+    "grant:founder": "node scripts/grant-founder.mjs",
     "build:vercel-api": "node scripts/bundle-vercel-api.mjs"
   },
   "dependencies": {

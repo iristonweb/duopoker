@@ -90,6 +90,19 @@ enum UserRole {
   SUPERADMIN
 }
 
+enum PlatformDuelStatus {
+  PENDING
+  LIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum PlatformDuelInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
@@ -115,6 +128,8 @@ model User {
   clubMemberships ClubMembership[]
   tableSeats    PrivateTableSeat[]
   tableInvitesSent PrivateTableSeat[] @relation("seat_inviter")
+  duelsHosted   PlatformDuel[]     @relation("duel_host")
+  duelInvites   PlatformDuelInvite[]
   @@map("users")
 }
 
@@ -319,4 +334,35 @@ model ComplianceEvent {
   club         Club     @relation(fields: [clubId], references: [id])
   @@index([clubId, createdAt])
   @@map("compliance_events")
+}
+
+/** Admin-initiated VIP table — invited players accept before the host starts the session. */
+model PlatformDuel {
+  id        String             @id @default(cuid())
+  hostId    String
+  message   String?
+  mode      Mode
+  buyIn     Int
+  sessionId String?            @unique
+  status    PlatformDuelStatus @default(PENDING)
+  expiresAt DateTime
+  createdAt DateTime           @default(now())
+  startedAt DateTime?
+  host      User               @relation("duel_host", fields: [hostId], references: [id])
+  invites   PlatformDuelInvite[]
+  @@index([hostId, status])
+  @@map("platform_duels")
+}
+
+model PlatformDuelInvite {
+  id          String                   @id @default(cuid())
+  duelId      String
+  userId      String
+  status      PlatformDuelInviteStatus @default(PENDING)
+  respondedAt DateTime?
+  duel        PlatformDuel             @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  user        User                     @relation(fields: [userId], references: [id])
+  @@unique([duelId, userId])
+  @@index([userId, status])
+  @@map("platform_duel_invites")
 }

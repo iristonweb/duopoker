@@ -289,6 +289,17 @@ export const foldActivePlayerOnTimeout = async (
   return (await autoStartNextHand(sessionId)) ?? next;
 };
 
+export const createVipSession = async (
+  userIds: string[],
+  mode: SessionState['mode'],
+  buyIn: number
+) => {
+  const sessionId = newSessionId('vip');
+  await seatPlayersBatch(sessionId, userIds, mode, buyIn);
+  await tickSession(sessionId);
+  return sessionId;
+};
+
 export const createMatchFromQueue = async (
   ready: MatchmakingTicket[],
   mode: SessionState['mode'],
@@ -349,7 +360,7 @@ export const leaveQueue = async (userId: string) => {
   await prisma.matchmakingTicket.deleteMany({ where: { userId } });
 };
 
-const recordMatchForPlayers = async (
+export const recordMatchForPlayers = async (
   sessionId: string,
   players: string[],
   mode: SessionState['mode'],

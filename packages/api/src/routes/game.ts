@@ -15,6 +15,10 @@ import {
   requestNextHand,
   tickSession
 } from '../services/game-session.js';
+import {
+  getUserVipNotifications,
+  respondVipInvite
+} from '../services/vip-table.js';
 
 const queueSchema = z.object({
   mode: z.enum(['HOLDEM', 'RASPISNOY']),
@@ -48,6 +52,35 @@ gameRoutes.get('/queue/status', async (c) => {
   const userId = c.get('auth').userId;
   const status = await getQueueStatus(userId);
   return c.json(status);
+});
+
+gameRoutes.get('/vip-invites', async (c) => {
+  const userId = c.get('auth').userId;
+  const { pending, live } = await getUserVipNotifications(userId);
+  return c.json({
+    invites: pending.map((inv) => ({
+      id: inv.id,
+      duelId: inv.duelId,
+      message: inv.duel.message,
+      mode: inv.duel.mode,
+      buyIn: inv.duel.buyIn,
+      expiresAt: inv.duel.expiresAt,
+      host: inv.duel.host
+    })),
+    liveSession: live
+  });
+});
+
+gameRoutes.post('/vip-invites/:duelId/accept', async (c) => {
+  const result = await respondVipInvite(c.get('auth').userId, c.req.param('duelId'), true);
+  if (!result.ok) return c.json({ error: result.error }, 400);
+  return c.json({ ok: true });
+});
+
+gameRoutes.post('/vip-invites/:duelId/decline', async (c) => {
+  const result = await respondVipInvite(c.get('auth').userId, c.req.param('duelId'), false);
+  if (!result.ok) return c.json({ error: result.error }, 400);
+  return c.json({ ok: true });
 });
 
 gameRoutes.post('/queue', async (c) => {

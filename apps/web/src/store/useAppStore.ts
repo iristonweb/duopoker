@@ -97,6 +97,29 @@ type AppStore = {
   acceptInviteByCode: (code: string) => Promise<{ clubId: string; tableId: string }>;
   buyCosmetic: (itemId: string) => Promise<void>;
   equipCosmetic: (itemId: string) => void;
+  vipInvites: VipInvite[];
+  vipLiveSession: VipLiveSession | null;
+  fetchVipInvites: () => Promise<void>;
+  acceptVipInvite: (duelId: string) => Promise<void>;
+  declineVipInvite: (duelId: string) => Promise<void>;
+};
+
+export type VipInvite = {
+  id: string;
+  duelId: string;
+  message: string | null;
+  mode: string;
+  buyIn: number;
+  expiresAt: string;
+  host: { id: string; displayName: string; nickname: string };
+};
+
+export type VipLiveSession = {
+  duelId: string;
+  sessionId: string;
+  mode: string;
+  buyIn: number;
+  host: { id: string; displayName: string; nickname: string };
 };
 
 export type ClubSummary = {
@@ -142,6 +165,8 @@ export const useAppStore = create<AppStore>((set, get) => {
     mode: 'HOLDEM',
     opponentType: 'BOT',
     botPlayerCount: 2,
+    vipInvites: [],
+    vipLiveSession: null,
     setMode: (mode) => set({ mode }),
     setOpponentType: (opponentType) => set({ opponentType }),
     setBotPlayerCount: (botPlayerCount) => set({ botPlayerCount }),
@@ -689,6 +714,34 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (def.slot === 'frame') next.frame = itemId;
       writeEquipped(userId, next);
       set({ equipped: next });
+    },
+    fetchVipInvites: async () => {
+      if (!get().accessToken) {
+        set({ vipInvites: [] });
+        return;
+      }
+      try {
+        const res = await get().apiFetch('/game/vip-invites');
+        if (!res.ok) return;
+        const data = (await res.json()) as { invites: VipInvite[]; liveSession: VipLiveSession | null };
+        set({ vipInvites: data.invites ?? [], vipLiveSession: data.liveSession ?? null });
+      } catch {
+        /* ignore */
+      }
+    },
+    acceptVipInvite: async (duelId) => {
+      const res = await get().apiFetch(`/game/vip-invites/${encodeURIComponent(duelId)}/accept`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('accept failed');
+      await get().fetchVipInvites();
+    },
+    declineVipInvite: async (duelId) => {
+      const res = await get().apiFetch(`/game/vip-invites/${encodeURIComponent(duelId)}/decline`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('decline failed');
+      await get().fetchVipInvites();
     }
   };
 });

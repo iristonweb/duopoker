@@ -17,6 +17,15 @@ export const assertCanJoinSession = async (
   const table = await getPrivateTableBySessionId(sessionId);
   if (table) return canJoinPrivateSession(sessionId, userId);
 
+  const vipInvite = await prisma.platformDuelInvite.findFirst({
+    where: {
+      userId,
+      status: 'ACCEPTED',
+      duel: { sessionId, status: 'LIVE' }
+    }
+  });
+  if (vipInvite) return { ok: true };
+
   return { ok: false, reason: 'NOT_ASSIGNED' };
 };
 

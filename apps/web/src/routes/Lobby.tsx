@@ -28,6 +28,7 @@ import {
 } from '@duopoker/ui-kit';
 import { AppLogo } from '../components/AppLogo';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { VipInviteBanner } from '../components/VipInviteBanner';
 import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
@@ -486,6 +487,12 @@ export const Lobby = () => {
             <AuthPanel />
           </div>
         </motion.header>
+
+        {accessToken ? (
+          <motion.div className="mb-8" variants={reduceMotion ? undefined : section} custom={0.6}>
+            <VipInviteBanner />
+          </motion.div>
+        ) : null}
 
         <motion.div
           className="glass-shine relative mb-10 overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-panel ring-1 ring-white/5"

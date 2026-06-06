@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge, GlassPanel, LoadingSkeleton, PageShell, SectionHeader } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
+
+type Tab = 'overview' | 'players' | 'vip';
 
 type AdminUser = {
   id: string;
@@ -11,8 +13,22 @@ type AdminUser = {
   nickname: string;
   role: string;
   chips: number;
+  level?: number;
+  xp?: number;
   emailVerified: boolean;
   createdAt: string;
+  subscriptionTier?: string | null;
+};
+
+type AdminUserDetail = AdminUser & {
+  subscription: { tier: string; expiresAt: string; status: string } | null;
+  inventory: { itemId: string; equipped: boolean; rarity: string }[];
+  stats: {
+    handsPlayed: number;
+    inQueue: boolean;
+    matchAssignment: string | null;
+    clubMemberships: number;
+  };
 };
 
 type AdminStats = {
@@ -27,15 +43,7 @@ type AdminStats = {
   totalClubs: number;
   livePrivateTables: number;
   scheduledPrivateTables: number;
-};
-
-type AdminSession = {
-  id: string;
-  mode: string;
-  status: string;
-  players: string[];
-  buyIn: number;
-  startedAt: string | null;
+  pendingVipTables?: number;
 };
 
 type QueueTicket = {
@@ -46,22 +54,25 @@ type QueueTicket = {
   user: { email: string; displayName: string; nickname: string } | null;
 };
 
-function AdminEmptyRow({ message }: { message: string }) {
-  return (
-    <div className="px-4 py-10 text-center">
-      <p className="font-display text-base font-semibold text-ivory">{message}</p>
-    </div>
-  );
-}
+type VipDuel = {
+  id: string;
+  mode: string;
+  buyIn: number;
+  status: string;
+  message: string | null;
+  sessionId: string | null;
+  invites: Array<{
+    userId: string;
+    status: string;
+    user: { nickname: string; displayName: string };
+  }>;
+};
 
 function StatCard({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
   const glow =
     accent?.includes('emerald') ? 'emerald' : accent?.includes('gold') || accent?.includes('amber') ? 'gold' : 'none';
   return (
-    <GlassPanel
-      glow={glow}
-      className="border-white/10 p-4 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5"
-    >
+    <GlassPanel glow={glow} className="border-white/10 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{label}</p>
       <p className={`mt-2 font-display text-2xl font-semibold tabular-nums ${accent ?? 'text-ivory'}`}>{value}</p>
     </GlassPanel>
@@ -70,50 +81,142 @@ function StatCard({ label, value, accent }: { label: string; value: number | str
 
 export function AdminPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const userRole = useAppStore((s) => s.userRole);
   const apiFetch = useAppStore((s) => s.apiFetch);
   const accessToken = useAppStore((s) => s.accessToken);
+  const joinSession = useAppStore((s) => s.joinSession);
+
+  const [tab, setTab] = useState<Tab>('overview');
   const [stats, setStats] = useState<AdminStats>();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [queue, setQueue] = useState<QueueTicket[]>([]);
+  const [vipDuels, setVipDuels] = useState<VipDuel[]>([]);
   const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<AdminUserDetail | null>(null);
+  const [vipNicknames, setVipNicknames] = useState('');
+  const [vipMessage, setVipMessage] = useState('');
+  const [vipBuyIn, setVipBuyIn] = useState(1000);
+  const [actionMsg, setActionMsg] = useState<string>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const loadCore = useCallback(async () => {
+    const [statsRes, usersRes, queueRes, vipRes] = await Promise.all([
+      apiFetch('/admin/stats'),
+      apiFetch(`/admin/users?take=40${search ? `&q=${encodeURIComponent(search)}` : ''}`),
+      apiFetch('/admin/queue'),
+      apiFetch('/admin/vip-tables')
+    ]);
+    if (!statsRes.ok || !usersRes.ok) throw new Error('forbidden');
+    setStats((await statsRes.json()) as AdminStats);
+    const usersData = (await usersRes.json()) as { users: AdminUser[]; total: number };
+    setUsers(usersData.users);
+    setTotal(usersData.total);
+    if (queueRes.ok) {
+      setQueue(((await queueRes.json()) as { tickets: QueueTicket[] }).tickets);
+    }
+    if (vipRes.ok) {
+      setVipDuels(((await vipRes.json()) as { duels: VipDuel[] }).duels);
+    }
+  }, [apiFetch, search]);
 
   useEffect(() => {
     if (!accessToken || userRole !== 'SUPERADMIN') {
       setLoading(false);
       return;
     }
-    void Promise.all([
-      apiFetch('/admin/stats'),
-      apiFetch('/admin/users?take=30'),
-      apiFetch('/admin/sessions'),
-      apiFetch('/admin/queue')
-    ])
-      .then(async ([statsRes, usersRes, sessionsRes, queueRes]) => {
-        if (!statsRes.ok || !usersRes.ok) {
-          setError(t('admin.forbidden'));
-          return;
-        }
-        const statsData = (await statsRes.json()) as AdminStats;
-        const usersData = (await usersRes.json()) as { users: AdminUser[]; total: number };
-        setStats(statsData);
-        setUsers(usersData.users);
-        setTotal(usersData.total);
-        if (sessionsRes.ok) {
-          const s = (await sessionsRes.json()) as { sessions: AdminSession[] };
-          setSessions(s.sessions);
-        }
-        if (queueRes.ok) {
-          const q = (await queueRes.json()) as { tickets: QueueTicket[] };
-          setQueue(q.tickets);
-        }
-      })
+    setLoading(true);
+    void loadCore()
       .catch(() => setError(t('admin.forbidden')))
       .finally(() => setLoading(false));
-  }, [accessToken, userRole, apiFetch, t]);
+  }, [accessToken, userRole, loadCore, t]);
+
+  const openUser = async (id: string) => {
+    setBusy(true);
+    setActionMsg(undefined);
+    try {
+      const res = await apiFetch(`/admin/users/${id}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { user: AdminUserDetail };
+      setSelected(data.user);
+      setTab('players');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const grantAction = async (path: string, body: object) => {
+    if (!selected) return;
+    setBusy(true);
+    setActionMsg(undefined);
+    try {
+      const res = await apiFetch(`/admin/users/${selected.id}${path}`, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        setActionMsg(t('admin.actionFailed'));
+        return;
+      }
+      setActionMsg(t('admin.actionOk'));
+      await openUser(selected.id);
+      await loadCore();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createVipTable = async () => {
+    const nicknames = vipNicknames
+      .split(/[\s,]+/)
+      .map((n) => n.replace(/^@/, '').trim())
+      .filter(Boolean);
+    if (!nicknames.length) return;
+    setBusy(true);
+    setActionMsg(undefined);
+    try {
+      const res = await apiFetch('/admin/vip-tables', {
+        method: 'POST',
+        body: JSON.stringify({
+          nicknames,
+          buyIn: vipBuyIn,
+          mode: 'HOLDEM',
+          message: vipMessage || undefined
+        })
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string; missing?: string[] };
+        setActionMsg(err.missing?.length ? t('admin.vipNotFound', { list: err.missing.join(', ') }) : t('admin.actionFailed'));
+        return;
+      }
+      setVipNicknames('');
+      setVipMessage('');
+      setActionMsg(t('admin.vipCreated'));
+      setTab('vip');
+      await loadCore();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startVip = async (duelId: string) => {
+    setBusy(true);
+    try {
+      const res = await apiFetch(`/admin/vip-tables/${duelId}/start`, { method: 'POST' });
+      if (!res.ok) {
+        setActionMsg(t('admin.actionFailed'));
+        return;
+      }
+      const data = (await res.json()) as { sessionId: string };
+      await joinSession(data.sessionId, 'HOLDEM', vipBuyIn);
+      navigate(`/table/${data.sessionId}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (userRole !== 'SUPERADMIN') {
     return (
@@ -123,6 +226,12 @@ export function AdminPage() {
     );
   }
 
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'overview', label: t('admin.tabOverview') },
+    { id: 'players', label: t('admin.tabPlayers') },
+    { id: 'vip', label: t('admin.tabVip') }
+  ];
+
   return (
     <PageShell
       maxWidth="5xl"
@@ -131,13 +240,32 @@ export function AdminPage() {
       title={t('admin.dashboardTitle')}
       description={t('admin.dashboardDesc', { count: total })}
     >
+      <div className="mb-6 flex flex-wrap gap-2">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              tab === item.id ? 'bg-gold/20 text-gold-light ring-1 ring-gold/40' : 'bg-white/5 text-muted hover:text-ivory'
+            }`}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {actionMsg ? (
+        <GlassPanel className="mb-4 border-emerald-500/30 p-3 text-sm text-emerald-200">{actionMsg}</GlassPanel>
+      ) : null}
+
       {loading ? (
         <GlassPanel className="border-white/10 p-6">
           <LoadingSkeleton lines={8} />
         </GlassPanel>
       ) : error ? (
         <GlassPanel className="border-white/10 p-6 text-rose-300">{error}</GlassPanel>
-      ) : (
+      ) : tab === 'overview' ? (
         <div className="flex flex-col gap-8">
           {stats ? (
             <section>
@@ -145,35 +273,25 @@ export function AdminPage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 <StatCard label={t('admin.statUsers')} value={stats.totalUsers} />
                 <StatCard label={t('admin.statNew24h')} value={stats.newUsers24h} accent="text-emerald" />
-                <StatCard label={t('admin.statVerified')} value={stats.verifiedUsers} />
                 <StatCard label={t('admin.statSubscriptions')} value={stats.activeSubscriptions} accent="text-gold-light" />
-                <StatCard label={t('admin.statActiveSessions')} value={stats.activeSessions} accent="text-emerald" />
-                <StatCard label={t('admin.statInProgress')} value={stats.inProgressSessions} />
                 <StatCard label={t('admin.statQueue')} value={stats.waitingQueue} accent="text-amber-300" />
-                <StatCard label={t('admin.statClubs')} value={stats.totalClubs} />
-                <StatCard label={t('admin.statLiveTables')} value={stats.livePrivateTables} />
-                <StatCard label={t('admin.statScheduledTables')} value={stats.scheduledPrivateTables} />
-                <StatCard label={t('admin.statSuperadmins')} value={stats.superAdmins} accent="text-gold-light" />
+                <StatCard label={t('admin.statActiveSessions')} value={stats.activeSessions} accent="text-emerald" />
+                <StatCard label={t('admin.statVipPending')} value={stats.pendingVipTables ?? 0} accent="text-gold-light" />
               </div>
             </section>
           ) : null}
-
           <section>
             <SectionHeader eyebrow={t('admin.queueEyebrow')} title={t('admin.queueTitle')} className="mb-4" />
             <GlassPanel className="overflow-hidden border-white/10 p-0">
               {!queue.length ? (
-                <AdminEmptyRow message={t('admin.queueEmpty')} />
+                <p className="px-4 py-8 text-center text-muted">{t('admin.queueEmpty')}</p>
               ) : (
                 <ul className="divide-y divide-white/5">
                   {queue.map((ticket) => (
                     <li key={ticket.userId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                       <div>
-                        <p className="font-medium text-zinc-100">
-                          {ticket.user?.displayName ?? ticket.userId.slice(0, 8)}
-                        </p>
-                        <p className="text-xs text-muted">
-                          {ticket.user?.email ?? '—'} · {ticket.mode} · {ticket.buyIn} chips
-                        </p>
+                        <p className="font-medium text-zinc-100">{ticket.user?.displayName ?? ticket.userId.slice(0, 8)}</p>
+                        <p className="text-xs text-muted">@{ticket.user?.nickname} · {ticket.mode}</p>
                       </div>
                       <Badge variant="gold">{t('admin.inQueue')}</Badge>
                     </li>
@@ -182,59 +300,122 @@ export function AdminPage() {
               )}
             </GlassPanel>
           </section>
-
-          <section>
-            <SectionHeader eyebrow={t('admin.sessionsEyebrow')} title={t('admin.sessionsTitle')} className="mb-4" />
-            <GlassPanel className="overflow-hidden border-white/10 p-0">
-              {!sessions.length ? (
-                <AdminEmptyRow message={t('admin.sessionsEmpty')} />
-              ) : (
-                <ul className="divide-y divide-white/5">
-                  {sessions.map((s) => (
-                    <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
-                      <div>
-                        <p className="font-mono text-xs text-zinc-200">{s.id}</p>
-                        <p className="text-xs text-muted">
-                          {s.mode} · {s.status} · {s.players.length} {t('admin.players')} · {s.buyIn}
-                        </p>
-                      </div>
-                      <Link to={`/table/${s.id}`} className="premium-link text-xs">
-                        {t('admin.openTable')}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </GlassPanel>
-          </section>
-
-          <section>
-            <SectionHeader eyebrow={t('admin.usersEyebrow')} title={t('admin.title')} description={t('admin.total', { count: total })} className="mb-4" />
-            <GlassPanel className="overflow-hidden border-white/10 p-0">
-              <ul className="divide-y divide-white/5">
+        </div>
+      ) : tab === 'players' ? (
+        <div className="grid gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            <GlassPanel className="border-white/10 p-4">
+              <input
+                className="premium-input mb-3 w-full"
+                placeholder={t('admin.searchPlaceholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void loadCore()}
+              />
+              <button type="button" className="premium-btn premium-btn-ghost mb-4 w-full text-sm" onClick={() => void loadCore()}>
+                {t('admin.search')}
+              </button>
+              <ul className="max-h-[480px] divide-y divide-white/5 overflow-y-auto">
                 {users.map((u) => (
-                  <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
-                    <div>
-                      <p className="font-medium text-zinc-100">{u.displayName}</p>
-                      <p className="text-xs text-muted">
-                        {u.email} · @{u.nickname} · {u.chips.toLocaleString()} {t('admin.chips')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {u.emailVerified ? (
-                        <Badge variant="emerald">{t('admin.verified')}</Badge>
-                      ) : (
-                        <Badge variant="default">{t('admin.unverified')}</Badge>
-                      )}
-                      <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-gold">
-                        {u.role}
-                      </span>
-                    </div>
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      className={`w-full px-2 py-3 text-left text-sm transition hover:bg-white/5 ${selected?.id === u.id ? 'bg-gold/10' : ''}`}
+                      onClick={() => void openUser(u.id)}
+                    >
+                      <p className="font-medium text-ivory">{u.displayName}</p>
+                      <p className="text-xs text-muted">@{u.nickname} · {u.subscriptionTier ?? 'FREE'}</p>
+                    </button>
                   </li>
                 ))}
               </ul>
             </GlassPanel>
-          </section>
+          </div>
+          <div className="lg:col-span-3">
+            {selected ? (
+              <GlassPanel className="border-white/10 p-5">
+                <SectionHeader title={selected.displayName} description={`@${selected.nickname} · ${selected.email}`} />
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-subtle">{t('admin.chips')}</span><p className="font-semibold">{selected.chips.toLocaleString()}</p></div>
+                  <div><span className="text-subtle">{t('admin.level')}</span><p className="font-semibold">{selected.level} · {selected.xp} XP</p></div>
+                  <div><span className="text-subtle">{t('admin.subscription')}</span><p className="font-semibold">{selected.subscription?.tier ?? 'FREE'}</p></div>
+                  <div><span className="text-subtle">{t('admin.handsWon')}</span><p className="font-semibold">{selected.stats.handsPlayed}</p></div>
+                  <div><span className="text-subtle">{t('admin.role')}</span><p className="font-semibold">{selected.role}</p></div>
+                  <div><span className="text-subtle">{t('admin.inventory')}</span><p className="font-semibold">{selected.inventory.length} {t('admin.items')}</p></div>
+                </div>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <button type="button" disabled={busy} className="premium-btn premium-btn-primary text-xs" onClick={() => void grantAction('/subscription', { tier: 'ROYAL', lifetime: true })}>
+                    {t('admin.grantRoyal')}
+                  </button>
+                  <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/cosmetics', { grantAll: true })}>
+                    {t('admin.grantCosmetics')}
+                  </button>
+                  <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/chips', { chips: 999999 })}>
+                    {t('admin.grantChips')}
+                  </button>
+                  {selected.role !== 'SUPERADMIN' ? (
+                    <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/role', { role: 'SUPERADMIN' })}>
+                      {t('admin.makeAdmin')}
+                    </button>
+                  ) : null}
+                </div>
+              </GlassPanel>
+            ) : (
+              <GlassPanel className="border-white/10 p-8 text-center text-muted">{t('admin.selectPlayer')}</GlassPanel>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <GlassPanel className="border-white/10 p-5">
+            <SectionHeader eyebrow={t('admin.vipEyebrow')} title={t('admin.vipTitle')} description={t('admin.vipDesc')} className="mb-4" />
+            <label className="mb-2 block text-xs text-subtle">{t('admin.vipNicknames')}</label>
+            <textarea
+              className="premium-input mb-3 min-h-[80px] w-full"
+              placeholder="@player1, @player2"
+              value={vipNicknames}
+              onChange={(e) => setVipNicknames(e.target.value)}
+            />
+            <label className="mb-2 block text-xs text-subtle">{t('admin.vipMessage')}</label>
+            <input className="premium-input mb-3 w-full" value={vipMessage} onChange={(e) => setVipMessage(e.target.value)} />
+            <label className="mb-2 block text-xs text-subtle">{t('admin.vipBuyIn')}</label>
+            <input type="number" className="premium-input mb-4 w-full" value={vipBuyIn} onChange={(e) => setVipBuyIn(Number(e.target.value))} />
+            <button type="button" disabled={busy} className="premium-btn premium-btn-primary w-full" onClick={() => void createVipTable()}>
+              {t('admin.vipSend')}
+            </button>
+          </GlassPanel>
+          <GlassPanel className="border-white/10 p-0">
+            <div className="border-b border-white/5 px-4 py-3">
+              <p className="font-display font-semibold text-ivory">{t('admin.vipActive')}</p>
+            </div>
+            {!vipDuels.length ? (
+              <p className="px-4 py-8 text-center text-muted">{t('admin.vipEmpty')}</p>
+            ) : (
+              <ul className="divide-y divide-white/5">
+                {vipDuels.map((duel) => {
+                  const accepted = duel.invites.filter((i) => i.status === 'ACCEPTED').length;
+                  return (
+                    <li key={duel.id} className="px-4 py-4 text-sm">
+                      <p className="font-medium text-ivory">{duel.mode} · {duel.buyIn} · {duel.status}</p>
+                      <p className="text-xs text-muted">{accepted}/{duel.invites.length} {t('admin.vipAccepted')}</p>
+                      <ul className="mt-2 space-y-1 text-xs text-subtle">
+                        {duel.invites.map((i) => (
+                          <li key={i.userId}>@{i.user.nickname} — {i.status}</li>
+                        ))}
+                      </ul>
+                      {duel.status === 'PENDING' ? (
+                        <button type="button" disabled={busy || accepted < 2} className="premium-btn premium-btn-primary mt-3 text-xs" onClick={() => void startVip(duel.id)}>
+                          {t('admin.vipStart')}
+                        </button>
+                      ) : duel.sessionId ? (
+                        <Link to={`/table/${duel.sessionId}`} className="premium-link mt-3 inline-block text-xs">{t('admin.openTable')}</Link>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </GlassPanel>
         </div>
       )}
     </PageShell>
