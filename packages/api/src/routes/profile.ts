@@ -4,14 +4,39 @@ import { authGuard } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
 import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
 
-const profileSchema = z.object({
-  displayName: z.string().min(2),
-  avatar: z.string().url().optional()
-});
+const avatarField = z
+  .string()
+  .max(600_000)
+  .refine(
+    (v) => v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:image/'),
+    'Avatar must be a URL or image data URL'
+  );
+
+const profileSchema = z
+  .object({
+    displayName: z.string().min(2).max(40).optional(),
+    avatar: avatarField.optional().nullable(),
+    tableStatus: z.string().max(80).optional().nullable()
+  })
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    message: 'At least one field is required'
+  });
 
 const nicknameSchema = z.object({
   nickname: z.string().min(3).max(20)
 });
+
+const userSelect = {
+  id: true,
+  email: true,
+  displayName: true,
+  nickname: true,
+  avatar: true,
+  tableStatus: true,
+  chips: true,
+  level: true,
+  xp: true
+} as const;
 
 export const profileRoutes = new Hono();
 
@@ -53,16 +78,7 @@ profileRoutes.put('/me/nickname', async (c) => {
 profileRoutes.get('/:id', async (c) => {
   const user = await prisma.user.findUnique({
     where: { id: c.req.param('id') },
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-      nickname: true,
-      avatar: true,
-      chips: true,
-      level: true,
-      xp: true
-    }
+    select: userSelect
   });
   if (!user) return c.json({ error: 'User not found' }, 404);
   return c.json({
@@ -85,16 +101,7 @@ profileRoutes.put('/:id', async (c) => {
   const updated = await prisma.user.update({
     where: { id },
     data: parsed.data,
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-      nickname: true,
-      avatar: true,
-      chips: true,
-      level: true,
-      xp: true
-    }
+    select: userSelect
   });
   return c.json(updated);
 });

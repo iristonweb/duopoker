@@ -6,6 +6,7 @@ import { avatarGradient, frameImageUrl, initialsFromName } from '../../lib/cosme
 export function PlayerAvatar({
   name,
   avatarUrl,
+  tableStatus,
   frameId = 'frame_none',
   tier = 'FREE',
   active = false,
@@ -17,6 +18,7 @@ export function PlayerAvatar({
 }: {
   name: string;
   avatarUrl?: string | null;
+  tableStatus?: string | null;
   frameId?: string;
   tier?: SubscriptionTier;
   active?: boolean;
@@ -74,6 +76,11 @@ export function PlayerAvatar({
       <p className={cn('mt-1 max-w-[88px] truncate text-center text-[11px]', active ? 'text-gold-light' : 'text-muted')}>
         {name}
       </p>
+      {tableStatus ? (
+        <p className="mt-0.5 max-w-[96px] truncate text-center text-[9px] leading-tight text-gold/75" title={tableStatus}>
+          {tableStatus}
+        </p>
+      ) : null}
       {showTier && tier !== 'FREE' ? (
         <Badge variant="gold" className="mt-1 scale-90">
           {tierLabel[tier]}

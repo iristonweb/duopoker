@@ -54,6 +54,7 @@ export type SessionPlayerProfile = {
   nickname: string | null;
   displayName: string;
   avatar: string | null;
+  tableStatus: string | null;
   subscriptionTier: SubscriptionTier;
   equipped: EquippedCosmetics;
 };
@@ -91,6 +92,7 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
         nickname: `bot${botIndex}`,
         displayName: botIndex > 1 ? `DuoBot ${botIndex}` : 'DuoBot',
         avatar: null,
+        tableStatus: null,
         subscriptionTier: 'FREE' as SubscriptionTier,
         equipped: resolveEquipped({}, 'FREE', [])
       };
@@ -109,6 +111,7 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
       nickname: u?.nickname ?? null,
       displayName: u?.displayName ?? id.slice(0, 8),
       avatar: u?.avatar ?? null,
+      tableStatus: u?.tableStatus ?? null,
       subscriptionTier: tier,
       equipped: resolveEquipped(equippedFromDb, tier, inventoryIds)
     };

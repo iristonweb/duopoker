@@ -31,6 +31,8 @@ type AppStore = {
   email?: string;
   nickname?: string;
   displayName?: string;
+  avatarUrl?: string | null;
+  tableStatus?: string | null;
   chips?: number;
   userRole: 'USER' | 'SUPERADMIN';
   subscriptionTier: SubscriptionTier;
@@ -74,6 +76,11 @@ type AppStore = {
   register: (email: string, password: string, displayName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   fetchProfile: () => Promise<void>;
+  updateProfile: (data: {
+    displayName?: string;
+    avatar?: string | null;
+    tableStatus?: string | null;
+  }) => Promise<{ ok: boolean; error?: string }>;
   fetchClubs: () => Promise<{ clubs: ClubSummary[] }>;
   createClub: (name: string, description?: string) => Promise<{ club: { id: string } }>;
   fetchClub: (clubId: string) => Promise<ClubDetail>;
@@ -500,6 +507,8 @@ export const useAppStore = create<AppStore>((set, get) => {
             displayName: string;
             email: string;
             nickname?: string;
+            avatar?: string | null;
+            tableStatus?: string | null;
             role?: 'USER' | 'SUPERADMIN';
           } | null;
           subscription?: { tier: SubscriptionTier } | null;
@@ -515,6 +524,8 @@ export const useAppStore = create<AppStore>((set, get) => {
             displayName: data.user.displayName,
             email: data.user.email,
             nickname: data.user.nickname,
+            avatarUrl: data.user.avatar ?? null,
+            tableStatus: data.user.tableStatus ?? null,
             userRole: data.user.role ?? 'USER',
             subscriptionTier: tier,
             inventory,
@@ -523,6 +534,34 @@ export const useAppStore = create<AppStore>((set, get) => {
         }
       } catch {
         /* ignore */
+      }
+    },
+    updateProfile: async (data) => {
+      const uid = get().userId;
+      const token = get().accessToken;
+      if (!token) return { ok: false, error: 'notSignedIn' };
+      try {
+        const res = await get().apiFetch(`/profile/${encodeURIComponent(uid)}`, {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return { ok: false, error: readApiError(err, 'saveFailed') };
+        }
+        const updated = (await res.json()) as {
+          displayName: string;
+          avatar?: string | null;
+          tableStatus?: string | null;
+        };
+        set({
+          displayName: updated.displayName,
+          avatarUrl: updated.avatar ?? null,
+          tableStatus: updated.tableStatus ?? null
+        });
+        return { ok: true };
+      } catch {
+        return { ok: false, error: 'network' };
       }
     },
     fetchClubs: async () => {

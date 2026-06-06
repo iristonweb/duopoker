@@ -50,6 +50,7 @@ export const Table = () => {
 
   const equipped = useAppStore((s) => s.equipped);
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
+  const heroTableStatus = useAppStore((s) => s.tableStatus);
 
   const [playerProfiles, setPlayerProfiles] = useState<
     Record<
@@ -57,6 +58,7 @@ export const Table = () => {
       {
         name: string;
         avatar?: string | null;
+        tableStatus?: string | null;
         subscriptionTier: SubscriptionTier;
         equipped: EquippedCosmetics;
       }
@@ -76,6 +78,7 @@ export const Table = () => {
               nickname?: string | null;
               displayName: string;
               avatar?: string | null;
+              tableStatus?: string | null;
               subscriptionTier?: SubscriptionTier;
               equipped?: EquippedCosmetics;
             }>;
@@ -87,6 +90,7 @@ export const Table = () => {
             map[p.userId] = {
               name: p.nickname ? `@${p.nickname}` : p.displayName,
               avatar: p.avatar,
+              tableStatus: p.tableStatus ?? null,
               subscriptionTier: p.subscriptionTier ?? 'FREE',
               equipped: p.equipped ?? defaultEquipped()
             };
@@ -141,6 +145,7 @@ export const Table = () => {
         name: profile?.name ?? uid.slice(0, 8),
         stack: session.stacks[uid] ?? 0,
         avatar: profile?.avatar,
+        tableStatus: hero ? heroTableStatus : profile?.tableStatus,
         tier: hero ? subscriptionTier : (profile?.subscriptionTier ?? 'FREE'),
         equipped: hero ? equipped : profile?.equipped,
         holeCards: session.playerCards[uid] ?? [],
@@ -150,7 +155,7 @@ export const Table = () => {
       };
     });
     return rotatePlayersForHero(visuals, userId);
-  }, [session, playerProfiles, userId, subscriptionTier, equipped, activeId]);
+  }, [session, playerProfiles, userId, subscriptionTier, equipped, heroTableStatus, activeId]);
 
   useEffect(() => {
     connect();

@@ -33,6 +33,37 @@ const checkoutSchema = z.object({
   itemId: z.string().optional()
 });
 
+const mockSubscribeSchema = z.object({
+  tier: z.enum(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'])
+});
+
+const subscriptionTiers = ['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const;
+type PaidTier = (typeof subscriptionTiers)[number];
+
+const tierFromToken = (token: string): PaidTier | null => {
+  const upper = token.toUpperCase();
+  if (subscriptionTiers.includes(upper as PaidTier)) return upper as PaidTier;
+  return tierFromPrice(token);
+};
+
+const activateSubscription = async (userId: string, tier: PaidTier) => {
+  const subId = `${userId}-${tier}`;
+  await prisma.subscription.upsert({
+    where: { id: subId },
+    create: {
+      id: subId,
+      userId,
+      tier,
+      status: 'ACTIVE',
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+    },
+    update: {
+      status: 'ACTIVE',
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
+    }
+  });
+};
+
 const cosmeticCosts: Record<string, number> = {
   deck_neon: 1800,
   table_void: 4500
@@ -156,21 +187,7 @@ monetizationRoutes.post('/stripe/webhook', async (c) => {
         const priceId = full.line_items?.data[0]?.price?.id ?? '';
         const tier = tierFromPrice(priceId);
         if (tier) {
-          const subId = `${userId}-${tier}`;
-          await prisma.subscription.upsert({
-            where: { id: subId },
-            create: {
-              id: subId,
-              userId,
-              tier,
-              status: 'ACTIVE',
-              expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
-            },
-            update: {
-              status: 'ACTIVE',
-              expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 32)
-            }
-          });
+          await activateSubscription(userId, tier);
         }
       } else if (userId && session.mode === 'payment') {
         const itemId = (session.metadata?.itemId as string | undefined) ?? 'chips_pack';
@@ -227,24 +244,42 @@ monetizationRoutes.post('/checkout-session', async (c) => {
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
   const uid = c.get('auth').userId;
 
-  if (config.mockCheckout) {
-    const url = `${config.publicWebUrl.replace(/\/$/, '')}/lobby?checkout=mock&success=1&tier=${encodeURIComponent(parsed.data.priceId)}`;
-    return c.json({ id: 'mock_checkout_session', url });
+  const mockTier = tierFromToken(parsed.data.priceId);
+  if (config.mockCheckout || !config.stripeSecretKey) {
+    if (parsed.data.mode === 'subscription' && mockTier) {
+      await activateSubscription(uid, mockTier);
+      return c.json({ id: 'mock_checkout_session', activated: true, tier: mockTier });
+    }
+    return c.json({ error: 'Subscription tier not recognized for mock checkout' }, 400);
   }
 
   if (!config.stripeSecretKey) {
     return c.json({ error: 'Stripe not configured' }, 503);
   }
   const stripe = new Stripe(config.stripeSecretKey);
+  const successUrl = `${config.publicWebUrl.replace(/\/$/, '')}/lobby?checkout=success`;
+  const cancelUrl = `${config.publicWebUrl.replace(/\/$/, '')}/lobby?checkout=cancel`;
   const session = await stripe.checkout.sessions.create({
     mode: parsed.data.mode,
     client_reference_id: uid,
     metadata: { userId: uid, itemId: parsed.data.itemId ?? '' },
     line_items: [{ price: parsed.data.priceId, quantity: 1 }],
-    success_url: `${config.publicWebUrl}/lobby?checkout=success`,
-    cancel_url: `${config.publicWebUrl}/lobby?checkout=cancel`
+    success_url: successUrl,
+    cancel_url: cancelUrl
   });
   return c.json({ id: session.id, url: session.url });
+});
+
+monetizationRoutes.post('/mock-subscribe', async (c) => {
+  if (config.isProduction && config.stripeSecretKey && !config.mockCheckout) {
+    return c.json({ error: 'Use Stripe checkout in production' }, 403);
+  }
+  const body = await c.req.json().catch(() => null);
+  const parsed = mockSubscribeSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+  const uid = c.get('auth').userId;
+  await activateSubscription(uid, parsed.data.tier);
+  return c.json({ ok: true, tier: parsed.data.tier });
 });
 
 monetizationRoutes.post('/bonus', async (c) => {

@@ -37,6 +37,22 @@
       "verificationRequired": "Account created. Check your email for a verification link."
     }
   },
+  "profile": {
+    "title": "Table profile",
+    "tableStatus": "Status at the table",
+    "tableStatusPlaceholder": "Bluff master · reading souls…",
+    "uploadPhoto": "Photo / GIF",
+    "removeAvatar": "Remove",
+    "avatarUrl": "Image URL",
+    "previewUrl": "Preview",
+    "save": "Save profile",
+    "saving": "Saving…",
+    "saved": "Profile saved — visible at the table.",
+    "saveFailed": "Could not save profile.",
+    "fileTooLarge": "Image must be under 450 KB.",
+    "uploadFailed": "Could not read the file.",
+    "hint": "Avatar and status are shown to everyone at your poker table. GIFs supported."
+  },
   "queue": {
     "signInToPlay": "Sign in to play online against other players.",
     "searching": "Searching for opponents…",
@@ -78,7 +94,13 @@
     "priceGold": "$9.99/mo",
     "pricePlatinum": "$19.99/mo",
     "priceRoyal": "$49.99/mo",
-    "perks": "Exclusive cosmetics & perks — no real-money gambling."
+    "perks": "Exclusive cosmetics & perks — no real-money gambling.",
+    "perkSummary": {
+      "silver": "Silver DP CLUB deck, chips & frame — your first premium identity.",
+      "gold": "Gold tier cosmetics + voice chat at live tables.",
+      "platinum": "Platinum visuals + AI coach hints (coming soon).",
+      "royal": "Full Royal DP CLUB set — the ultimate table presence."
+    }
   },
   "cosmetics": {
     "eyebrow": "Cosmetics",
@@ -141,7 +163,12 @@
     "clubsDesc": "Company tables · YooMoney · @nickname invites",
     "myClubs": "My clubs",
     "checkoutFailed": "Purchase failed — sign in and check chip balance.",
-    "signInToSubscribe": "Sign in to subscribe."
+    "signInToSubscribe": "Sign in to subscribe.",
+    "subscriptionActivated": "Subscription activated — premium cosmetics unlocked.",
+    "subscriptionActivatedTier": "{{tier}} activated — equip your new cosmetics below.",
+    "subscriptionActive": "Active plan",
+    "subscribing": "Activating…",
+    "checkoutCancelled": "Checkout cancelled."
   },
   "table": {
     "liveTable": "Live table",

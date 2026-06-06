@@ -30,12 +30,22 @@ const tierBadge: Record<'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL', string> = {
   ROYAL: 'border-rose-400/35 bg-rose-500/15 text-rose-200'
 };
 
+const tierRing: Record<'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL', string> = {
+  SILVER: 'ring-zinc-400/40 shadow-[0_0_40px_rgba(161,161,170,0.15)]',
+  GOLD: 'ring-gold/45 shadow-glow-gold',
+  PLATINUM: 'ring-violet-400/40 shadow-[0_0_48px_rgba(167,139,250,0.2)]',
+  ROYAL: 'ring-rose-400/40 shadow-[0_0_56px_rgba(251,113,133,0.22)]'
+};
+
 export function SubscriptionTierCard({
   tier,
   price,
   bannerUrl,
   tierName,
   perkDescription,
+  perks,
+  active = false,
+  featured = false,
   children,
   className
 }: {
@@ -44,17 +54,26 @@ export function SubscriptionTierCard({
   bannerUrl?: string;
   tierName?: string;
   perkDescription?: string;
+  perks?: string[];
+  active?: boolean;
+  featured?: boolean;
   children?: ReactNode;
   className?: string;
 }) {
   const label = tierName ?? tier;
-  const perks =
+  const summary =
     perkDescription ?? 'Exclusive cosmetics & perks — no real-money gambling.';
 
   return (
     <GlassPanel
-      glow={tier === 'GOLD' || tier === 'ROYAL' ? 'gold' : tier === 'PLATINUM' ? 'emerald' : 'none'}
-      className={cn('overflow-hidden border-white/10 p-0', tierBorder[tier], className)}
+      glow={active || tier === 'GOLD' || tier === 'ROYAL' ? 'gold' : tier === 'PLATINUM' ? 'emerald' : 'none'}
+      className={cn(
+        'overflow-hidden border-white/10 p-0 transition-all duration-300',
+        tierBorder[tier],
+        active && cn('ring-2', tierRing[tier]),
+        featured && !active && 'ring-1 ring-gold/20',
+        className
+      )}
     >
       <div className="relative aspect-[21/9] w-full overflow-hidden bg-[#050508]">
         {bannerUrl ? (
@@ -69,14 +88,26 @@ export function SubscriptionTierCard({
           <div className={cn('absolute inset-0 bg-gradient-to-br opacity-90', tierAccent[tier])} aria-hidden />
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/80 via-surface/10 to-transparent" />
-        <span
-          className={cn(
-            'absolute left-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm',
-            tierBadge[tier]
-          )}
-        >
-          {label}
-        </span>
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          <span
+            className={cn(
+              'rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm',
+              tierBadge[tier]
+            )}
+          >
+            {label}
+          </span>
+          {active ? (
+            <span className="rounded-full border border-emerald/40 bg-emerald/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald backdrop-blur-sm">
+              Active
+            </span>
+          ) : null}
+          {featured && !active ? (
+            <span className="rounded-full border border-gold/35 bg-gold/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-light backdrop-blur-sm">
+              Best value
+            </span>
+          ) : null}
+        </div>
       </div>
       <div className="p-4 sm:p-5">
         <div className="flex items-baseline justify-between gap-4">
@@ -85,7 +116,19 @@ export function SubscriptionTierCard({
           </h3>
           <p className="shrink-0 text-base font-semibold text-gold sm:text-lg">{price}</p>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted">{perks}</p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{summary}</p>
+        {perks?.length ? (
+          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
+            {perks.map((perk) => (
+              <li key={perk} className="flex items-start gap-2 text-xs text-ivory/85">
+                <span className="mt-0.5 text-gold" aria-hidden>
+                  ✦
+                </span>
+                <span>{perk}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {children ? <div className="mt-4 border-t border-white/10 pt-4">{children}</div> : null}
       </div>
     </GlassPanel>

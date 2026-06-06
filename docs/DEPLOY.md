@@ -52,7 +52,8 @@ Project → **Settings → Environment Variables** (Production + Preview):
 | `DATABASE_URL` | строка из Neon |
 | `JWT_SECRET` | случайная длинная строка (64+ символов) |
 | `JWT_REFRESH_SECRET` | другая случайная строка |
-| `PUBLIC_WEB_URL` | `https://duopoker.vercel.app` (твой домен) |
+| `PUBLIC_WEB_URL` | `https://duopoker.ru` |
+| `CORS_ORIGIN` | `https://duopoker.ru,https://www.duopoker.ru,https://duopoker.vercel.app` |
 | `ALLOW_SOLO_QUEUE` | `true` |
 | `MOCK_CHECKOUT` | `true` для demo; **`false` + Stripe keys для реальных платежей** |
 | `LIVEKIT_API_KEY` | из cloud.livekit.io |
@@ -81,14 +82,16 @@ Vercel → **Deployments → Redeploy** (если env меняли после п
 
 ### 4. Проверка после деплоя
 
+Подробнее: [DOMAIN.md](./DOMAIN.md) (REG.RU + Vercel).
+
 ```text
-https://duopoker.vercel.app/api/health
+https://duopoker.ru/api/health
 → {"status":"ok","runtime":"vercel-serverless"}
 
-https://duopoker.vercel.app/health
+https://duopoker.ru/health
 → то же (rewrite)
 
-https://duopoker.vercel.app/api/voice/status
+https://duopoker.ru/api/voice/status
 → {"livekit":"configured",...}
 ```
 
@@ -160,7 +163,7 @@ Login → `GET /api/auth/me` should return `"role":"SUPERADMIN"`. Admin UI: `/ad
 Webhook URL (режим A):
 
 ```text
-https://duopoker.vercel.app/api/monetization/yookassa/webhook
+https://duopoker.ru/api/monetization/yookassa/webhook
 ```
 
 Return URL после оплаты: `/clubs/:clubId?checkout=success`
@@ -172,5 +175,5 @@ Return URL после оплаты: `/clubs/:clubId?checkout=success`
 Webhook URL (режим A):
 
 ```
-https://duopoker.vercel.app/monetization/stripe/webhook
+https://duopoker.ru/api/monetization/stripe/webhook
 ```

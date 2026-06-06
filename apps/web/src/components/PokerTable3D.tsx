@@ -13,6 +13,7 @@ export type TablePlayerVisual = {
   name: string;
   stack: number;
   avatar?: string | null;
+  tableStatus?: string | null;
   tier?: SubscriptionTier;
   equipped?: Partial<EquippedCosmetics>;
   holeCards?: Card[];
@@ -175,6 +176,7 @@ export function PokerTable3D({
               <PlayerAvatar
                 name={player.name}
                 avatarUrl={player.avatar}
+                tableStatus={player.tableStatus}
                 frameId={equipped.frame}
                 tier={tier}
                 active={player.isActive}

@@ -20,9 +20,9 @@ services:
       - key: JWT_REFRESH_SECRET
         generateValue: true
       - key: PUBLIC_WEB_URL
-        value: https://duopoker.vercel.app
+        value: https://duopoker.ru
       - key: CORS_ORIGIN
-        value: https://duopoker.vercel.app
+        value: https://duopoker.ru,https://www.duopoker.ru,https://duopoker.vercel.app
       # Required — set in Render dashboard:
       # - DATABASE_URL  (Neon PostgreSQL connection string)
       # Optional:

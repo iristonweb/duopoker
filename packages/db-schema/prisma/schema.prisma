@@ -93,6 +93,7 @@ model User {
   displayName   String
   nickname      String         @unique
   avatar        String?
+  tableStatus   String?
   role          UserRole       @default(USER)
   emailVerified Boolean        @default(true)
   verificationToken String?

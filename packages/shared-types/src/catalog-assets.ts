@@ -23,7 +23,7 @@ export type CatalogSubscription = {
 
 export type OrganizerPlanTier = 'BASIC' | 'PRO' | 'NETWORK';
 
-export const lobbyHeroBanner = '/assets/banners/lobby-hero.svg';
+export const lobbyHeroBanner = '/assets/banners/lobby-preview.png';
 export const lobbyPreviewBanner = '/assets/banners/lobby-preview.png';
 export const clubsHeroBanner = '/assets/banners/clubs-hero.png';
 export const appBackgroundUrl = '/assets/banners/app-background.svg';

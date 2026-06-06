@@ -225,6 +225,7 @@ authRoutes.get('/me', async (c) => {
         displayName: true,
         nickname: true,
         avatar: true,
+        tableStatus: true,
         chips: true,
         level: true,
         xp: true,

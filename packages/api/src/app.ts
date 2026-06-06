@@ -14,11 +14,7 @@ import { adminRoutes } from './routes/admin.js';
 
 export const app = new Hono().basePath('/api');
 
-const allowedOrigins = new Set(
-  [config.publicWebUrl, 'http://localhost:5180', 'http://localhost:5173']
-    .map((url) => url.replace(/\/$/, ''))
-    .filter(Boolean)
-);
+const allowedOrigins = new Set(config.corsOrigins);
 
 app.use(
   '*',

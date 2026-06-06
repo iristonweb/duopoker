@@ -6,7 +6,9 @@ import {
   catalogGameModes,
   clubsHeroBanner,
   lobbyHeroBanner,
-  subscriptionBannerImages
+  lobbyPreviewBanner,
+  subscriptionBannerImages,
+  subscriptionCosmetics
 } from '@duopoker/shared-types';
 import {
   AppBackground,
@@ -28,6 +30,7 @@ import {
 } from '@duopoker/ui-kit';
 import { AppLogo } from '../components/AppLogo';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { ProfileEditor } from '../components/ProfileEditor';
 import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
@@ -66,6 +69,7 @@ function AuthPanel() {
   const userRole = useAppStore((s) => s.userRole);
   const email = useAppStore((s) => s.email);
   const displayName = useAppStore((s) => s.displayName);
+  const avatarUrl = useAppStore((s) => s.avatarUrl);
   const chips = useAppStore((s) => s.chips);
   const equipped = useAppStore((s) => s.equipped);
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
@@ -82,11 +86,12 @@ function AuthPanel() {
 
   if (accessToken) {
     return (
-      <GlassPanel glow="gold" className="w-full max-w-sm border-gold/20 p-4 sm:max-w-md">
+      <GlassPanel glow="gold" className="w-full max-w-sm border-gold/20 p-4 sm:max-w-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             <PlayerAvatar
               name={displayName ?? t('auth.player')}
+              avatarUrl={avatarUrl}
               frameId={equipped.frame}
               tier={subscriptionTier}
               size="sm"
@@ -123,10 +128,7 @@ function AuthPanel() {
             {t('auth.signOut')}
           </Button>
         </div>
-        <div className="mt-4 flex items-center justify-center gap-2 border-t border-white/10 pt-4">
-          <PlayingCard faceUp={false} deckId={equipped.deck} size="sm" />
-          <PlayingCard faceUp={false} deckId={equipped.deck} size="sm" />
-        </div>
+        <ProfileEditor />
       </GlassPanel>
     );
   }
@@ -233,6 +235,7 @@ export const Lobby = () => {
   const [clubsBannerUrl, setClubsBannerUrl] = useState(clubsHeroBanner);
   const [catalogMockCheckout, setCatalogMockCheckout] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
   const [queueBusy, setQueueBusy] = useState(false);
   const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -246,6 +249,20 @@ export const Lobby = () => {
   useEffect(() => {
     void fetchProfile();
   }, [fetchProfile]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get('checkout');
+    if (checkout === 'success' || (checkout === 'mock' && params.get('success'))) {
+      void fetchProfile().then(() => {
+        setCheckoutMsg(t('lobby.subscriptionActivated'));
+      });
+      window.history.replaceState({}, '', '/lobby');
+    } else if (checkout === 'cancel') {
+      setCheckoutMsg(t('lobby.checkoutCancelled'));
+      window.history.replaceState({}, '', '/lobby');
+    }
+  }, [fetchProfile, t]);
 
   useEffect(() => {
     if (!usesRealtimeSocket() || !socket) return;
@@ -340,36 +357,63 @@ export const Lobby = () => {
 
   const startSubscription = async (tier: string) => {
     const sub = catalogSubs.find((s) => s.tier === tier);
-    const priceId = sub?.stripePriceId ?? (catalogMockCheckout ? tier : undefined);
     const token = useAppStore.getState().accessToken;
     if (!token) {
       setCheckoutMsg(t('lobby.signInToSubscribe'));
       return;
     }
-    if (!priceId) {
-      setCheckoutMsg(t('lobby.stripeNotConfigured'));
-      return;
-    }
+    const useStripe = Boolean(sub?.stripePriceId && !catalogMockCheckout);
     setCheckoutMsg(null);
+    setCheckoutBusy(tier);
     try {
-      const res = await fetch(resolveApiUrl('/monetization/checkout-session'), {
+      if (useStripe && sub?.stripePriceId) {
+        const res = await fetch(resolveApiUrl('/monetization/checkout-session'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ priceId: sub.stripePriceId, mode: 'subscription' })
+        });
+        const data = (await res.json()) as { url?: string; error?: string };
+        if (!res.ok) {
+          setCheckoutMsg(data.error ?? t('queue.failed'));
+          return;
+        }
+        if (data.url) window.location.href = data.url;
+        return;
+      }
+
+      const res = await fetch(resolveApiUrl('/monetization/mock-subscribe'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ priceId, mode: 'subscription' })
+        body: JSON.stringify({ tier })
       });
-      const data = (await res.json()) as { url?: string; error?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string; tier?: string };
       if (!res.ok) {
         setCheckoutMsg(data.error ?? t('queue.failed'));
         return;
       }
-      if (data.url) window.location.href = data.url;
+      await fetchProfile();
+      setCheckoutMsg(
+        t('lobby.subscriptionActivatedTier', {
+          tier: t(`subscriptions.${tier.toLowerCase()}` as 'subscriptions.silver')
+        })
+      );
     } catch {
       setCheckoutMsg(t('lobby.networkError'));
+    } finally {
+      setCheckoutBusy(null);
     }
   };
+
+  const tierPerks = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') =>
+    subscriptionCosmetics
+      .filter((c) => c.requiredTier === tier)
+      .map((c) => c.name);
 
   const kettle = session
     ? session.pot +
@@ -441,6 +485,11 @@ export const Lobby = () => {
             className="block h-40 w-full object-cover object-center sm:h-52"
             loading="eager"
             decoding="async"
+            onError={(e) => {
+              if (e.currentTarget.src !== lobbyPreviewBanner) {
+                e.currentTarget.src = lobbyPreviewBanner;
+              }
+            }}
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/25 via-transparent to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-gold/5" />
@@ -644,73 +693,46 @@ export const Lobby = () => {
               </div>
             </GlassPanel>
 
+            {checkoutMsg ? (
+              <p className="rounded-xl border border-gold/25 bg-gold/10 px-4 py-3 text-sm text-gold-light">{checkoutMsg}</p>
+            ) : null}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <SubscriptionTierCard
-                tier="SILVER"
-                price={t('subscriptions.priceSilver')}
-                tierName={t('subscriptions.silver')}
-                perkDescription={t('subscriptions.perks')}
-                bannerUrl={subBanner('SILVER')}
-              >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => void startSubscription('SILVER')}
-                >
-                  {t('lobby.subscribe')}
-                </Button>
-              </SubscriptionTierCard>
-              <SubscriptionTierCard
-                tier="GOLD"
-                price={t('subscriptions.priceGold')}
-                tierName={t('subscriptions.gold')}
-                perkDescription={t('subscriptions.perks')}
-                bannerUrl={subBanner('GOLD')}
-              >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => void startSubscription('GOLD')}
-                >
-                  {t('lobby.subscribe')}
-                </Button>
-              </SubscriptionTierCard>
-              <SubscriptionTierCard
-                tier="PLATINUM"
-                price={t('subscriptions.pricePlatinum')}
-                tierName={t('subscriptions.platinum')}
-                perkDescription={t('subscriptions.perks')}
-                bannerUrl={subBanner('PLATINUM')}
-              >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => void startSubscription('PLATINUM')}
-                >
-                  {t('lobby.subscribe')}
-                </Button>
-              </SubscriptionTierCard>
-              <SubscriptionTierCard
-                tier="ROYAL"
-                price={t('subscriptions.priceRoyal')}
-                tierName={t('subscriptions.royal')}
-                perkDescription={t('subscriptions.perks')}
-                bannerUrl={subBanner('ROYAL')}
-              >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => void startSubscription('ROYAL')}
-                >
-                  {t('lobby.subscribe')}
-                </Button>
-              </SubscriptionTierCard>
+              {(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const).map((tier) => {
+                const active = subscriptionTier === tier;
+                const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}` as
+                  | 'subscriptions.priceSilver'
+                  | 'subscriptions.priceGold'
+                  | 'subscriptions.pricePlatinum'
+                  | 'subscriptions.priceRoyal';
+                return (
+                  <SubscriptionTierCard
+                    key={tier}
+                    tier={tier}
+                    price={t(priceKey)}
+                    tierName={t(`subscriptions.${tier.toLowerCase()}` as 'subscriptions.silver')}
+                    perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}` as 'subscriptions.perkSummary.silver')}
+                    perks={tierPerks(tier)}
+                    active={active}
+                    featured={tier === 'ROYAL'}
+                    bannerUrl={subBanner(tier)}
+                  >
+                    <Button
+                      variant={active ? 'ghost' : 'secondary'}
+                      size="sm"
+                      className="w-full"
+                      disabled={active || checkoutBusy === tier}
+                      onClick={() => void startSubscription(tier)}
+                    >
+                      {active
+                        ? t('lobby.subscriptionActive')
+                        : checkoutBusy === tier
+                          ? t('lobby.subscribing')
+                          : t('lobby.subscribe')}
+                    </Button>
+                  </SubscriptionTierCard>
+                );
+              })}
             </div>
-            {checkoutMsg ? <p className="text-xs text-amber-400">{checkoutMsg}</p> : null}
           </motion.div>
         </div>
 

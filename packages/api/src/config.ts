@@ -16,6 +16,19 @@ function requireSecret(name: string, value: string | undefined, devFallback: str
   return value;
 }
 
+const splitOrigins = (raw?: string): string[] => {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+};
+
+const defaultPublicWebUrl = (
+  process.env.PUBLIC_WEB_URL?.trim() ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173')
+).replace(/\/$/, '');
+
 export const config = {
   isProduction,
   allowSoloQueue: process.env.ALLOW_SOLO_QUEUE === 'true',
@@ -37,9 +50,18 @@ export const config = {
   stripePriceRoyal: process.env.STRIPE_PRICE_ROYAL ?? '',
   yookassaShopId: process.env.YOOKASSA_SHOP_ID ?? '',
   yookassaSecretKey: process.env.YOOKASSA_SECRET_KEY ?? '',
-  publicWebUrl:
-    process.env.PUBLIC_WEB_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173'),
+  publicWebUrl: defaultPublicWebUrl,
+  corsOrigins: (() => {
+    const fromEnv = splitOrigins(process.env.CORS_ORIGIN?.trim());
+    const primary = defaultPublicWebUrl;
+    const merged = new Set([primary, ...fromEnv]);
+    merged.add('http://localhost:5180');
+    merged.add('http://localhost:5173');
+    if (process.env.VERCEL_URL) {
+      merged.add(`https://${process.env.VERCEL_URL}`.replace(/\/$/, ''));
+    }
+    return [...merged];
+  })(),
   livekitApiKey: process.env.LIVEKIT_API_KEY ?? '',
   livekitApiSecret: process.env.LIVEKIT_API_SECRET ?? '',
   livekitUrl: process.env.LIVEKIT_URL ?? ''
