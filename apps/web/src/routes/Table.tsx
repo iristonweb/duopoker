@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
+import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
 import type { EquippedCosmetics, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
 import { NEXT_HAND_DELAY_MS, defaultEquipped } from '@duopoker/shared-types';
 import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
@@ -11,6 +11,8 @@ import { TableTopHUD } from '../components/table/TableTopHUD';
 import { TableActionDock } from '../components/table/TableActionDock';
 import { HandResultOverlay } from '../components/table/HandResultOverlay';
 import { VoiceChatPill } from '../components/table/VoiceChatPill';
+import { GameEventFeed } from '../components/table/GameEventFeed';
+import { useCommunityCardSounds, useTableGameFeed } from '../hooks/useTableGameFeed';
 import { useAppStore } from '../store/useAppStore';
 import { usesRealtimeSocket } from '../config/api';
 import { rotatePlayersForHero } from '../lib/table-layout';
@@ -23,6 +25,7 @@ const amountToCall = (s: SessionState, uid: string) =>
 
 export const Table = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
   const session = useAppStore((s) => s.session);
   const sessionError = useAppStore((s) => s.sessionError);
@@ -33,6 +36,7 @@ export const Table = () => {
   const joinSession = useAppStore((s) => s.joinSession);
   const pollSession = useAppStore((s) => s.pollSession);
   const stopPolling = useAppStore((s) => s.stopPolling);
+  const leaveTable = useAppStore((s) => s.leaveTable);
   const mode = useAppStore((s) => s.mode);
 
   const equipped = useAppStore((s) => s.equipped);
@@ -90,6 +94,8 @@ export const Table = () => {
 
   const [raiseAmount, setRaiseAmount] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const [leaving, setLeaving] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
@@ -122,8 +128,12 @@ export const Table = () => {
 
   const label = (uid: string) => playerProfiles[uid]?.name ?? uid.slice(0, 8);
 
+  const feedEvents = useTableGameFeed(session, label, t, soundOn);
+  useCommunityCardSounds(session?.communityCards?.length ?? 0, soundOn);
+
   const tablePlayers = useMemo((): TablePlayerVisual[] => {
     if (!session) return [];
+    const dealerUid = session.players[session.dealerIndex];
     const visuals = session.players.map((uid) => {
       const profile = playerProfiles[uid];
       const hero = uid === userId;
@@ -132,6 +142,7 @@ export const Table = () => {
         name: profile?.name ?? uid.slice(0, 8),
         stack: session.stacks[uid] ?? 0,
         roundBet: session.playerRoundBet[uid] ?? 0,
+        isDealer: uid === dealerUid,
         avatar: profile?.avatar,
         tableStatus: hero ? heroTableStatus : profile?.tableStatus,
         tier: hero ? subscriptionTier : (profile?.subscriptionTier ?? 'FREE'),
@@ -167,6 +178,14 @@ export const Table = () => {
   useEffect(() => {
     if (session?.bigBlind) setRaiseAmount(session.bigBlind * 2);
   }, [session?.bigBlind, session?.handNumber]);
+
+  const handleLeaveTable = async () => {
+    const id = session?.sessionId ?? routeSessionId;
+    if (!id || leaving) return;
+    setLeaving(true);
+    await leaveTable(id);
+    navigate('/lobby');
+  };
 
   if (!routeSessionId) {
     return (
@@ -245,7 +264,12 @@ export const Table = () => {
           pot={kettle}
           street={session.street}
           seatCount={session.players.length}
+          smallBlind={session.smallBlind}
+          bigBlind={session.bigBlind}
+          handNumber={session.handNumber}
           chipId={equipped.chip}
+          onLeaveTable={() => void handleLeaveTable()}
+          leaving={leaving}
         />
       }
       table={
@@ -273,6 +297,17 @@ export const Table = () => {
                 nextHandMsLeft !== null && nextHandMsLeft > 0 ? Math.ceil(nextHandMsLeft / 1000) : null
               }
             />
+            <div className="pointer-events-auto absolute left-3 top-16 z-20 sm:left-4 sm:top-[4.5rem]">
+              <GameEventFeed events={feedEvents} title={t('table.feedTitle')} />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 border-white/10 text-[10px] uppercase tracking-wider"
+                onClick={() => setSoundOn((v) => !v)}
+              >
+                {soundOn ? t('table.soundOn') : t('table.soundOff')}
+              </Button>
+            </div>
             <VoiceChatPill />
           </motion.div>
         ) : (

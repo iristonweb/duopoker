@@ -87,6 +87,7 @@ export {
   autoFoldActivePlayer,
   createInitialTableState,
   markReadyForNextHand,
+  removePlayerFromTable,
   startNewHand,
   totalInKettle,
   sbBbIndices

@@ -8,12 +8,14 @@ import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipStack, PokerChipVisual } from './cosmetics/PokerChipVisual';
 import { isBotUserId, seatLayout } from '../lib/table-layout';
+import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 
 export type TablePlayerVisual = {
   userId: string;
   name: string;
   stack: number;
   roundBet?: number;
+  isDealer?: boolean;
   avatar?: string | null;
   tableStatus?: string | null;
   tier?: SubscriptionTier;
@@ -123,17 +125,8 @@ export function PokerTable3D({
           )}
         </div>
 
-        <div className="absolute left-1/2 top-[50%] flex -translate-x-1/2 items-center gap-2.5 rounded-full border border-gold/30 bg-black/60 px-5 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_24px_rgba(232,197,71,0.15)] backdrop-blur-md">
-          <PokerChipVisual chipId={heroChipId} size="sm" />
-          <div className="flex flex-col items-start leading-tight">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-gold/70">Pot</span>
-            <span className="font-mono text-sm font-bold text-gold-light">{pot.toLocaleString()}</span>
-          </div>
-          {street ? (
-            <span className="ml-1 rounded-full border border-emerald/30 bg-emerald/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald sm:hidden">
-              {street}
-            </span>
-          ) : null}
+        <div className="absolute left-1/2 top-[50%] -translate-x-1/2">
+          <AnimatedPotDisplay pot={pot} chipId={heroChipId} street={street} />
         </div>
 
         {players.map((player, index) => {
@@ -156,6 +149,12 @@ export function PokerTable3D({
             >
               {player.isActive ? (
                 <span className="absolute -inset-3 animate-pulse-glow rounded-3xl border-2 border-emerald/50 bg-emerald/[0.07] shadow-[0_0_28px_rgba(74,222,128,0.35)] sm:-inset-4" />
+              ) : null}
+
+              {player.isDealer ? (
+                <span className="absolute -right-1 -top-1 z-[2] flex h-5 w-5 items-center justify-center rounded-full border border-gold/40 bg-gold/20 text-[10px] font-bold text-gold-light shadow-glow-gold">
+                  D
+                </span>
               ) : null}
 
               <PlayerAvatar
@@ -181,10 +180,15 @@ export function PokerTable3D({
               </div>
 
               {roundBet > 0 ? (
-                <div className="relative z-[1] flex items-center gap-1 rounded-full border border-gold/25 bg-black/50 px-2 py-0.5">
+                <motion.div
+                  key={roundBet}
+                  initial={{ scale: 0.6, y: 8, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  className="relative z-[1] flex items-center gap-1 rounded-full border border-gold/25 bg-black/50 px-2 py-0.5"
+                >
                   <PokerChipVisual chipId={equipped.chip} size="sm" className="scale-75" />
                   <span className="font-mono text-[9px] font-bold text-gold-light">{roundBet.toLocaleString()}</span>
-                </div>
+                </motion.div>
               ) : null}
 
               {cards.length ? (

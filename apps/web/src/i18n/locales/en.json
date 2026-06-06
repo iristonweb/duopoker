@@ -144,7 +144,8 @@
     "connecting": "Connecting…",
     "join": "Join voice (LiveKit)",
     "tokenFailed": "Token request failed",
-    "connectionFailed": "Voice connection failed"
+    "connectionFailed": "Voice connection failed",
+    "invalidCredentials": "LiveKit is not configured: set real LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL on the server (not your-project.livekit.cloud)."
   },
   "legal": {
     "disclaimer": "Virtual chips only. No real-money gambling. Chips are not convertible to cash. Purchases are final. Play responsibly."
@@ -223,7 +224,22 @@
     "actionError": "Action failed: {{code}}",
     "nextHandAuto": "Next hand in {{seconds}}s…",
     "dealingNext": "Dealing next hand…",
-    "gameOver": "Game over — not enough players with chips."
+    "gameOver": "Game over — not enough players with chips.",
+    "leaveTable": "Leave table",
+    "leaving": "Leaving…",
+    "blinds": "Blinds {{sb}}/{{bb}}",
+    "feedTitle": "Game feed",
+    "feedNewHand": "Hand #{{num}}",
+    "feedBlinds": "Blinds {{sb}} / {{bb}}",
+    "feedStreet": "Street: {{street}}",
+    "feedFold": "{{name}} folds",
+    "feedCheck": "{{name}} checks",
+    "feedCall": "{{name}} calls {{amount}}",
+    "feedBet": "{{name}} bets {{amount}}",
+    "feedRaise": "{{name}} raises to {{amount}}",
+    "feedWinner": "Winner: {{names}}",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off"
   },
   "clubs": {
     "title": "Private clubs",

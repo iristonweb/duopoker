@@ -10,6 +10,7 @@ import {
   markReadyForNextHand,
   normalizeSessionState,
   pickBotAction,
+  removePlayerFromTable,
   shouldAutoStartNextHand,
   shouldForceActionTimeout,
   startNewHand
@@ -358,6 +359,23 @@ export const getQueueStatus = async (userId: string): Promise<QueueStatus> => {
 
 export const leaveQueue = async (userId: string) => {
   await prisma.matchmakingTicket.deleteMany({ where: { userId } });
+};
+
+export const leaveTable = async (sessionId: string, userId: string) => {
+  const existing = await getSessionSnapshot(sessionId);
+  if (!existing) {
+    return { ok: false as const, reason: 'SESSION_NOT_FOUND' };
+  }
+  if (!existing.players.includes(userId)) {
+    return { ok: false as const, reason: 'NOT_SEATED' };
+  }
+  const result = removePlayerFromTable(existing, userId);
+  if (!result.ok) {
+    return { ok: false as const, reason: result.reason };
+  }
+  const saved = await saveState(result.state);
+  await clearMatchAssignment(userId);
+  return { ok: true as const, state: saved };
 };
 
 export const recordMatchForPlayers = async (

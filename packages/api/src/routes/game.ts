@@ -10,6 +10,7 @@ import {
   getSessionSnapshot,
   joinTable,
   leaveQueue,
+  leaveTable,
   matchmakingAllowsSolo,
   processPlayerAction,
   requestNextHand,
@@ -41,6 +42,10 @@ const actionSchema = z.object({
 });
 
 const readySchema = z.object({
+  sessionId: z.string().min(1)
+});
+
+const leaveSchema = z.object({
   sessionId: z.string().min(1)
 });
 
@@ -108,6 +113,24 @@ gameRoutes.delete('/queue', async (c) => {
   const userId = c.get('auth').userId;
   await leaveQueue(userId);
   return c.body(null, 204);
+});
+
+gameRoutes.post('/leave', async (c) => {
+  const userId = c.get('auth').userId;
+  const body = await c.req.json().catch(() => null);
+  const parsed = leaveSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten(), code: 'INVALID_LEAVE_PAYLOAD' }, 400);
+  }
+
+  const result = await leaveTable(parsed.data.sessionId, userId);
+  if (!result.ok) {
+    return c.json({ error: result.reason, code: result.reason }, 400);
+  }
+
+  const ticked = await tickSession(parsed.data.sessionId);
+  const outState = ticked ?? result.state;
+  return c.json({ session: sanitizeStateForViewer(outState, userId), left: true });
 });
 
 gameRoutes.post('/join', async (c) => {

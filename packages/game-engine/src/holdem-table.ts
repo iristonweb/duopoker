@@ -691,3 +691,104 @@ export const autoFoldActivePlayer = (
     at: Date.now()
   });
 };
+
+const awardSingleWinner = (state: SessionState, winnerId: string): SessionState => {
+  const awarded = applyUncalledReturn(state);
+  const won = totalInKettle(awarded);
+  const stacks = { ...awarded.stacks };
+  stacks[winnerId] = (stacks[winnerId] ?? 0) + won;
+  return {
+    ...awarded,
+    street: 'COMPLETE',
+    phase: 'SHOWDOWN',
+    pot: 0,
+    currentBet: 0,
+    playerRoundBet: Object.fromEntries(awarded.players.map((p) => [p, 0])),
+    stacks,
+    winners: [winnerId],
+    winnersShare: { [winnerId]: won },
+    readyForNextHand: [],
+    activePlayerIndex: awarded.players.indexOf(winnerId),
+    activePlayerId: winnerId,
+    handCompletedAt: Date.now()
+  };
+};
+
+const omitPlayerKey = <T>(rec: Record<string, T>, userId: string): Record<string, T> => {
+  const next = { ...rec };
+  delete next[userId];
+  return next;
+};
+
+/** Remove a seated player (leave table). Folds active hand if needed. */
+export const removePlayerFromTable = (
+  state: SessionState,
+  userId: string
+): { ok: true; state: SessionState } | { ok: false; reason: string } => {
+  if (!state.players.includes(userId)) {
+    return { ok: false, reason: 'NOT_SEATED' };
+  }
+
+  let ns = state;
+
+  if (ns.street !== 'LOBBY' && ns.street !== 'COMPLETE' && !ns.foldedPlayerIds.includes(userId)) {
+    ns = { ...ns, foldedPlayerIds: [...ns.foldedPlayerIds, userId] };
+    const alive = activeNonFolded(ns);
+    if (alive.length === 1) {
+      ns = awardSingleWinner(ns, alive[0]!);
+    } else if (ns.players[ns.activePlayerIndex] === userId) {
+      ns = rotateTurn(ns);
+    }
+  }
+
+  const idx = ns.players.indexOf(userId);
+  const players = ns.players.filter((p) => p !== userId);
+
+  let dealerIndex = ns.dealerIndex;
+  if (idx < dealerIndex) dealerIndex -= 1;
+  else if (dealerIndex >= players.length) dealerIndex = Math.max(0, players.length - 1);
+
+  let activePlayerIndex = ns.activePlayerIndex;
+  if (idx < activePlayerIndex) activePlayerIndex -= 1;
+  else if (idx === activePlayerIndex) activePlayerIndex = 0;
+  if (players.length && activePlayerIndex >= players.length) activePlayerIndex = 0;
+
+  ns = {
+    ...ns,
+    players,
+    dealerIndex,
+    activePlayerIndex,
+    activePlayerId: players[activePlayerIndex],
+    foldedPlayerIds: ns.foldedPlayerIds.filter((id) => id !== userId),
+    readyForNextHand: ns.readyForNextHand.filter((id) => id !== userId),
+    allInPlayerIds: ns.allInPlayerIds.filter((id) => id !== userId),
+    stacks: omitPlayerKey(ns.stacks, userId),
+    playerRoundBet: omitPlayerKey(ns.playerRoundBet, userId),
+    playerCards: omitPlayerKey(ns.playerCards, userId),
+    handContributions: omitPlayerKey(ns.handContributions, userId),
+    actedThisRound: omitPlayerKey(ns.actedThisRound, userId)
+  };
+
+  if (players.length < 2) {
+    ns = {
+      ...ns,
+      street: 'LOBBY',
+      phase: 'DEAL',
+      pot: 0,
+      currentBet: 0,
+      communityCards: [],
+      playerRoundBet: Object.fromEntries(players.map((p) => [p, 0])),
+      foldedPlayerIds: [],
+      readyForNextHand: [],
+      winners: undefined,
+      winnersShare: undefined,
+      handCompletedAt: undefined,
+      actionDeadlineAt: undefined,
+      actionLog: [],
+      activePlayerIndex: 0,
+      activePlayerId: players[0]
+    };
+  }
+
+  return { ok: true, state: ns };
+};

@@ -144,7 +144,8 @@
     "connecting": "Подключение…",
     "join": "Войти в голос (LiveKit)",
     "tokenFailed": "Не удалось получить токен",
-    "connectionFailed": "Ошибка подключения к голосу"
+    "connectionFailed": "Ошибка подключения к голосу",
+    "invalidCredentials": "LiveKit не настроен: укажите реальные LIVEKIT_API_KEY, LIVEKIT_API_SECRET и LIVEKIT_URL в Vercel (не your-project.livekit.cloud)."
   },
   "legal": {
     "disclaimer": "Только виртуальные фишки. Без игры на реальные деньги. Фишки не конвертируются в наличные. Покупки не возвращаются. Играйте ответственно."
@@ -223,7 +224,22 @@
     "actionError": "Ошибка действия: {{code}}",
     "nextHandAuto": "Следующая раздача через {{seconds}}с…",
     "dealingNext": "Раздаём следующую…",
-    "gameOver": "Игра окончена — недостаточно игроков с фишками."
+    "gameOver": "Игра окончена — недостаточно игроков с фишками.",
+    "leaveTable": "Встать",
+    "leaving": "Выход…",
+    "blinds": "Блайнды {{sb}}/{{bb}}",
+    "feedTitle": "Ход игры",
+    "feedNewHand": "Раздача #{{num}}",
+    "feedBlinds": "Блайнды {{sb}} / {{bb}}",
+    "feedStreet": "Улица: {{street}}",
+    "feedFold": "{{name}} — фолд",
+    "feedCheck": "{{name}} — чек",
+    "feedCall": "{{name}} — колл {{amount}}",
+    "feedBet": "{{name}} — бет {{amount}}",
+    "feedRaise": "{{name}} — рейз {{amount}}",
+    "feedWinner": "Победитель: {{names}}",
+    "soundOn": "Звук вкл.",
+    "soundOff": "Звук выкл."
   },
   "clubs": {
     "title": "Приватные клубы",

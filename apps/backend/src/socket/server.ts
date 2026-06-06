@@ -14,6 +14,7 @@ import {
   foldActivePlayerOnTimeout,
   getSessionSnapshot,
   joinTable,
+  leaveTable,
   processPlayerAction,
   requestNextHand,
   seatPlayersBatch,
@@ -280,6 +281,24 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: result.reason });
         return;
       }
+      await broadcastSessionState(io, sessionId, result.state);
+    });
+
+    socket.on('leaveTable', async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
+      if (!sessionId || typeof sessionId !== 'string') return;
+      const userId = resolveUserId(socket, payloadUserId);
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
+      clearActionTimer(sessionId);
+      const result = await leaveTable(sessionId, userId);
+      if (!result.ok) {
+        socket.emit('sessionError', { code: result.reason });
+        return;
+      }
+      await socket.leave(sessionId);
+      socket.emit('leftTable', { sessionId });
       await broadcastSessionState(io, sessionId, result.state);
     });
 
