@@ -12,7 +12,7 @@ import {
   SectionHeader
 } from '@duopoker/ui-kit';
 import { ORGANIZER_PLAN_PRICES_RUB, organizerPlanBanners } from '@duopoker/shared-types';
-import { useAppStore, type ClubDetail } from '../store/useAppStore';
+import { useAppStore, type ClubDetail, type PrivateTableSummary } from '../store/useAppStore';
 
 const formatPlanPrice = (rub: number) =>
   rub === 0 ? '0 ₽' : `${rub.toLocaleString('ru-RU')} ₽/мес`;
@@ -24,8 +24,10 @@ export const ClubDashboard = () => {
   const addClubMember = useAppStore((s) => s.addClubMember);
   const upgradeClubPlan = useAppStore((s) => s.upgradeClubPlan);
   const createPrivateTable = useAppStore((s) => s.createPrivateTable);
+  const fetchPrivateTables = useAppStore((s) => s.fetchPrivateTables);
   const navigate = useNavigate();
   const [data, setData] = useState<ClubDetail | null>(null);
+  const [tables, setTables] = useState<PrivateTableSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [memberQuery, setMemberQuery] = useState('');
   const [tableName, setTableName] = useState('');
@@ -36,6 +38,9 @@ export const ClubDashboard = () => {
     setLoading(true);
     void fetchClub(clubId)
       .then(setData)
+      .then(() => fetchPrivateTables(clubId))
+      .then(setTables)
+      .catch(() => setTables([]))
       .finally(() => setLoading(false));
   };
 
@@ -158,7 +163,35 @@ export const ClubDashboard = () => {
           </GlassPanel>
 
           <GlassPanel className="border-white/10 p-5">
-            <SectionHeader eyebrow="Tables" title={t('clubs.privateTables', { defaultValue: 'Private tables' })} className="mb-4" />
+            <SectionHeader eyebrow="Tables" title={t('clubs.privateTables')} className="mb-4" />
+            {tables.filter((tbl) => tbl.status !== 'CLOSED').length > 0 ? (
+              <ul className="mb-4 space-y-2">
+                {tables
+                  .filter((tbl) => tbl.status !== 'CLOSED')
+                  .map((tbl) => (
+                    <li
+                      key={tbl.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-medium text-zinc-200">{tbl.name}</span>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          <Badge variant={tbl.status === 'LIVE' ? 'emerald' : 'default'}>{tbl.status}</Badge>
+                          <Badge>{tbl.mode}</Badge>
+                        </div>
+                      </div>
+                      <Link
+                        to={`/clubs/${clubId}/tables/${tbl.id}`}
+                        className="premium-link shrink-0 text-xs font-semibold uppercase tracking-wider"
+                      >
+                        {t('clubs.manageTable')}
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="mb-4 text-sm text-muted">{t('clubs.noActiveTables')}</p>
+            )}
             {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') && (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input

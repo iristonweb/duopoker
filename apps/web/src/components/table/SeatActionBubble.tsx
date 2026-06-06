@@ -26,9 +26,10 @@ export function SeatActionBubble({ text, kind = 'check', className }: Props) {
         }}
         exit={{ opacity: 0, y: -10, scale: 0.85 }}
         className={cn(
-          'pointer-events-none absolute -top-12 left-1/2 z-[25] min-w-[4.5rem] max-w-[11rem] -translate-x-1/2',
+          'pointer-events-none absolute z-[25] min-w-[4.5rem] max-w-[14rem]',
           'flex items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 backdrop-blur-md',
-          'text-xs font-bold uppercase tracking-[0.08em] sm:text-sm',
+          'text-xs font-bold uppercase tracking-[0.08em] whitespace-nowrap sm:text-sm',
+          '-top-12 left-1/2 -translate-x-1/2',
           style,
           className
         )}
@@ -36,7 +37,7 @@ export function SeatActionBubble({ text, kind = 'check', className }: Props) {
         <span className="shrink-0 text-[10px] opacity-80 sm:text-xs" aria-hidden>
           {icon}
         </span>
-        <span className="truncate">{text}</span>
+        <span>{text}</span>
       </motion.div>
     </AnimatePresence>
   );

@@ -10,7 +10,7 @@ import { PlayingCard } from '../cosmetics/PlayingCard';
 import { JokerTrumpBadge } from './JokerTrumpBadge';
 import { TurnTimer } from './TurnTimer';
 
-const PENDING_CARD_TIMEOUT_MS = 3000;
+const PENDING_ACTION_TIMEOUT_MS = 3000;
 
 type Props = {
   myTurn: boolean;
@@ -51,6 +51,7 @@ export function JokerActionDock({
 }: Props) {
   const { t } = useTranslation();
   const [pendingCard, setPendingCard] = useState<string | null>(null);
+  const [pendingBid, setPendingBid] = useState(false);
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showActions = myTurn && street !== 'COMPLETE' && street !== 'LOBBY';
   const bidding = street === 'BIDDING';
@@ -73,8 +74,9 @@ export function JokerActionDock({
 
   useEffect(() => {
     setPendingCard(null);
+    setPendingBid(false);
     clearPendingTimer();
-  }, [holeCards.length, joker.trickNumber, sessionError, actionLogLen]);
+  }, [holeCards.length, joker.trickNumber, sessionError, actionLogLen, street]);
 
   useEffect(() => () => clearPendingTimer(), []);
 
@@ -82,8 +84,16 @@ export function JokerActionDock({
     if (pendingCard || !legalCards.has(card)) return;
     setPendingCard(card);
     clearPendingTimer();
-    pendingTimerRef.current = setTimeout(() => setPendingCard(null), PENDING_CARD_TIMEOUT_MS);
+    pendingTimerRef.current = setTimeout(() => setPendingCard(null), PENDING_ACTION_TIMEOUT_MS);
     onPlayCard(card);
+  };
+
+  const handleBid = () => {
+    if (pendingBid) return;
+    setPendingBid(true);
+    clearPendingTimer();
+    pendingTimerRef.current = setTimeout(() => setPendingBid(false), PENDING_ACTION_TIMEOUT_MS);
+    onBid();
   };
 
   return (
@@ -164,17 +174,24 @@ export function JokerActionDock({
               max={maxBid}
               step={1}
               value={clampedBid}
+              disabled={pendingBid}
               aria-label={t('table.bidSliderLabel')}
               aria-valuemin={0}
               aria-valuemax={maxBid}
               aria-valuenow={clampedBid}
               aria-valuetext={t('table.jokerBid', { amount: clampedBid })}
               onChange={(e) => onBidAmountChange(Number(e.target.value))}
-              className="h-2 min-w-[8rem] flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-gold [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gold"
+              className="h-2 min-w-[8rem] flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-gold disabled:opacity-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gold"
             />
             <span className="w-8 font-mono text-lg font-bold text-gold-light">{clampedBid}</span>
-            <Button variant="primary" size="lg" className="min-h-12 border border-gold/30 shadow-glow-gold" onClick={onBid}>
-              {t('table.jokerBid', { amount: clampedBid })}
+            <Button
+              variant="primary"
+              size="lg"
+              className="min-h-12 border border-gold/30 shadow-glow-gold"
+              disabled={pendingBid}
+              onClick={handleBid}
+            >
+              {pendingBid ? t('table.submittingBid') : t('table.jokerBid', { amount: clampedBid })}
             </Button>
           </div>
         ) : null}

@@ -295,6 +295,7 @@
     "jokerBidPrompt": "Сделайте заявку на взятки",
     "jokerPlayPrompt": "Выберите карту для хода",
     "jokerBid": "Заявка: {{amount}}",
+    "submittingBid": "Отправка…",
     "jokerTrick": "Взятка {{n}}",
     "jokerNoCards": "Нет карт на руке",
     "jokerPoolLabel": "Пул",
@@ -317,7 +318,7 @@
       "RIVER": "Ривер",
       "SHOWDOWN": "Шоудаун",
       "COMPLETE": "Завершено",
-      "BIDDING": "Заказы",
+      "BIDDING": "Заявки",
       "TRICKS": "Взятки"
     },
     "errors": {
@@ -331,7 +332,9 @@
       "notAssigned": "Место не назначено",
       "joinFailed": "Не удалось подключиться к столу",
       "sessionNotFound": "Сессия не найдена",
-      "authRequired": "Требуется вход"
+      "authRequired": "Требуется вход",
+      "connectionLost": "Нет соединения с сервером — проверьте интернет и обновите страницу",
+      "tableClosed": "Стол закрыт организатором"
     },
     "connecting": "Подключение",
     "joiningTitle": "Подключение к столу",
@@ -380,7 +383,7 @@
     "actionCall": "КОЛЛ {{amount}}",
     "actionBet": "БЕТ {{amount}}",
     "actionRaise": "РЕЙЗ {{amount}}",
-    "actionBid": "ЗАКАЗ {{amount}}",
+    "actionBid": "ЗАЯВКА {{amount}}",
     "actionPlay": "ХОД",
     "postsBlindSB": "МБ {{amount}}",
     "postsBlindBB": "ББ {{amount}}",
@@ -404,7 +407,7 @@
     "feedJokerTricks": "Взятки",
     "feedJokerTrump": "Козырь — {{suit}}",
     "feedJokerNoTrumpDeal": "Без козыря — козырь определит последняя карта",
-    "feedJokerBid": "{{name}} заказывает {{amount}}",
+    "feedJokerBid": "{{name}} заявляет {{amount}}",
     "feedJokerPlay": "{{name}} кладёт {{card}}",
     "feedJokerTrickDone": "Взятка {{n}} из {{total}} сыграна",
     "feedJokerHandDone": "Итог раздачи: {{summary}}",
@@ -413,7 +416,7 @@
     "notebookOpen": "Открыть тетрадь",
     "notebookClose": "Закрыть тетрадь",
     "notebookDeal": "Сдача",
-    "notebookBid": "заказ",
+    "notebookBid": "заявка",
     "notebookTricks": "взятки",
     "notebookPoints": "очки",
     "notebookTotal": "Итого",
@@ -472,7 +475,13 @@
     },
     "payPro": "Оплатить PRO (ЮMoney)",
     "payNetwork": "Оплатить NETWORK (ЮMoney)",
-    "currentPlan": "Текущий план"
+    "currentPlan": "Текущий план",
+    "privateTables": "Приватные столы",
+    "closeTable": "Закрыть стол",
+    "closeTableConfirm": "Закрыть стол? Игроки будут отключены, стол исчезнет из эфира.",
+    "closingTable": "Закрытие…",
+    "manageTable": "Управление",
+    "noActiveTables": "Нет активных столов"
   },
   "admin": {
     "eyebrow": "Superadmin",

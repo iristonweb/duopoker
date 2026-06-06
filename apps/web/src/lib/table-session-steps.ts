@@ -38,7 +38,8 @@ export const buildTableSessionSteps = (
   prev: SessionSnap | null,
   session: SessionState,
   formatAction: (action: PlayerAction) => string,
-  formatBlind?: (type: 'SB' | 'BB', amount: number) => string
+  formatBlind?: (type: 'SB' | 'BB', amount: number) => string,
+  heroId?: string
 ): TableSessionStep[] => {
   if (!prev) return [];
 
@@ -46,7 +47,8 @@ export const buildTableSessionSteps = (
   const snap = sessionSnap(session);
 
   if (prev.handNumber !== snap.handNumber) {
-    for (const uid of session.players) {
+    const dealTargets = heroId ? [heroId] : session.players;
+    for (const uid of dealTargets) {
       const count = (session.playerCards[uid] ?? []).length || 2;
       for (let i = 0; i < count; i++) {
         steps.push({ kind: 'dealHole', userId: uid, cardIndex: i });
@@ -74,7 +76,12 @@ export const buildTableSessionSteps = (
     return steps;
   }
 
-  if (prev.street !== snap.street && prev.street !== 'LOBBY' && snap.street !== 'LOBBY') {
+  if (
+    prev.street !== snap.street &&
+    prev.street !== 'LOBBY' &&
+    snap.street !== 'LOBBY' &&
+    session.mode !== 'JOKER'
+  ) {
     steps.push({ kind: 'collectBets' }, { kind: 'potPulse' });
   }
 

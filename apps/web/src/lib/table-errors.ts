@@ -11,7 +11,9 @@ const ERROR_KEY_MAP: Record<string, string> = {
   NOT_ASSIGNED: 'table.errors.notAssigned',
   join_failed: 'table.errors.joinFailed',
   SESSION_NOT_FOUND: 'table.errors.sessionNotFound',
-  AUTH_REQUIRED: 'table.errors.authRequired'
+  AUTH_REQUIRED: 'table.errors.authRequired',
+  connection_lost: 'table.errors.connectionLost',
+  table_closed: 'table.errors.tableClosed'
 };
 
 export const formatTableError = (code: string, t: Translate): string => {

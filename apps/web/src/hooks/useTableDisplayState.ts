@@ -73,7 +73,7 @@ export function useTableDisplayState(
       return;
     }
 
-    const steps = buildTableSessionSteps(prev, session, formatAction);
+    const steps = buildTableSessionSteps(prev, session, formatAction, undefined, heroId);
     prevRef.current = snap;
 
     if (!steps.length) return;

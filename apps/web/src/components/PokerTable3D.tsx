@@ -10,7 +10,7 @@ import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipStack, PokerChipVisual } from './cosmetics/PokerChipVisual';
-import { isBotUserId, seatLayout } from '../lib/table-layout';
+import { isBotUserId, bubbleOffset, seatLayout } from '../lib/table-layout';
 import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 import { SeatActionBubble } from './table/SeatActionBubble';
 import { ChipFlightLayer } from './table/ChipFlightLayer';
@@ -53,7 +53,6 @@ type Props = {
   chipFlights?: ChipFlight[];
   jokerFlights?: JokerCardFlight[];
   potPulseKey?: number;
-  dealTick?: number;
   foldingUsers?: string[];
   checkRippleUsers?: string[];
   className?: string;
@@ -85,7 +84,6 @@ export function PokerTable3D({
   chipFlights = [],
   jokerFlights = [],
   potPulseKey = 0,
-  dealTick = 0,
   foldingUsers = [],
   checkRippleUsers = [],
   className
@@ -155,7 +153,7 @@ export function PokerTable3D({
 
       {/* Virtual deck position for deal animation origin */}
       <motion.div
-        key={`deck-${handNumber}-${dealTick}`}
+        key={`deck-${handNumber}`}
         className="pointer-events-none absolute left-1/2 top-[22%] z-[5] -translate-x-1/2 opacity-0"
         initial={reduceMotion ? false : { opacity: 0.6, scale: 1 }}
         animate={{ opacity: 0, scale: 0.8 }}
@@ -177,12 +175,12 @@ export function PokerTable3D({
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
                 <motion.div
-                  key={boardCardKeys?.[i] ?? `h${handNumber}-board-${c}-${i}`}
+                  key={boardCardKeys?.[i] ?? `board-${i}-${c}`}
                   layout
                   initial={
                     reduceMotion
                       ? { opacity: 1, y: 0, scale: 1, rotateY: 0 }
-                      : { opacity: 0, y: -20, scale: 0.75, rotateY: 90 }
+                      : false
                   }
                   animate={{ opacity: showGhostBoard ? 0.72 : 1, y: 0, scale: 1, rotateY: 0 }}
                   exit={{ opacity: 0, y: 12, scale: 0.85, transition: { duration: 0.22 } }}
@@ -268,7 +266,13 @@ export function PokerTable3D({
                 <span className="absolute -inset-2 rounded-3xl border border-gold/30 shadow-[inset_0_0_24px_rgba(232,197,71,0.14)]" />
               ) : null}
 
-              {bubble ? <SeatActionBubble text={bubble.text} kind={bubble.kind} /> : null}
+              {bubble ? (
+                <SeatActionBubble
+                  text={bubble.text}
+                  kind={bubble.kind}
+                  className={bubbleOffset(index, players.length)}
+                />
+              ) : null}
 
               {player.isFolded ? (
                 <span className="absolute -bottom-1 z-[4] rounded-full border border-rose/40 bg-rose/20 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-rose sm:text-[9px]">
@@ -319,12 +323,12 @@ export function PokerTable3D({
                   <AnimatePresence mode="popLayout">
                     {(cards.length ? cards : Array.from({ length: hiddenCount })).map((c, ci) => (
                       <motion.div
-                        key={`h${handNumber}-seat-${player.userId}-${ci}`}
+                        key={`seat-${player.userId}-${ci}`}
                         layout
                         initial={
                           reduceMotion
                             ? { opacity: 1, y: 0, scale: 1 }
-                            : { opacity: 0, y: -28, x: 0, scale: 0.75, rotate: -6 }
+                            : false
                         }
                         animate={{ opacity: 1, y: 0, x: 0, scale: 1, rotate: 0 }}
                         exit={

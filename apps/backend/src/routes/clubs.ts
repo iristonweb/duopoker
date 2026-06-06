@@ -501,14 +501,26 @@ clubsRouter.post('/:clubId/private-tables/:tableId/close', async (req, res) => {
   if (!(await requireClubAdmin(clubId, actorId))) {
     return res.status(403).json({ error: 'Admin role required' });
   }
+  const existing = await prisma.privateTable.findFirst({
+    where: { id: tableId, clubId }
+  });
+  if (!existing) return res.status(404).json({ error: 'Table not found' });
+
+  const closedSessionId = existing.sessionId;
   const table = await prisma.privateTable.update({
     where: { id: tableId },
-    data: { status: 'CLOSED', closedAt: new Date() }
+    data: { status: 'CLOSED', closedAt: new Date(), sessionId: null }
   });
-  if (table.sessionId) {
+  if (closedSessionId) {
     await prisma.gameSession.updateMany({
-      where: { id: table.sessionId },
+      where: { id: closedSessionId },
       data: { status: 'FINISHED', finishedAt: new Date() }
+    });
+    const { emitTableClosedToSession } = await import('../socket/server.js');
+    emitTableClosedToSession(closedSessionId, {
+      clubId,
+      tableId,
+      sessionId: closedSessionId
     });
   }
   await prisma.complianceEvent.create({

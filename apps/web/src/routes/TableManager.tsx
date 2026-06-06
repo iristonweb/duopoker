@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Badge, Button, GlassPanel, Input, LoadingSkeleton, PageShell, SectionHeader } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
@@ -15,16 +16,19 @@ type TableData = {
 };
 
 export const TableManager = () => {
+  const { t } = useTranslation();
   const { clubId, tableId } = useParams<{ clubId: string; tableId: string }>();
   const apiFetch = useAppStore((s) => s.apiFetch);
   const inviteToTable = useAppStore((s) => s.inviteToTable);
   const startPrivateTable = useAppStore((s) => s.startPrivateTable);
   const joinPrivateTable = useAppStore((s) => s.joinPrivateTable);
+  const closePrivateTable = useAppStore((s) => s.closePrivateTable);
   const navigate = useNavigate();
   const [table, setTable] = useState<TableData | null>(null);
   const [loading, setLoading] = useState(true);
   const [inviteQuery, setInviteQuery] = useState('');
   const [msg, setMsg] = useState<string>();
+  const [closing, setClosing] = useState(false);
 
   const reload = () => {
     if (!clubId || !tableId) return;
@@ -39,12 +43,26 @@ export const TableManager = () => {
 
   if (!clubId || !tableId) return null;
 
+  const canClose = table?.status === 'LIVE' || table?.status === 'SCHEDULED';
+
+  const handleClose = () => {
+    if (!window.confirm(t('clubs.closeTableConfirm'))) return;
+    setClosing(true);
+    void closePrivateTable(clubId, tableId)
+      .then(() => {
+        setMsg(t('clubs.closeTable'));
+        navigate(`/clubs/${clubId}`);
+      })
+      .catch(() => setMsg(t('clubs.loadError')))
+      .finally(() => setClosing(false));
+  };
+
   return (
     <PageShell
       maxWidth="2xl"
       back={
         <Link to={`/clubs/${clubId}`} className="premium-link text-sm">
-          ← Клуб
+          ← {t('clubs.back')}
         </Link>
       }
     >
@@ -122,6 +140,11 @@ export const TableManager = () => {
                 Войти за стол
               </Button>
             )}
+            {canClose ? (
+              <Button variant="ghost" size="sm" className="border-rose/40 text-rose" disabled={closing} onClick={handleClose}>
+                {closing ? t('clubs.closingTable') : t('clubs.closeTable')}
+              </Button>
+            ) : null}
           </div>
           {msg ? (
             <p className="mt-4 rounded-lg border border-emerald/20 bg-emerald/10 px-3 py-2 text-sm text-emerald">

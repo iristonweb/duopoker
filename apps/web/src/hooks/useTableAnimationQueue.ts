@@ -73,6 +73,7 @@ const formatActionText = (
 
 export function useTableAnimationQueue(
   session: SessionState | undefined,
+  heroId: string,
   label: (uid: string) => string,
   t: (key: string, opts?: Record<string, unknown>) => string,
   soundOn: boolean,
@@ -82,12 +83,12 @@ export function useTableAnimationQueue(
   const queueRef = useRef<TableSessionStep[]>([]);
   const processingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dealSoundPlayedRef = useRef(false);
 
   const [seatBubbles, setSeatBubbles] = useState<SeatActionBubble[]>([]);
   const [chipFlights, setChipFlights] = useState<ChipFlight[]>([]);
   const [jokerFlights, setJokerFlights] = useState<JokerCardFlight[]>([]);
   const [potPulseKey, setPotPulseKey] = useState(0);
-  const [dealTick, setDealTick] = useState(0);
   const [foldingUsers, setFoldingUsers] = useState<string[]>([]);
   const [checkRippleUsers, setCheckRippleUsers] = useState<string[]>([]);
 
@@ -178,11 +179,12 @@ export function useTableAnimationQueue(
         if (soundOn) playChipSound();
         break;
       case 'dealHole':
-        setDealTick((k) => k + 1);
-        if (soundOn) playCardSound();
+        if (!dealSoundPlayedRef.current) {
+          dealSoundPlayedRef.current = true;
+          if (soundOn) playCardSound();
+        }
         break;
       case 'dealBoard':
-        setDealTick((k) => k + 1);
         if (soundOn) playCardSound();
         break;
       case 'jokerPlay': {
@@ -218,6 +220,10 @@ export function useTableAnimationQueue(
       return;
     }
 
+    if (prev.handNumber !== snap.handNumber) {
+      dealSoundPlayedRef.current = false;
+    }
+
     const formatBlind = (type: 'SB' | 'BB', amount: number) =>
       type === 'SB'
         ? t('table.postsBlindSB', { amount })
@@ -227,12 +233,13 @@ export function useTableAnimationQueue(
       prev,
       session,
       (action) => formatActionText(action, label, t),
-      formatBlind
+      formatBlind,
+      heroId
     );
 
     if (steps.length) enqueue(steps);
     prevRef.current = snap;
-  }, [session, label, t, soundOn, reduceMotion]);
+  }, [session, heroId, label, t, soundOn, reduceMotion]);
 
   useEffect(
     () => () => {
@@ -241,5 +248,5 @@ export function useTableAnimationQueue(
     []
   );
 
-  return { seatBubbles, chipFlights, jokerFlights, potPulseKey, dealTick, foldingUsers, checkRippleUsers };
+  return { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers };
 }

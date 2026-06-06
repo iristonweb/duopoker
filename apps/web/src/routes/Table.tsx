@@ -201,10 +201,12 @@ export const Table = () => {
   const viewSession = useTableDisplayState(session, userId, formatDisplayAction, reduceMotion) ?? session;
 
   const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(viewSession, label, t, soundOn, {
-    actionSounds: false
+    actionSounds: false,
+    handSounds: false,
+    streetSounds: false
   });
-  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, dealTick, foldingUsers, checkRippleUsers } =
-    useTableAnimationQueue(session, label, t, soundOn, reduceMotion);
+  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers } =
+    useTableAnimationQueue(session, userId, label, t, soundOn, reduceMotion);
   useCommunityCardSounds(viewSession?.communityCards?.length ?? 0, false);
   useTableMusic(musicOn);
 
@@ -545,7 +547,6 @@ export const Table = () => {
               chipFlights={chipFlights}
               jokerFlights={jokerFlights}
               potPulseKey={potPulseKey}
-              dealTick={dealTick}
               foldingUsers={foldingUsers}
               checkRippleUsers={checkRippleUsers}
               className="h-full"

@@ -109,6 +109,8 @@ type AppStore = {
   inviteToTable: (clubId: string, tableId: string, query: string) => Promise<void>;
   startPrivateTable: (clubId: string, tableId: string) => Promise<string>;
   joinPrivateTable: (clubId: string, tableId: string) => Promise<string>;
+  closePrivateTable: (clubId: string, tableId: string) => Promise<void>;
+  fetchPrivateTables: (clubId: string) => Promise<PrivateTableSummary[]>;
   acceptInviteByCode: (code: string) => Promise<{ clubId: string; tableId: string }>;
   buyCosmetic: (itemId: string) => Promise<void>;
   equipCosmetic: (itemId: string) => Promise<{ ok: boolean; error?: string }>;
@@ -162,6 +164,17 @@ export type TableLiveSession = {
   mode: string;
   buyIn: number;
   host: { id: string; displayName: string; nickname: string };
+};
+
+export type PrivateTableSummary = {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  sessionId?: string | null;
+  inviteCode: string;
+  virtualBuyIn: number;
+  createdAt?: string;
 };
 
 export type ClubSummary = {
@@ -310,6 +323,26 @@ export const useAppStore = create<AppStore>((set, get) => {
           window.location.replace('/lobby');
         }
       });
+      socket.on(
+        'tableClosed',
+        (payload: { clubId?: string; tableId?: string; sessionId?: string }) => {
+          const sid = get().session?.sessionId;
+          if (payload.sessionId && sid && payload.sessionId !== sid) return;
+          get().stopPolling();
+          set({
+            tableVoluntaryLeave: true,
+            session: undefined,
+            sessionError: 'table_closed',
+            tableLiveSessions: get().tableLiveSessions.filter(
+              (t) => t.sessionId !== payload.sessionId
+            ),
+            tableInvites: get().tableInvites.filter((t) => t.tableId !== payload.tableId)
+          });
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/table/')) {
+            window.location.replace('/lobby');
+          }
+        }
+      );
       socket.on('connect', () => {
         const sid = get().session?.sessionId;
         if (!sid) return;
@@ -473,7 +506,13 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     playerAction: async ({ sessionId, type, amount, card }) => {
       if (usesRealtimeSocket()) {
-        get().socket?.emit('playerAction', {
+        const socket = get().socket;
+        if (!socket?.connected) {
+          set({ sessionError: 'connection_lost' });
+          return;
+        }
+        set({ sessionError: undefined });
+        socket.emit('playerAction', {
           sessionId,
           userId: get().userId,
           type,
@@ -821,6 +860,23 @@ export const useAppStore = create<AppStore>((set, get) => {
       get().resetTableJoin();
       await get().joinSession(data.sessionId);
       return data.sessionId;
+    },
+    closePrivateTable: async (clubId, tableId) => {
+      const res = await get().apiFetch(`/clubs/${clubId}/private-tables/${tableId}/close`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('Failed to close table');
+      set({
+        tableLiveSessions: get().tableLiveSessions.filter((t) => t.tableId !== tableId),
+        tableInvites: get().tableInvites.filter((t) => t.tableId !== tableId)
+      });
+      void get().fetchTableInvites();
+    },
+    fetchPrivateTables: async (clubId) => {
+      const res = await get().apiFetch(`/clubs/${clubId}/private-tables`);
+      if (!res.ok) throw new Error('Failed to fetch tables');
+      const data = (await res.json()) as { tables: PrivateTableSummary[] };
+      return data.tables ?? [];
     },
     acceptInviteByCode: async (code) => {
       const res = await get().apiFetch(`/clubs/invite/${code}/accept`, { method: 'POST' });

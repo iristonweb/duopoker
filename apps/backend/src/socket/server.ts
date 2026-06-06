@@ -229,6 +229,14 @@ export const emitNotificationToUsers = (
   }
 };
 
+export const emitTableClosedToSession = (
+  sessionId: string,
+  payload: { clubId: string; tableId: string; sessionId: string }
+) => {
+  if (!globalIo) return;
+  globalIo.to(sessionId).emit('tableClosed', payload);
+};
+
 export const createRealtimeServer = (app: Express) => {
   const httpServer = createServer(app);
   const io = new Server(httpServer, {

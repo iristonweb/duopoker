@@ -33,3 +33,29 @@ export const seatLayout = (index: number, total: number): string => {
   ];
   return positions[index % positions.length] ?? positions[0];
 };
+
+/** Offset action bubble toward open felt space (inward from seat rim). */
+export const bubbleOffset = (index: number, total: number): string => {
+  if (total <= 2) {
+    return index === 0
+      ? 'top-full left-1/2 mt-2 -translate-x-1/2'
+      : '-top-14 left-1/2 -translate-x-1/2';
+  }
+  const region = index % 6;
+  switch (region) {
+    case 0:
+      return 'top-full left-1/2 mt-2 -translate-x-1/2';
+    case 1:
+      return 'right-full top-1/2 mr-2 -translate-y-1/2 translate-x-0';
+    case 2:
+      return 'right-full top-1/2 mr-2 -translate-y-1/2 translate-x-0';
+    case 3:
+      return '-top-14 left-1/2 -translate-x-1/2';
+    case 4:
+      return 'left-full top-1/2 ml-2 -translate-y-1/2 translate-x-0';
+    case 5:
+      return 'left-full top-1/2 ml-2 -translate-y-1/2 translate-x-0';
+    default:
+      return '-top-14 left-1/2 -translate-x-1/2';
+  }
+};

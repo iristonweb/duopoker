@@ -295,6 +295,7 @@
     "jokerBidPrompt": "Bid your tricks",
     "jokerPlayPrompt": "Choose a card to play",
     "jokerBid": "Bid {{amount}}",
+    "submittingBid": "Submitting…",
     "jokerTrick": "Trick {{n}}",
     "jokerNoCards": "No cards in hand",
     "jokerPoolLabel": "Pool",
@@ -331,7 +332,9 @@
       "notAssigned": "No seat assigned",
       "joinFailed": "Could not join the table",
       "sessionNotFound": "Session not found",
-      "authRequired": "Sign in required"
+      "authRequired": "Sign in required",
+      "connectionLost": "Connection lost — check your network and refresh",
+      "tableClosed": "Table was closed by the organizer"
     },
     "connecting": "Connecting",
     "joiningTitle": "Joining table",
@@ -472,7 +475,13 @@
     },
     "payPro": "Pay for PRO (YooMoney)",
     "payNetwork": "Pay for NETWORK (YooMoney)",
-    "currentPlan": "Current plan"
+    "currentPlan": "Current plan",
+    "privateTables": "Private tables",
+    "closeTable": "Close table",
+    "closeTableConfirm": "Close this table? Players will be disconnected and it will leave the live list.",
+    "closingTable": "Closing…",
+    "manageTable": "Manage",
+    "noActiveTables": "No active tables"
   },
   "admin": {
     "eyebrow": "Superadmin",

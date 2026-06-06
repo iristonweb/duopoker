@@ -654,14 +654,16 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/close', async (c) => {
   });
   if (!existing) return c.json({ error: 'Table not found' }, 404);
 
+  const closedSessionId = existing.sessionId;
+
   const table = await prisma.privateTable.update({
     where: { id: tableId },
-    data: { status: 'CLOSED', closedAt: new Date() }
+    data: { status: 'CLOSED', closedAt: new Date(), sessionId: null }
   });
 
-  if (table.sessionId) {
+  if (closedSessionId) {
     await prisma.gameSession.updateMany({
-      where: { id: table.sessionId },
+      where: { id: closedSessionId },
       data: { status: 'FINISHED', finishedAt: new Date() }
     });
   }
