@@ -44,8 +44,10 @@ type AppStore = {
   authError?: string;
   authNotice?: string;
   sessionError?: string;
+  opponentType: 'HUMAN' | 'BOT';
   pollTimer?: ReturnType<typeof setInterval>;
   setMode: (mode: 'HOLDEM' | 'RASPISNOY') => void;
+  setOpponentType: (opponentType: 'HUMAN' | 'BOT') => void;
   setTokens: (access: string, refresh: string, userId: string) => void;
   logout: () => void;
   refreshAccessToken: () => Promise<boolean>;
@@ -128,7 +130,9 @@ export const useAppStore = create<AppStore>((set, get) => {
     accessToken: initial.access,
     refreshToken: initial.refresh,
     mode: 'HOLDEM',
+    opponentType: 'BOT',
     setMode: (mode) => set({ mode }),
+    setOpponentType: (opponentType) => set({ opponentType }),
     setTokens: (access, refresh, userId) => {
       localStorage.setItem(LS_ACCESS, access);
       localStorage.setItem(LS_REFRESH, refresh);
@@ -224,7 +228,8 @@ export const useAppStore = create<AppStore>((set, get) => {
         get().socket?.emit('queueMatchmaking', {
           userId: get().userId,
           mode: get().mode,
-          buyIn: 100
+          buyIn: 100,
+          opponent: get().opponentType === 'BOT' ? 'bot' : 'human'
         });
         return { status: 'waiting' as const };
       }
@@ -232,7 +237,8 @@ export const useAppStore = create<AppStore>((set, get) => {
         method: 'POST',
         body: JSON.stringify({
           mode: get().mode,
-          buyIn: 100
+          buyIn: 100,
+          opponent: get().opponentType === 'BOT' ? 'bot' : 'human'
         })
       });
       if (!res.ok) {

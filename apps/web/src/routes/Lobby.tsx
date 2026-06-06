@@ -11,10 +11,12 @@ import {
 import {
   AppBackground,
   Button,
+  cn,
   GlassPanel,
   Input,
   LegalDisclaimer,
   ModeCard,
+  OpponentSelector,
   SectionHeader,
   SkinSelector,
   SubscriptionTierCard,
@@ -213,7 +215,7 @@ function AuthPanel() {
 export const Lobby = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { mode, setMode, connect, queue, pollQueueStatus, session, readyNextHand, fetchProfile } =
+  const { mode, setMode, opponentType, setOpponentType, connect, queue, pollQueueStatus, session, readyNextHand, fetchProfile } =
     useAppStore();
   const accessToken = useAppStore((s) => s.accessToken);
   const sessionError = useAppStore((s) => s.sessionError);
@@ -268,7 +270,7 @@ export const Lobby = () => {
       return;
     }
     setQueueBusy(true);
-    setQueueBanner(t('queue.searching'));
+    setQueueBanner(opponentType === 'BOT' ? t('queue.startingBot') : t('queue.searching'));
     useAppStore.setState({ sessionError: undefined });
     try {
       const result = await queue();
@@ -476,32 +478,74 @@ export const Lobby = () => {
                 onClick={() => setMode('RASPISNOY')}
               />
             </div>
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full sm:w-auto"
-              disabled={queueBusy}
-              onClick={() => void startQueue()}
+            <GlassPanel
+              glow={opponentType === 'BOT' ? 'emerald' : 'gold'}
+              className="mt-2 border-white/10 p-4 sm:p-5"
             >
-              {mode === 'HOLDEM' ? t('queue.buttonHoldem') : t('queue.buttonRaspisnoy')}
-            </Button>
-            {queueBanner ? (
-              <p className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200/90">
-                {queueBanner}
-              </p>
-            ) : null}
-            {sessionError ? (
-              <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
-                {translateQueueError(sessionError)}
-              </p>
-            ) : null}
-            {tableHref ? (
-              <Link to={tableHref}>
-                <Button variant="secondary" size="md" className="mt-2 w-full sm:w-auto">
-                  {t('queue.openTable')}
-                </Button>
-              </Link>
-            ) : null}
+              <SectionHeader
+                eyebrow={t('lobby.opponentEyebrow')}
+                title={t('lobby.opponentTitle')}
+                description={t('lobby.opponentDesc')}
+                className="mb-4"
+              />
+              <OpponentSelector
+                value={opponentType}
+                onChange={setOpponentType}
+                selectedLabel={t('modes.selected')}
+                options={[
+                  {
+                    id: 'HUMAN',
+                    label: t('lobby.opponentHuman'),
+                    hint: t('lobby.opponentHumanHint')
+                  },
+                  {
+                    id: 'BOT',
+                    label: t('lobby.opponentBot'),
+                    hint: t('lobby.opponentBotHint')
+                  }
+                ]}
+                className="mb-4"
+              />
+              <Button
+                variant={opponentType === 'BOT' ? 'secondary' : 'primary'}
+                size="lg"
+                className="w-full"
+                disabled={queueBusy}
+                onClick={() => void startQueue()}
+              >
+                {opponentType === 'BOT'
+                  ? mode === 'HOLDEM'
+                    ? t('queue.buttonHoldemBot')
+                    : t('queue.buttonRaspisnoyBot')
+                  : mode === 'HOLDEM'
+                    ? t('queue.buttonHoldem')
+                    : t('queue.buttonRaspisnoy')}
+              </Button>
+              {queueBanner ? (
+                <p
+                  className={cn(
+                    'mt-3 rounded-xl border px-3 py-2.5 text-xs leading-relaxed',
+                    opponentType === 'BOT'
+                      ? 'border-emerald/25 bg-emerald/[0.08] text-emerald'
+                      : 'border-amber-500/20 bg-amber-500/10 text-amber-200/90'
+                  )}
+                >
+                  {queueBanner}
+                </p>
+              ) : null}
+              {sessionError ? (
+                <p className="mt-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300">
+                  {translateQueueError(sessionError)}
+                </p>
+              ) : null}
+              {tableHref ? (
+                <Link to={tableHref} className="mt-3 block">
+                  <Button variant="ghost" size="md" className="w-full">
+                    {t('queue.openTable')}
+                  </Button>
+                </Link>
+              ) : null}
+            </GlassPanel>
           </motion.div>
 
           <motion.div className="flex flex-col gap-4 lg:col-span-7" variants={reduceMotion ? undefined : section} custom={2}>

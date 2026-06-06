@@ -46,11 +46,24 @@ type QueueTicket = {
   user: { email: string; displayName: string; nickname: string } | null;
 };
 
-function StatCard({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
+function AdminEmptyRow({ message }: { message: string }) {
   return (
-    <GlassPanel className="border-white/10 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-subtle">{label}</p>
-      <p className={`mt-1 font-display text-2xl font-semibold ${accent ?? 'text-ivory'}`}>{value}</p>
+    <div className="px-4 py-10 text-center">
+      <p className="font-display text-base font-semibold text-ivory">{message}</p>
+    </div>
+  );
+}
+
+function StatCard({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
+  const glow =
+    accent?.includes('emerald') ? 'emerald' : accent?.includes('gold') || accent?.includes('amber') ? 'gold' : 'none';
+  return (
+    <GlassPanel
+      glow={glow}
+      className="border-white/10 p-4 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5"
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{label}</p>
+      <p className={`mt-2 font-display text-2xl font-semibold tabular-nums ${accent ?? 'text-ivory'}`}>{value}</p>
     </GlassPanel>
   );
 }
@@ -149,7 +162,7 @@ export function AdminPage() {
             <SectionHeader eyebrow={t('admin.queueEyebrow')} title={t('admin.queueTitle')} className="mb-4" />
             <GlassPanel className="overflow-hidden border-white/10 p-0">
               {!queue.length ? (
-                <p className="p-4 text-sm text-muted">{t('admin.queueEmpty')}</p>
+                <AdminEmptyRow message={t('admin.queueEmpty')} />
               ) : (
                 <ul className="divide-y divide-white/5">
                   {queue.map((ticket) => (
@@ -174,7 +187,7 @@ export function AdminPage() {
             <SectionHeader eyebrow={t('admin.sessionsEyebrow')} title={t('admin.sessionsTitle')} className="mb-4" />
             <GlassPanel className="overflow-hidden border-white/10 p-0">
               {!sessions.length ? (
-                <p className="p-4 text-sm text-muted">{t('admin.sessionsEmpty')}</p>
+                <AdminEmptyRow message={t('admin.sessionsEmpty')} />
               ) : (
                 <ul className="divide-y divide-white/5">
                   {sessions.map((s) => (

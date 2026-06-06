@@ -4,6 +4,7 @@ import {
   type SubscriptionTier
 } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
+import { BOT_PREFIX } from './game-session.js';
 
 export const getPrivateTableBySessionId = async (sessionId: string) =>
   prisma.privateTable.findUnique({
@@ -80,6 +81,16 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
   });
   const byId = new Map(users.map((u) => [u.id, u]));
   return userIds.map((id) => {
+    if (id.startsWith(BOT_PREFIX)) {
+      return {
+        userId: id,
+        nickname: 'DuoBot',
+        displayName: 'DuoBot',
+        avatar: null,
+        subscriptionTier: 'FREE' as SubscriptionTier,
+        equipped: resolveEquipped({}, 'FREE', [])
+      };
+    }
     const u = byId.get(id);
     const tier: SubscriptionTier = (u?.subscriptions[0]?.tier as SubscriptionTier | undefined) ?? 'FREE';
     const inventoryIds = u?.inventory.map((i) => i.itemId) ?? [];

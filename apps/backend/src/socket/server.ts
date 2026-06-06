@@ -38,7 +38,8 @@ const actionSchema = z.object({
 const matchmakingSchema = z.object({
   userId: z.string().min(1),
   mode: z.enum(['HOLDEM', 'RASPISNOY']),
-  buyIn: z.number().int().positive()
+  buyIn: z.number().int().positive(),
+  opponent: z.enum(['human', 'bot']).optional().default('human')
 });
 
 const BOT_PREFIX = 'duopoker-bot';
@@ -274,13 +275,14 @@ export const createRealtimeServer = (app: Express) => {
       }
       const userId = socket.data.userId ?? parsed.data.userId;
       registerUserSocket(userId, socket.id);
+      const { opponent, ...ticketFields } = parsed.data;
       const ready = enqueueMatchmaking(
         {
-          ...parsed.data,
+          ...ticketFields,
           userId,
           createdAt: Date.now()
         },
-        { allowSoloQueue: config.allowSoloQueue }
+        { allowSoloQueue: config.allowSoloQueue, opponent }
       );
       if (!ready) {
         socket.emit('matchmakingWaiting', {
@@ -295,16 +297,12 @@ export const createRealtimeServer = (app: Express) => {
         mode: parsed.data.mode,
         buyIn: parsed.data.buyIn
       };
-      const hasBot = match.players.some((id) => id.startsWith(BOT_PREFIX));
-      if (hasBot) {
-        const humanId = match.players.find((id) => !id.startsWith(BOT_PREFIX))!;
-        const botId = match.players.find((id) => id.startsWith(BOT_PREFIX))!;
-        joinTable(match.sessionId, humanId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
-        joinTable(match.sessionId, botId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
-        const botState = await advanceBotTurns(match.sessionId);
-        if (botState) {
-          await broadcastSessionState(io, match.sessionId, botState);
-        }
+      for (const playerId of match.players) {
+        joinTable(match.sessionId, playerId, match.mode as 'HOLDEM' | 'RASPISNOY', match.buyIn);
+      }
+      const botState = await advanceBotTurns(match.sessionId);
+      if (botState) {
+        await broadcastSessionState(io, match.sessionId, botState);
       }
       emitMatchFoundToPlayers(io, match);
     });

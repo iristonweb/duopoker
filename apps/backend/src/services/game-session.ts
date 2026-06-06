@@ -105,10 +105,22 @@ export const requestNextHand = (sessionId: string, userId: string) => {
 
 export const enqueueMatchmaking = (
   ticket: import('@duopoker/shared-types/index').MatchmakingTicket,
-  opts?: { allowSoloQueue?: boolean }
+  opts?: { allowSoloQueue?: boolean; opponent?: 'human' | 'bot' }
 ) => {
   type Ticket = import('@duopoker/shared-types/index').MatchmakingTicket;
-  const allowSolo = opts?.allowSoloQueue === true;
+  if (opts?.opponent === 'bot') {
+    const idx = queue.findIndex((q) => q.userId === ticket.userId);
+    if (idx >= 0) queue.splice(idx, 1);
+    const bot: Ticket = {
+      userId: `${BOT_PREFIX}-${Date.now()}`,
+      mode: ticket.mode,
+      buyIn: ticket.buyIn,
+      createdAt: Date.now()
+    };
+    return [ticket, bot];
+  }
+
+  const allowSolo = opts?.opponent === 'human' ? false : opts?.allowSoloQueue === true;
   queue.push(ticket);
   const compatible = queue.filter((q) => q.mode === ticket.mode && q.buyIn === ticket.buyIn).slice(0, 6);
   if (compatible.length >= 2) {

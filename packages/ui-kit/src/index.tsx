@@ -10,6 +10,11 @@ export { LegalDisclaimer } from './components/LegalDisclaimer';
 export { PageShell } from './components/PageShell';
 export { Textarea, type TextareaProps } from './components/Textarea';
 export { ModeCard, type ModeCardProps } from './components/ModeCard';
+export {
+  OpponentSelector,
+  type OpponentKind,
+  type OpponentSelectorOption
+} from './components/OpponentSelector';
 export { SectionHeader } from './components/SectionHeader';
 export { SkinSelector, type CosmeticItem } from './components/SkinSelector';
 export { TabGroup } from './components/TabGroup';

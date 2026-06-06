@@ -90,11 +90,27 @@ export const requestNextHand = async (sessionId: string, userId: string) => {
   return { ok: true as const, state: result.state, started: result.started };
 };
 
+export type MatchmakingOpts = {
+  allowSoloQueue?: boolean;
+  opponent?: 'human' | 'bot';
+};
+
 export const enqueueMatchmaking = async (
   ticket: MatchmakingTicket,
-  opts?: { allowSoloQueue?: boolean }
+  opts?: MatchmakingOpts
 ): Promise<MatchmakingTicket[] | null> => {
-  const allowSolo = opts?.allowSoloQueue === true;
+  if (opts?.opponent === 'bot') {
+    await prisma.matchmakingTicket.deleteMany({ where: { userId: ticket.userId } });
+    const bot: MatchmakingTicket = {
+      userId: `${BOT_PREFIX}-${Date.now()}`,
+      mode: ticket.mode,
+      buyIn: ticket.buyIn,
+      createdAt: Date.now()
+    };
+    return [ticket, bot];
+  }
+
+  const allowSolo = opts?.opponent === 'human' ? false : opts?.allowSoloQueue === true;
 
   await prisma.matchmakingTicket.upsert({
     where: { userId: ticket.userId },
@@ -267,7 +283,7 @@ export const clearMatchAssignment = async (userId: string) => {
 /** Enter queue once; pair humans or optionally spawn a bot. */
 export const enterMatchmaking = async (
   ticket: MatchmakingTicket,
-  opts?: { allowSoloQueue?: boolean }
+  opts?: MatchmakingOpts
 ): Promise<QueueStatus> => {
   const existing = await getQueueStatus(ticket.userId);
   if (existing.status === 'matched') return existing;

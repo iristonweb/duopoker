@@ -17,7 +17,8 @@ import {
 
 const queueSchema = z.object({
   mode: z.enum(['HOLDEM', 'RASPISNOY']),
-  buyIn: z.number().int().positive()
+  buyIn: z.number().int().positive(),
+  opponent: z.enum(['human', 'bot']).optional().default('human')
 });
 
 const joinSchema = z.object({
@@ -55,9 +56,10 @@ gameRoutes.post('/queue', async (c) => {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
 
+  const { opponent, ...ticketFields } = parsed.data;
   const result = await enterMatchmaking(
-    { userId, ...parsed.data, createdAt: Date.now() },
-    { allowSoloQueue: matchmakingAllowsSolo() }
+    { userId, ...ticketFields, createdAt: Date.now() },
+    { allowSoloQueue: matchmakingAllowsSolo(), opponent }
   );
 
   return c.json(result);
