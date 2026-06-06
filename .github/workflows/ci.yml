@@ -12,7 +12,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     env:
       HUSKY: "0"
     steps:
@@ -35,5 +35,13 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-chromium-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm exec playwright install chromium --with-deps
-      - run: pnpm exec playwright test tests/web.e2e.spec.ts
+          restore-keys: |
+            ms-playwright-${{ runner.os }}-chromium-
+      # Browser only — skip --with-deps (apt on GitHub runners often hangs 10+ min).
+      # ubuntu-latest already has headless Chromium system libraries.
+      - name: Install Playwright Chromium
+        timeout-minutes: 5
+        run: pnpm exec playwright install chromium
+      - name: Playwright E2E
+        timeout-minutes: 10
+        run: pnpm exec playwright test tests/web.e2e.spec.ts
