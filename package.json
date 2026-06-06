@@ -4,7 +4,16 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.7.0",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
   },
   "scripts": {
     "build": "pnpm -r build",
