@@ -87,17 +87,18 @@ export function PlayerAvatar({
           </span>
         ) : null}
       </div>
-      <p className={cn('mt-1 max-w-[88px] truncate text-center text-[11px]', active ? 'text-gold-light' : 'text-muted')}>
-        {name}
-      </p>
       {titleSrc ? (
         <img
           src={titleSrc}
           alt={titleText ?? ''}
-          className="mt-0.5 h-4 w-auto max-w-[120px] object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.65)] sm:h-[1.125rem]"
+          className="mt-1 h-4 w-auto max-w-[120px] object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.65)] sm:h-[1.125rem]"
           title={titleText}
         />
-      ) : tableStatus ? (
+      ) : null}
+      <p className={cn('mt-1 max-w-[88px] truncate text-center text-[11px]', active ? 'text-gold-light' : 'text-muted')}>
+        {name}
+      </p>
+      {!titleSrc && tableStatus ? (
         <p className="mt-0.5 max-w-[96px] truncate text-center text-[9px] leading-tight text-gold/75" title={tableStatus}>
           {tableStatus}
         </p>

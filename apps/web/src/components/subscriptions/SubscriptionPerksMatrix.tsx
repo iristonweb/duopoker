@@ -93,7 +93,7 @@ export function SubscriptionPerksMatrix({
                             title={item.name}
                             className={
                               item.slot === 'deck'
-                                ? 'h-14 w-10 object-contain [background:transparent]'
+                                ? 'h-14 w-10 rounded-sm object-contain object-center [background:transparent]'
                                 : item.slot === 'title'
                                   ? 'max-h-7 w-auto max-w-[7.5rem] object-contain [background:transparent]'
                                   : 'h-12 w-12 object-contain object-center [background:transparent]'

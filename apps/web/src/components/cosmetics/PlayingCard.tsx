@@ -107,7 +107,7 @@ export function PlayingCard({
         <img
           src={deckBackUrl(deckId)}
           alt=""
-          className="h-full w-full object-fill"
+          className="h-full w-full object-contain object-center"
           draggable={false}
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-black/10" />

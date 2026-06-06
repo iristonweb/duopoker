@@ -1,8 +1,6 @@
 /**
- * Normalize AI card backs to portrait poker ratio.
- * 1. Trim black/checkerboard padding
- * 2. Center-crop to 2.5:3.5
- * 3. Resize to 500×700 for web performance
+ * Normalize AI card backs to portrait poker ratio (500×700).
+ * Sources are landscape (1536×1024) with a centered portrait card — center extract only (no trim).
  */
 import sharp from 'sharp';
 import fs from 'node:fs';
@@ -29,6 +27,27 @@ const decks = [
 
 fs.mkdirSync(sourcesDir, { recursive: true });
 
+const portraitFromLandscape = async (src) => {
+  const meta = await sharp(src).metadata();
+  const w = meta.width ?? 1;
+  const h = meta.height ?? 1;
+  const ratio = w / h;
+
+  if (ratio > CARD_RATIO * 1.02) {
+    const cropW = Math.round(h * CARD_RATIO);
+    const left = Math.max(0, Math.round((w - cropW) / 2));
+    return sharp(src).extract({ left, top: 0, width: cropW, height: h });
+  }
+
+  if (ratio < CARD_RATIO * 0.98) {
+    const cropH = Math.round(w / CARD_RATIO);
+    const top = Math.max(0, Math.round((h - cropH) / 2));
+    return sharp(src).extract({ left: 0, top, width: w, height: cropH });
+  }
+
+  return sharp(src);
+};
+
 for (const id of decks) {
   const sourceInRepo = path.join(backsDir, `${id}.png`);
   const sourceArchive = path.join(sourcesDir, `${id}.png`);
@@ -47,42 +66,18 @@ for (const id of decks) {
     continue;
   }
 
-  let pipeline = sharp(src);
-
-  const trimmed = await pipeline.clone().trim({ threshold: 18 }).toBuffer();
-  let meta = await sharp(trimmed).metadata();
-  let work = trimmed;
-
-  const w = meta.width ?? 1;
-  const h = meta.height ?? 1;
-  const currentRatio = w / h;
-
-  if (currentRatio > CARD_RATIO * 1.05) {
-    const cropW = Math.round(h * CARD_RATIO);
-    const left = Math.max(0, Math.round((w - cropW) / 2));
-    work = await sharp(trimmed).extract({ left, top: 0, width: cropW, height: h }).toBuffer();
-    meta = await sharp(work).metadata();
-    console.log(`${id}: landscape trim ${w}x${h} → center crop ${meta.width}x${meta.height}`);
-  } else if (currentRatio < CARD_RATIO * 0.95) {
-    const cropH = Math.round(w / CARD_RATIO);
-    const top = Math.max(0, Math.round((h - cropH) / 2));
-    work = await sharp(trimmed).extract({ left: 0, top, width: w, height: cropH }).toBuffer();
-    meta = await sharp(work).metadata();
-    console.log(`${id}: tall trim ${w}x${h} → center crop ${meta.width}x${meta.height}`);
-  } else {
-    console.log(`${id}: trim ${w}x${h} (ratio ok)`);
-  }
-
-  const outBuf = await sharp(work)
+  const meta = await sharp(src).metadata();
+  const pipeline = await portraitFromLandscape(src);
+  const outBuf = await pipeline
     .resize(CARD_W, CARD_H, { fit: 'fill' })
-    .png({ compressionLevel: 9, quality: 92 })
+    .png({ compressionLevel: 9, palette: false })
     .toBuffer();
 
   const outMain = path.join(backsDir, `${id}.png`);
   const outGame = path.join(backsDir, `${id}_game.png`);
   await sharp(outBuf).toFile(outMain);
   await sharp(outBuf).toFile(outGame);
-  console.log(`${id}: → ${CARD_W}x${CARD_H}`);
+  console.log(`${id}: ${meta.width}x${meta.height} → ${CARD_W}x${CARD_H}`);
 }
 
 console.log('[crop-deck-backs] done');
@@ -91,7 +86,10 @@ const cosmeticsDir = path.join(root, 'apps/web/public/assets/cosmetics');
 const neonSvg = path.join(cosmeticsDir, 'deck_neon.svg');
 
 if (fs.existsSync(neonSvg)) {
-  const neonBuf = await sharp(neonSvg).resize(CARD_W, CARD_H, { fit: 'fill' }).png({ compressionLevel: 9 }).toBuffer();
+  const neonBuf = await sharp(neonSvg)
+    .resize(CARD_W, CARD_H, { fit: 'contain', background: { r: 4, g: 8, b: 12, alpha: 1 } })
+    .png({ compressionLevel: 9, palette: false })
+    .toBuffer();
   await sharp(neonBuf).toFile(path.join(backsDir, 'deck_neon.png'));
   await sharp(neonBuf).toFile(path.join(backsDir, 'deck_neon_game.png'));
   console.log('deck_neon: → catalog + game PNG');

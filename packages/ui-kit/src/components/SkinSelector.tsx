@@ -51,7 +51,8 @@ function CosmeticPreview({ slot, itemId, imageUrl }: { slot: CosmeticSlot; itemI
         <img
           src={src}
           alt=""
-          className={`${cosmeticImg} h-[6.5rem] w-auto max-w-[88%] drop-shadow-[0_8px_20px_rgba(0,0,0,0.55)]`}
+          className={`${cosmeticImg} h-[6.75rem] w-auto rounded-[0.35rem] object-contain object-center drop-shadow-[0_8px_20px_rgba(0,0,0,0.55)]`}
+          style={{ aspectRatio: '5 / 7', maxWidth: '72%' }}
           loading="lazy"
           decoding="async"
         />
