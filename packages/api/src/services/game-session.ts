@@ -20,6 +20,7 @@ import { config } from '../config.js';
 import { newSessionId } from './session-access.js';
 import { loadGameSnapshot, persistGameSnapshot } from './session-persistence.js';
 import { prisma } from '../lib/prisma.js';
+import { recordReferralHands } from './referrals.js';
 
 export const BOT_PREFIX = 'duopoker-bot';
 
@@ -84,6 +85,9 @@ export const processPlayerAction = async (action: PlayerAction) => {
   }
 
   const saved = await saveState(result.state);
+  if (saved.street === 'COMPLETE' && existing.street !== 'COMPLETE') {
+    void recordReferralHands(saved.players).catch((err) => console.warn('referral hand track failed', err));
+  }
   return {
     rejected: false as const,
     state: saved,

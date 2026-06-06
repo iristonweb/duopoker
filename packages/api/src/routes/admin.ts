@@ -8,8 +8,11 @@ import {
   grantAllCosmetics,
   grantCosmeticItems,
   grantFounderPackage,
-  grantSubscription
+  grantSubscription,
+  grantTierCosmetics,
+  revokeUserSubscriptions
 } from '../services/admin-grants.js';
+import { grantOrganizerPlan } from '../services/club-plans.js';
 import {
   cancelVipTable,
   createVipTableInvite,
@@ -33,6 +36,15 @@ const cosmeticsSchema = z.object({
 
 const roleSchema = z.object({
   role: z.enum(['USER', 'SUPERADMIN'])
+});
+
+const organizerPlanSchema = z.object({
+  tier: z.enum(['BASIC', 'PRO', 'NETWORK']),
+  lifetime: z.boolean().optional().default(false)
+});
+
+const tierCosmeticsSchema = z.object({
+  tier: z.enum(['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'])
 });
 
 const vipTableSchema = z.object({
@@ -219,7 +231,37 @@ adminRoutes.post('/users/:id/subscription', async (c) => {
   if (!user) return c.json({ error: 'User not found' }, 404);
 
   await grantSubscription(user.id, parsed.data.tier, parsed.data.lifetime);
+  await grantTierCosmetics(user.id, parsed.data.tier);
   return c.json({ ok: true, tier: parsed.data.tier, lifetime: parsed.data.lifetime });
+});
+
+adminRoutes.post('/users/:id/subscription/revoke', async (c) => {
+  const user = await prisma.user.findUnique({ where: { id: c.req.param('id') }, select: { id: true } });
+  if (!user) return c.json({ error: 'User not found' }, 404);
+  await revokeUserSubscriptions(user.id);
+  return c.json({ ok: true });
+});
+
+adminRoutes.post('/users/:id/cosmetics/tier', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = tierCosmeticsSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const user = await prisma.user.findUnique({ where: { id: c.req.param('id') }, select: { id: true } });
+  if (!user) return c.json({ error: 'User not found' }, 404);
+
+  const granted = await grantTierCosmetics(user.id, parsed.data.tier);
+  return c.json({ ok: true, granted: granted.length });
+});
+
+adminRoutes.post('/clubs/:id/plan', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = organizerPlanSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const result = await grantOrganizerPlan(c.req.param('id'), parsed.data.tier, parsed.data.lifetime);
+  if (!result.ok) return c.json({ error: result.error }, 404);
+  return c.json(result);
 });
 
 adminRoutes.post('/users/:id/cosmetics', async (c) => {

@@ -21,6 +21,7 @@ import {
   type CosmeticItem
 } from '@duopoker/ui-kit';
 import { ProfileEditor } from '../components/ProfileEditor';
+import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { useAppStore } from '../store/useAppStore';
@@ -147,6 +148,15 @@ export const ProfilePage = () => {
               <ProfileEditor />
             </div>
           </GlassPanel>
+        </motion.div>
+
+        <motion.div
+          initial={reduceMotion ? false : 'hidden'}
+          animate="show"
+          variants={reduceMotion ? undefined : fade}
+          className="mb-8"
+        >
+          <ReferralPanel />
         </motion.div>
 
         <motion.div

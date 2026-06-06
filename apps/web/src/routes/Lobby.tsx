@@ -88,7 +88,16 @@ function AuthPanel() {
   const [passwordIn, setPasswordIn] = useState('');
   const [nameIn, setNameIn] = useState('');
   const [nicknameIn, setNicknameIn] = useState('');
+  const [referralIn, setReferralIn] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) {
+      setReferralIn(ref.toUpperCase());
+      setTab('register');
+    }
+  }, []);
 
   if (accessToken) {
     const nickLabel = nickname ? `@${nickname}` : displayName ?? t('auth.player');
@@ -181,7 +190,7 @@ function AuthPanel() {
             if (tab === 'register') {
               const name = nameIn.trim().length >= 2 ? nameIn.trim() : t('auth.player');
               const nick = nicknameIn.trim().replace(/^@/, '').toLowerCase();
-              await register(emailIn, passwordIn, name, nick);
+              await register(emailIn, passwordIn, name, nick, referralIn);
             } else {
               await login(emailIn, passwordIn);
             }
@@ -211,6 +220,13 @@ function AuthPanel() {
               onChange={(e) => setNicknameIn(e.target.value.replace(/^@/, '').toLowerCase())}
             />
             <p className="-mt-1 text-[11px] text-subtle">{t('auth.nicknameHint')}</p>
+            <Input
+              label={t('auth.referralCode')}
+              placeholder={t('auth.referralPlaceholder')}
+              maxLength={24}
+              value={referralIn}
+              onChange={(e) => setReferralIn(e.target.value.toUpperCase())}
+            />
           </>
         ) : null}
         <Input

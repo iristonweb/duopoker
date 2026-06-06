@@ -9,7 +9,8 @@ import {
   NON_GAMBLING_DISCLAIMER,
   ORGANIZER_PLAN_PRICES_RUB,
   PLAN_LIMITS,
-  effectiveMaxPlayers
+  effectiveMaxPlayers,
+  getEffectiveOrganizerTier
 } from '../services/club-plans.js';
 import { createOrganizerPayment } from '../services/yookassa.js';
 import { config } from '../config.js';
@@ -209,7 +210,7 @@ clubsRoutes.get('/mine', async (c) => {
   return c.json({
     clubs: clubs.map((club) => {
       const membership = memberships.find((m) => m.clubId === club.id);
-      const tier = club.organizerPlan?.tier ?? 'BASIC';
+      const tier = getEffectiveOrganizerTier(club.organizerPlan);
       return {
         ...club,
         myRole: membership?.role ?? 'MEMBER',
@@ -241,7 +242,7 @@ clubsRoutes.get('/:clubId', async (c) => {
   });
   if (!club) return c.json({ error: 'Club not found' }, 404);
 
-  const tier = club.organizerPlan?.tier ?? 'BASIC';
+  const tier = getEffectiveOrganizerTier(club.organizerPlan);
   const activeTables = await prisma.privateTable.count({
     where: { clubId, status: { in: ['SCHEDULED', 'LIVE'] } }
   });
@@ -312,7 +313,7 @@ clubsRoutes.post('/:clubId/members', async (c) => {
   });
   if (!club || club.isArchived) return c.json({ error: 'Club not found' }, 404);
 
-  const tier = club.organizerPlan?.tier ?? 'BASIC';
+  const tier = getEffectiveOrganizerTier(club.organizerPlan);
   if (club._count.members >= PLAN_LIMITS[tier].maxMembers) {
     return c.json({ error: `Member limit reached for ${tier} plan` }, 409);
   }
@@ -349,7 +350,7 @@ clubsRoutes.post('/:clubId/private-tables', async (c) => {
   });
   if (!club || club.isArchived) return c.json({ error: 'Club not found' }, 404);
 
-  const tier = club.organizerPlan?.tier ?? 'BASIC';
+  const tier = getEffectiveOrganizerTier(club.organizerPlan);
   const activeTableCount = await prisma.privateTable.count({
     where: { clubId, status: { in: ['SCHEDULED', 'LIVE'] } }
   });

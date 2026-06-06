@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { PaidSubscriptionTier } from '@duopoker/shared-types';
+import { tierLabel } from '@duopoker/shared-types';
 import { Badge, GlassPanel, LoadingSkeleton, PageShell, SectionHeader } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
+
+const PAID_TIERS: PaidSubscriptionTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'];
+const ORGANIZER_TIERS = ['BASIC', 'PRO', 'NETWORK'] as const;
 
 type Tab = 'overview' | 'players' | 'vip';
 
@@ -29,6 +34,14 @@ type AdminUserDetail = AdminUser & {
     matchAssignment: string | null;
     clubMemberships: number;
   };
+  clubsOwned: Array<{
+    id: string;
+    name: string;
+    organizerTier: string;
+    members: number;
+    activeTables: number;
+    limits: { maxMembers: number; maxActiveTables: number };
+  }>;
 };
 
 type AdminStats = {
@@ -102,54 +115,79 @@ export function AdminPage() {
   const [actionMsg, setActionMsg] = useState<string>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
+  const [profileReady, setProfileReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [grantTier, setGrantTier] = useState<PaidSubscriptionTier>('BLACK');
+  const [grantLifetime, setGrantLifetime] = useState(true);
+  const [grantChips, setGrantChips] = useState(999_999);
+  const [clubPlanTier, setClubPlanTier] = useState<(typeof ORGANIZER_TIERS)[number]>('PRO');
+  const [clubPlanLifetime, setClubPlanLifetime] = useState(false);
 
-  const loadCore = useCallback(async () => {
-    const [statsRes, usersRes, queueRes, vipRes] = await Promise.all([
-      apiFetch('/admin/stats'),
-      apiFetch(`/admin/users?take=40${search ? `&q=${encodeURIComponent(search)}` : ''}`),
-      apiFetch('/admin/queue'),
-      apiFetch('/admin/vip-tables')
-    ]);
-    if (!statsRes.ok || !usersRes.ok) {
-      const failed = !statsRes.ok ? statsRes : usersRes;
-      if (failed.status === 401) throw new Error('unauthorized');
-      if (failed.status === 403) throw new Error('forbidden');
-      throw new Error('server');
-    }
-    setStats((await statsRes.json()) as AdminStats);
-    const usersData = (await usersRes.json()) as { users: AdminUser[]; total: number };
-    setUsers(usersData.users);
-    setTotal(usersData.total);
-    if (queueRes.ok) {
-      setQueue(((await queueRes.json()) as { tickets: QueueTicket[] }).tickets);
-    }
-    if (vipRes.ok) {
-      setVipDuels(((await vipRes.json()) as { duels: VipDuel[] }).duels);
-    }
-  }, [apiFetch, search]);
+  const loadCore = useCallback(
+    async (query: string) => {
+      const [statsRes, usersRes, queueRes, vipRes] = await Promise.all([
+        apiFetch('/admin/stats'),
+        apiFetch(`/admin/users?take=40${query ? `&q=${encodeURIComponent(query)}` : ''}`),
+        apiFetch('/admin/queue'),
+        apiFetch('/admin/vip-tables')
+      ]);
+      if (!statsRes.ok || !usersRes.ok) {
+        const failed = !statsRes.ok ? statsRes : usersRes;
+        if (failed.status === 401) throw new Error('unauthorized');
+        if (failed.status === 403) throw new Error('forbidden');
+        throw new Error('server');
+      }
+      setStats((await statsRes.json()) as AdminStats);
+      const usersData = (await usersRes.json()) as { users: AdminUser[]; total: number };
+      setUsers(usersData.users);
+      setTotal(usersData.total);
+      if (queueRes.ok) {
+        setQueue(((await queueRes.json()) as { tickets: QueueTicket[] }).tickets);
+      }
+      if (vipRes.ok) {
+        setVipDuels(((await vipRes.json()) as { duels: VipDuel[] }).duels);
+      }
+    },
+    [apiFetch]
+  );
+
+  const handleLoadError = useCallback(
+    (err: Error) => {
+      if (err.message === 'unauthorized') setError(t('admin.sessionExpired'));
+      else if (err.message === 'forbidden') setError(t('admin.forbidden'));
+      else setError(t('admin.loadFailed'));
+    },
+    [t]
+  );
 
   useEffect(() => {
     if (!accessToken) {
+      setProfileReady(true);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setProfileReady(false);
+    void fetchProfile().finally(() => {
+      if (!cancelled) setProfileReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, fetchProfile]);
+
+  useEffect(() => {
+    if (!profileReady) return;
+    if (!accessToken || userRole !== 'SUPERADMIN') {
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
     setError(undefined);
-    void fetchProfile()
-      .then(() => {
-        if (cancelled) return;
-        if (useAppStore.getState().userRole !== 'SUPERADMIN') {
-          setLoading(false);
-          return;
-        }
-        return loadCore().catch((err: Error) => {
-          if (cancelled) return;
-          if (err.message === 'unauthorized') setError(t('admin.sessionExpired'));
-          else if (err.message === 'forbidden') setError(t('admin.forbidden'));
-          else setError(t('admin.loadFailed'));
-        });
+    void loadCore('')
+      .catch((err: Error) => {
+        if (!cancelled) handleLoadError(err);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -157,7 +195,7 @@ export function AdminPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, fetchProfile, loadCore, t]);
+  }, [profileReady, accessToken, userRole, loadCore, handleLoadError]);
 
   const openUser = async (id: string) => {
     setBusy(true);
@@ -168,6 +206,25 @@ export function AdminPage() {
       const data = (await res.json()) as { user: AdminUserDetail };
       setSelected(data.user);
       setTab('players');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const grantClubPlan = async (clubId: string) => {
+    setBusy(true);
+    setActionMsg(undefined);
+    try {
+      const res = await apiFetch(`/admin/clubs/${clubId}/plan`, {
+        method: 'POST',
+        body: JSON.stringify({ tier: clubPlanTier, lifetime: clubPlanLifetime })
+      });
+      if (!res.ok) {
+        setActionMsg(t('admin.actionFailed'));
+        return;
+      }
+      setActionMsg(t('admin.clubPlanOk'));
+      if (selected) await openUser(selected.id);
     } finally {
       setBusy(false);
     }
@@ -188,7 +245,7 @@ export function AdminPage() {
       }
       setActionMsg(t('admin.actionOk'));
       await openUser(selected.id);
-      await loadCore();
+      await loadCore(search);
     } finally {
       setBusy(false);
     }
@@ -221,7 +278,7 @@ export function AdminPage() {
       setVipMessage('');
       setActionMsg(t('admin.vipCreated'));
       setTab('vip');
-      await loadCore();
+      await loadCore(search);
     } finally {
       setBusy(false);
     }
@@ -337,9 +394,13 @@ export function AdminPage() {
                 placeholder={t('admin.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void loadCore()}
+                onKeyDown={(e) => e.key === 'Enter' && void loadCore(search).catch(handleLoadError)}
               />
-              <button type="button" className="premium-btn premium-btn-ghost mb-4 w-full text-sm" onClick={() => void loadCore()}>
+              <button
+                type="button"
+                className="premium-btn premium-btn-ghost mb-4 w-full text-sm"
+                onClick={() => void loadCore(search).catch(handleLoadError)}
+              >
                 {t('admin.search')}
               </button>
               <ul className="max-h-[480px] divide-y divide-white/5 overflow-y-auto">
@@ -370,22 +431,112 @@ export function AdminPage() {
                   <div><span className="text-subtle">{t('admin.role')}</span><p className="font-semibold">{selected.role}</p></div>
                   <div><span className="text-subtle">{t('admin.inventory')}</span><p className="font-semibold">{selected.inventory.length} {t('admin.items')}</p></div>
                 </div>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <button type="button" disabled={busy} className="premium-btn premium-btn-primary text-xs" onClick={() => void grantAction('/subscription', { tier: 'BLACK', lifetime: true })}>
-                    {t('admin.grantRoyal')}
-                  </button>
-                  <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/cosmetics', { grantAll: true })}>
-                    {t('admin.grantCosmetics')}
-                  </button>
-                  <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/chips', { chips: 999999 })}>
-                    {t('admin.grantChips')}
-                  </button>
-                  {selected.role !== 'SUPERADMIN' ? (
-                    <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/role', { role: 'SUPERADMIN' })}>
-                      {t('admin.makeAdmin')}
+                <section className="mt-6 space-y-3 border-t border-white/10 pt-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('admin.grantSubscription')}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      className="premium-input text-sm"
+                      value={grantTier}
+                      onChange={(e) => setGrantTier(e.target.value as PaidSubscriptionTier)}
+                    >
+                      {PAID_TIERS.map((tier) => (
+                        <option key={tier} value={tier}>
+                          {tierLabel[tier]}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-1 text-xs text-muted">
+                      <input type="checkbox" checked={grantLifetime} onChange={(e) => setGrantLifetime(e.target.checked)} />
+                      {t('admin.lifetime')}
+                    </label>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="premium-btn premium-btn-primary text-xs"
+                      onClick={() => void grantAction('/subscription', { tier: grantTier, lifetime: grantLifetime })}
+                    >
+                      {t('admin.grantSub')}
                     </button>
-                  ) : null}
-                </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="premium-btn premium-btn-ghost text-xs"
+                      onClick={() => void grantAction('/subscription/revoke', {})}
+                    >
+                      {t('admin.revokeSub')}
+                    </button>
+                  </div>
+                </section>
+                <section className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('admin.grantExtras')}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="number"
+                      className="premium-input w-32 text-sm"
+                      value={grantChips}
+                      onChange={(e) => setGrantChips(Number(e.target.value))}
+                    />
+                    <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/chips', { chips: grantChips })}>
+                      {t('admin.grantChips')}
+                    </button>
+                    <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/cosmetics', { grantAll: true })}>
+                      {t('admin.grantCosmetics')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="premium-btn premium-btn-ghost text-xs"
+                      onClick={() => void grantAction('/cosmetics/tier', { tier: grantTier })}
+                    >
+                      {t('admin.grantTierCosmetics')}
+                    </button>
+                    {selected.role !== 'SUPERADMIN' ? (
+                      <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/role', { role: 'SUPERADMIN' })}>
+                        {t('admin.makeAdmin')}
+                      </button>
+                    ) : null}
+                  </div>
+                </section>
+                {selected.clubsOwned?.length ? (
+                  <section className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('admin.clubsOwned')}</p>
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <select
+                        className="premium-input text-sm"
+                        value={clubPlanTier}
+                        onChange={(e) => setClubPlanTier(e.target.value as (typeof ORGANIZER_TIERS)[number])}
+                      >
+                        {ORGANIZER_TIERS.map((tier) => (
+                          <option key={tier} value={tier}>
+                            {tier}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="flex items-center gap-1 text-xs text-muted">
+                        <input type="checkbox" checked={clubPlanLifetime} onChange={(e) => setClubPlanLifetime(e.target.checked)} />
+                        {t('admin.lifetime')}
+                      </label>
+                    </div>
+                    <ul className="space-y-2 text-sm">
+                      {selected.clubsOwned.map((club) => (
+                        <li key={club.id} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="font-medium text-ivory">{club.name}</p>
+                              <p className="text-xs text-muted">
+                                {club.organizerTier} · {club.members}/{club.limits.maxMembers} {t('admin.members')} ·{' '}
+                                {club.activeTables}/{club.limits.maxActiveTables} {t('admin.tables')}
+                              </p>
+                            </div>
+                            <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantClubPlan(club.id)}>
+                              {t('admin.applyClubPlan')}
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
               </GlassPanel>
             ) : (
               <GlassPanel className="border-white/10 p-8 text-center text-muted">{t('admin.selectPlayer')}</GlassPanel>

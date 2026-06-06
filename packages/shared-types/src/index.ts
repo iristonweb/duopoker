@@ -66,6 +66,18 @@ export {
   type PaidSubscriptionTier
 } from './pricing';
 
+export {
+  REFERRAL_ACTIVE_MIN_HANDS,
+  REFERRAL_ACTIVE_MIN_AGE_MS,
+  REFERRAL_CODE_WINDOW_DAYS,
+  REFERRAL_MILESTONES,
+  referralMilestoneByLevel,
+  nextReferralMilestone,
+  type ReferralMilestone,
+  type ReferralStatus,
+  type ReferralRewardKind
+} from './referrals';
+
 export type GameMode = 'HOLDEM' | 'RASPISNOY';
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type GameStreet =

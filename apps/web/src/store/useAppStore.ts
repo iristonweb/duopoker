@@ -75,7 +75,13 @@ type AppStore = {
   readyNextHand: () => Promise<void>;
   leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
   clearTableSession: () => void;
-  register: (email: string, password: string, displayName: string, nickname: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    displayName: string,
+    nickname: string,
+    referralCode?: string
+  ) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   fetchProfile: () => Promise<void>;
   updateProfile: (data: {
@@ -480,7 +486,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       clearLocal();
       return { ok: true };
     },
-    register: async (email, password, displayName, nickname) => {
+    register: async (email, password, displayName, nickname, referralCode) => {
       set({ authError: undefined, authNotice: undefined });
       let res: Response;
       try {
@@ -491,7 +497,8 @@ export const useAppStore = create<AppStore>((set, get) => {
             email,
             password,
             displayName,
-            nickname: nickname.replace(/^@/, '').trim().toLowerCase()
+            nickname: nickname.replace(/^@/, '').trim().toLowerCase(),
+            ...(referralCode?.trim() ? { referralCode: referralCode.trim() } : {})
           })
         });
       } catch {

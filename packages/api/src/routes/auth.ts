@@ -15,6 +15,8 @@ import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
 import { decryptProfileRow } from '../lib/profile-privacy.js';
 import { jsonError } from '../lib/http-error.js';
 import { resolveUserRole } from '../services/admin-access.js';
+import { attachReferralOnSignup, ensureReferralCode } from '../services/referrals.js';
+import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -25,7 +27,8 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   displayName: z.string().min(2).max(40),
-  nickname: z.string().min(3).max(20)
+  nickname: z.string().min(3).max(20),
+  referralCode: z.string().min(3).max(24).optional()
 });
 
 const issueSession = async (userId: string, email: string, deviceId: string) => {
@@ -98,7 +101,12 @@ authRoutes.post('/register', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
-    const role = (await resolveUserRole(user.id, user.email)) ?? user.role;
+    await ensureReferralCode(user.id, user.nickname);
+    if (parsed.data.referralCode) {
+      await attachReferralOnSignup(user.id, parsed.data.referralCode);
+    }
+    const role =
+      (await resolveUserRole(user.id, user.email, { bootstrapFounder: true })) ?? user.role;
     return c.json(
       {
         ...tokens,
@@ -126,8 +134,8 @@ authRoutes.post('/login', async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Invalid email or password' }, 400);
     }
-    const user = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: parsed.data.email, mode: 'insensitive' } },
       select: { id: true, email: true, passwordHash: true, displayName: true, nickname: true, emailVerified: true, role: true }
     });
     if (!user?.passwordHash) {
@@ -142,7 +150,8 @@ authRoutes.post('/login', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
-    const role = (await resolveUserRole(user.id, user.email)) ?? user.role;
+    const role =
+      (await resolveUserRole(user.id, user.email, { bootstrapFounder: true })) ?? user.role;
     return c.json({
       ...tokens,
       user: {
@@ -249,8 +258,6 @@ authRoutes.get('/me', async (c) => {
         role: true,
         subscriptions: {
           where: { status: 'ACTIVE', expiresAt: { gt: new Date() } },
-          orderBy: { expiresAt: 'desc' },
-          take: 1,
           select: { tier: true, expiresAt: true, status: true }
         },
         inventory: {
@@ -260,10 +267,13 @@ authRoutes.get('/me', async (c) => {
     });
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     const role = (await resolveUserRole(user.id, user.email)) ?? user.role;
+    await ensureReferralCode(user.id, user.nickname);
     const { subscriptions, inventory, ...profile } = user;
+    const effectiveTier = await resolveUserSubscriptionTier(user.id);
+    const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
     return c.json({
       user: { ...decryptProfileRow(profile), role },
-      subscription: subscriptions[0] ?? null,
+      subscription: topSub,
       inventory
     });
   } catch {
