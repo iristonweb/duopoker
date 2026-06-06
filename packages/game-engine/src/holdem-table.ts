@@ -226,6 +226,28 @@ const applyUncalledReturn = (state: SessionState): SessionState => {
   return { ...state, stacks, playerRoundBet, handContributions };
 };
 
+const withHandComplete = (state: SessionState): SessionState => ({
+  ...state,
+  handCompletedAt: state.handCompletedAt ?? Date.now()
+});
+
+const resetToLobbyAfterGame = (state: SessionState): SessionState => ({
+  ...state,
+  street: 'LOBBY',
+  phase: 'DEAL',
+  pot: 0,
+  currentBet: 0,
+  communityCards: [],
+  playerRoundBet: Object.fromEntries(state.players.map((p) => [p, 0])),
+  foldedPlayerIds: [],
+  readyForNextHand: [],
+  winners: undefined,
+  winnersShare: undefined,
+  handCompletedAt: undefined,
+  actionDeadlineAt: undefined,
+  actionLog: []
+});
+
 const finalizeShowdown = (state: SessionState): SessionState => {
   const folded = new Set(state.foldedPlayerIds);
   const committed = commitRoundToPot(state);
@@ -240,7 +262,7 @@ const finalizeShowdown = (state: SessionState): SessionState => {
   for (const [pid, share] of Object.entries(winnersShare)) {
     stacks[pid] = (stacks[pid] ?? 0) + share;
   }
-  return {
+  return withHandComplete({
     ...committed,
     street: 'COMPLETE',
     phase: 'SHOWDOWN',
@@ -251,7 +273,7 @@ const finalizeShowdown = (state: SessionState): SessionState => {
     winnersShare,
     readyForNextHand: [],
     activePlayerIndex: committed.dealerIndex
-  };
+  });
 };
 
 const resolveShowdownHoldem = (state: SessionState): SessionState => {
@@ -263,7 +285,7 @@ const resolveShowdownHoldem = (state: SessionState): SessionState => {
     const won = totalInKettle(ns);
     const stacks = { ...ns.stacks };
     stacks[w] = (stacks[w] ?? 0) + won;
-    return {
+    return withHandComplete({
       ...ns,
       street: 'COMPLETE',
       phase: 'SHOWDOWN',
@@ -274,7 +296,7 @@ const resolveShowdownHoldem = (state: SessionState): SessionState => {
       winnersShare: { [w]: won },
       readyForNextHand: [],
       activePlayerIndex: ns.dealerIndex
-    };
+    });
   }
   return finalizeShowdown(state);
 };
@@ -288,7 +310,7 @@ const resolveShowdownRaspisnoy = (state: SessionState): SessionState => {
     const won = totalInKettle(ns);
     const stacks = { ...ns.stacks };
     stacks[w] = (stacks[w] ?? 0) + won;
-    return {
+    return withHandComplete({
       ...ns,
       street: 'COMPLETE',
       phase: 'SHOWDOWN',
@@ -299,10 +321,12 @@ const resolveShowdownRaspisnoy = (state: SessionState): SessionState => {
       winnersShare: { [w]: won },
       readyForNextHand: [],
       activePlayerIndex: ns.dealerIndex
-    };
+    });
   }
   return finalizeShowdown(state);
 };
+
+export { resetToLobbyAfterGame };
 
 export const createInitialTableState = (
   sessionId: string,
@@ -615,7 +639,7 @@ export const applyTableAction = (
     stacks[w] = (stacks[w] ?? 0) + won;
     return {
       ok: true,
-      state: {
+      state: withHandComplete({
         ...awarded,
         street: 'COMPLETE',
         phase: 'SHOWDOWN',
@@ -628,7 +652,7 @@ export const applyTableAction = (
         readyForNextHand: [],
         activePlayerIndex: ns.players.indexOf(w),
         activePlayerId: w
-      }
+      })
     };
   }
 
@@ -697,7 +721,7 @@ const awardSingleWinner = (state: SessionState, winnerId: string): SessionState 
   const won = totalInKettle(awarded);
   const stacks = { ...awarded.stacks };
   stacks[winnerId] = (stacks[winnerId] ?? 0) + won;
-  return {
+  return withHandComplete({
     ...awarded,
     street: 'COMPLETE',
     phase: 'SHOWDOWN',
@@ -709,9 +733,8 @@ const awardSingleWinner = (state: SessionState, winnerId: string): SessionState 
     winnersShare: { [winnerId]: won },
     readyForNextHand: [],
     activePlayerIndex: awarded.players.indexOf(winnerId),
-    activePlayerId: winnerId,
-    handCompletedAt: Date.now()
-  };
+    activePlayerId: winnerId
+  });
 };
 
 const omitPlayerKey = <T>(rec: Record<string, T>, userId: string): Record<string, T> => {

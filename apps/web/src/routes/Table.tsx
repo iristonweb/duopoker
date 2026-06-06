@@ -12,7 +12,9 @@ import { TableActionDock } from '../components/table/TableActionDock';
 import { HandResultOverlay } from '../components/table/HandResultOverlay';
 import { VoiceChatPill } from '../components/table/VoiceChatPill';
 import { GameEventFeed } from '../components/table/GameEventFeed';
+import { BustedPlayerOverlay } from '../components/table/BustedPlayerOverlay';
 import { useCommunityCardSounds, useTableGameFeed } from '../hooks/useTableGameFeed';
+import { useTableSessionTick } from '../hooks/useTableSessionTick';
 import { useAppStore } from '../store/useAppStore';
 import { usesRealtimeSocket } from '../config/api';
 import { rotatePlayersForHero } from '../lib/table-layout';
@@ -96,6 +98,7 @@ export const Table = () => {
   const [now, setNow] = useState(() => Date.now());
   const [leaving, setLeaving] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
+  const [bustedDismissed, setBustedDismissed] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
@@ -130,6 +133,10 @@ export const Table = () => {
 
   const feedEvents = useTableGameFeed(session, label, t, soundOn);
   useCommunityCardSounds(session?.communityCards?.length ?? 0, soundOn);
+
+  const sid = session?.sessionId;
+  const matchRoute = sid && routeSessionId && sid === routeSessionId;
+  useTableSessionTick(matchRoute ? session : undefined, routeSessionId);
 
   const tablePlayers = useMemo((): TablePlayerVisual[] => {
     if (!session) return [];
@@ -172,12 +179,13 @@ export const Table = () => {
     return () => stopPolling();
   }, [routeSessionId, joinSession, pollSession, stopPolling, mode, socket]);
 
-  const sid = session?.sessionId;
-  const matchRoute = sid && routeSessionId && sid === routeSessionId;
-
   useEffect(() => {
     if (session?.bigBlind) setRaiseAmount(session.bigBlind * 2);
   }, [session?.bigBlind, session?.handNumber]);
+
+  useEffect(() => {
+    if ((session?.stacks[userId] ?? 0) > 0) setBustedDismissed(false);
+  }, [session?.stacks, userId, session?.handNumber]);
 
   const handleLeaveTable = async () => {
     const id = session?.sessionId ?? routeSessionId;
@@ -186,6 +194,12 @@ export const Table = () => {
     await leaveTable(id);
     navigate('/lobby');
   };
+
+  useEffect(() => {
+    if (sessionError === 'NOT_SEATED' && routeSessionId) {
+      navigate('/lobby');
+    }
+  }, [sessionError, routeSessionId, navigate]);
 
   if (!routeSessionId) {
     return (
@@ -223,11 +237,20 @@ export const Table = () => {
       ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
       : null;
   const nextHandMsLeft =
-    session.street === 'COMPLETE' && session.handCompletedAt
-      ? Math.max(0, NEXT_HAND_DELAY_MS - (now - session.handCompletedAt))
+    session.street === 'COMPLETE'
+      ? session.handCompletedAt
+        ? Math.max(0, NEXT_HAND_DELAY_MS - (now - session.handCompletedAt))
+        : 0
       : null;
+  const nextHandSeconds =
+    nextHandMsLeft !== null ? Math.max(0, Math.ceil(nextHandMsLeft / 1000)) : null;
   const playersWithStack = session.players.filter((id) => (session.stacks[id] ?? 0) > 0);
   const gameOver = session.street === 'COMPLETE' && playersWithStack.length < 2;
+  const heroStack = session.stacks[userId] ?? 0;
+  const heroBusted = session.players.includes(userId) && heroStack <= 0;
+  const heroSpectating = heroBusted && !gameOver;
+  const showBustedOverlay = heroBusted && !bustedDismissed && !gameOver;
+
   const kettle =
     session.pot +
     Object.values(session.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
@@ -237,7 +260,6 @@ export const Table = () => {
       ? session.currentBet * 2 - (session.playerRoundBet[userId] ?? 0)
       : session.bigBlind
   );
-  const heroStack = session.stacks[userId] ?? 0;
   const maxRaise = heroStack;
   const halfPotRaise = Math.max(minRaise, Math.floor(kettle / 2));
   const potRaise = Math.max(minRaise, kettle);
@@ -290,12 +312,16 @@ export const Table = () => {
               className="h-full"
             />
             <HandResultOverlay
-              visible={session.street === 'COMPLETE'}
+              visible={session.street === 'COMPLETE' && !showBustedOverlay}
               winners={winnerNames}
               gameOver={gameOver}
-              nextHandSeconds={
-                nextHandMsLeft !== null && nextHandMsLeft > 0 ? Math.ceil(nextHandMsLeft / 1000) : null
-              }
+              nextHandSeconds={nextHandSeconds}
+            />
+            <BustedPlayerOverlay
+              visible={showBustedOverlay}
+              leaving={leaving}
+              onWatch={() => setBustedDismissed(true)}
+              onLeave={() => void handleLeaveTable()}
             />
             <div className="pointer-events-auto absolute left-3 top-16 z-20 sm:left-4 sm:top-[4.5rem]">
               <GameEventFeed events={feedEvents} title={t('table.feedTitle')} />
@@ -335,6 +361,7 @@ export const Table = () => {
           deckId={equipped.deck}
           activeLabel={activeLabel}
           isHeroActive={activeId === userId}
+          heroSpectating={heroSpectating}
           street={session.street}
           sessionError={sessionError}
           onFold={() => playerAction({ sessionId: sid, type: 'fold' })}

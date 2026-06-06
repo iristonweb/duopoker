@@ -22,6 +22,7 @@ type Props = {
   activeLabel: string;
   isHeroActive: boolean;
   street: string;
+  heroSpectating?: boolean;
   onFold: () => void;
   onCheck: () => void;
   onCall: () => void;
@@ -46,6 +47,7 @@ export function TableActionDock({
   activeLabel,
   isHeroActive,
   street,
+  heroSpectating,
   onFold,
   onCheck,
   onCall,
@@ -184,7 +186,9 @@ export function TableActionDock({
             </div>
           </div>
         ) : street !== 'COMPLETE' && street !== 'LOBBY' ? (
-          <p className="text-center text-sm text-subtle">{t('table.waitingOpponent')}</p>
+          <p className="text-center text-sm text-subtle">
+            {heroSpectating ? t('table.spectating') : t('table.waitingOpponent')}
+          </p>
         ) : null}
       </div>
     </motion.footer>

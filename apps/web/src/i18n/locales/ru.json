@@ -239,7 +239,12 @@
     "feedRaise": "{{name}} — рейз {{amount}}",
     "feedWinner": "Победитель: {{names}}",
     "soundOn": "Звук вкл.",
-    "soundOff": "Звук выкл."
+    "soundOff": "Звук выкл.",
+    "bustedEyebrow": "Вне игры",
+    "bustedTitle": "Вы проиграли все фишки",
+    "bustedDesc": "Вы можете наблюдать за столом или встать и вернуться в лобби.",
+    "watchTable": "Наблюдать",
+    "spectating": "Вы наблюдаете за столом"
   },
   "clubs": {
     "title": "Приватные клубы",

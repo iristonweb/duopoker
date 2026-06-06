@@ -239,7 +239,12 @@
     "feedRaise": "{{name}} raises to {{amount}}",
     "feedWinner": "Winner: {{names}}",
     "soundOn": "Sound on",
-    "soundOff": "Sound off"
+    "soundOff": "Sound off",
+    "bustedEyebrow": "Out of chips",
+    "bustedTitle": "You lost all your chips",
+    "bustedDesc": "You can watch the table or leave and return to the lobby.",
+    "watchTable": "Watch table",
+    "spectating": "You are watching the table"
   },
   "clubs": {
     "title": "Private clubs",

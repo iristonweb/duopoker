@@ -380,9 +380,13 @@ export const useAppStore = create<AppStore>((set, get) => {
       const tick = async () => {
         try {
           const res = await get().apiFetch(`/game/session/${encodeURIComponent(sessionId)}`);
+          if (res.status === 403) {
+            set({ session: undefined, sessionError: 'NOT_SEATED' });
+            return;
+          }
           if (!res.ok) return;
           const data = (await res.json()) as { session: SessionState | null };
-          if (data.session) set({ session: data.session });
+          if (data.session) set({ session: data.session, sessionError: undefined });
         } catch {
           /* ignore */
         }
