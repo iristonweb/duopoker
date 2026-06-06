@@ -209,7 +209,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: chip.name,
       slot: 'chip',
       requiredTier: tier,
-      imageUrl: asset(`chips/chip_${t}_game.png`),
+      imageUrl: asset(`chips/chip_${t}.png`),
       gameImageUrl: asset(`chips/chip_${t}_game.png`),
       rarity: chip.rarity,
       description: chip.description
@@ -219,7 +219,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: frame.name,
       slot: 'frame',
       requiredTier: tier,
-      imageUrl: asset(`frames/frame_${t}_game.png`),
+      imageUrl: asset(`frames/frame_${t}.png`),
       gameImageUrl: asset(`frames/frame_${t}_game.png`),
       rarity: frame.rarity,
       description: frame.description
@@ -229,7 +229,7 @@ const tierCosmetics = (tier: (typeof paidTiers)[number]): CosmeticDefinition[] =
       name: title.name,
       slot: 'title',
       requiredTier: tier,
-      imageUrl: asset(`titles/title_${t}_game.png`),
+      imageUrl: asset(`titles/title_${t}.png`),
       gameImageUrl: asset(`titles/title_${t}_game.png`),
       rarity: title.rarity,
       description: title.description
@@ -254,7 +254,7 @@ export const subscriptionCosmetics: CosmeticDefinition[] = [
     name: 'DP CLUB House',
     slot: 'chip',
     requiredTier: 'FREE',
-    imageUrl: asset('chips/chip_classic_game.png'),
+    imageUrl: asset('chips/chip_classic.png'),
     gameImageUrl: asset('chips/chip_classic_game.png'),
     rarity: 'COMMON',
     description: 'Official DP CLUB house chips — emerald edge stripes.'
@@ -311,6 +311,13 @@ export const allCosmetics: CosmeticDefinition[] = [...subscriptionCosmetics, ...
 
 export const cosmeticById = (id: string): CosmeticDefinition | undefined =>
   allCosmetics.find((c) => c.id === id);
+
+/** Profile / shop catalog preview — rich still assets, not in-game cutouts. */
+export const catalogPreviewUrl = (id: string): string | undefined => {
+  const def = cosmeticById(id);
+  if (!def) return undefined;
+  return def.imageUrl;
+};
 
 /** Prefer transparent game cutout when available (table, HUD, live preview). */
 export const cosmeticImageUrl = (

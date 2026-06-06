@@ -40,6 +40,7 @@ export {
   bonusCosmetics,
   bestCosmeticForTier,
   canEquipCosmetic,
+  catalogPreviewUrl,
   cosmeticById,
   cosmeticImageUrl,
   cosmeticsBySlot,
