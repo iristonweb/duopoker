@@ -39,14 +39,14 @@ const checkoutSchema = z.object({
 });
 
 const mockSubscribeSchema = z.object({
-  tier: z.enum(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'])
+  tier: z.enum(['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'])
 });
 
 const subscriptionCheckoutSchema = z.object({
-  tier: z.enum(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'])
+  tier: z.enum(['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'])
 });
 
-const subscriptionTiers = ['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const;
+const subscriptionTiers = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'] as const;
 type PaidTier = (typeof subscriptionTiers)[number];
 
 const tierFromToken = (token: string): PaidTier | null => {
@@ -61,31 +61,40 @@ const cosmeticCosts: Record<string, number> = {
 };
 
 const tierFromPrice = (priceId: string): PaidTier | null => {
+  if (priceId === config.stripePriceBronze) return 'BRONZE';
   if (priceId === config.stripePriceSilver) return 'SILVER';
   if (priceId === config.stripePriceGold) return 'GOLD';
   if (priceId === config.stripePricePlatinum) return 'PLATINUM';
-  if (priceId === config.stripePriceRoyal) return 'ROYAL';
+  if (priceId === config.stripePriceDiamond) return 'DIAMOND';
+  if (priceId === config.stripePriceBlack) return 'BLACK';
   return null;
+};
+
+const stripePriceForTier = (tier: PaidTier): string | undefined => {
+  const map: Record<PaidTier, string> = {
+    BRONZE: config.stripePriceBronze,
+    SILVER: config.stripePriceSilver,
+    GOLD: config.stripePriceGold,
+    PLATINUM: config.stripePricePlatinum,
+    DIAMOND: config.stripePriceDiamond,
+    BLACK: config.stripePriceBlack
+  };
+  return map[tier] || undefined;
 };
 
 const buildCatalogSubscriptions = () =>
   ([
+    { tier: 'BRONZE' as const, ghostBoard: true, privateTables: true },
     { tier: 'SILVER' as const, chipsBonusPct: 50 },
     { tier: 'GOLD' as const, voiceChat: true },
     { tier: 'PLATINUM' as const, coach: true },
-    { tier: 'ROYAL' as const, apiStats: true }
+    { tier: 'DIAMOND' as const, rareCosmetics: true },
+    { tier: 'BLACK' as const, apiStats: true }
   ] as const).map(({ tier, ...flags }) => ({
     tier,
     priceRubMonthly: SUBSCRIPTION_PRICES_RUB[tier],
     ...flags,
-    stripePriceId:
-      tier === 'SILVER'
-        ? config.stripePriceSilver || undefined
-        : tier === 'GOLD'
-          ? config.stripePriceGold || undefined
-          : tier === 'PLATINUM'
-            ? config.stripePricePlatinum || undefined
-            : config.stripePriceRoyal || undefined,
+    stripePriceId: stripePriceForTier(tier),
     imageUrl: subscriptionBannerImages[tier]
   }));
 

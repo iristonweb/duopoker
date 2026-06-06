@@ -44,6 +44,14 @@ monetizationRouter.get('/catalog', (_req, res) => {
     gameModes: catalogGameModes,
     subscriptions: [
       {
+        tier: 'BRONZE',
+        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.BRONZE,
+        ghostBoard: true,
+        privateTables: true,
+        stripePriceId: config.stripePriceBronze || undefined,
+        imageUrl: subscriptionBannerImages.BRONZE
+      },
+      {
         tier: 'SILVER',
         priceRubMonthly: SUBSCRIPTION_PRICES_RUB.SILVER,
         chipsBonusPct: 50,
@@ -65,11 +73,18 @@ monetizationRouter.get('/catalog', (_req, res) => {
         imageUrl: subscriptionBannerImages.PLATINUM
       },
       {
-        tier: 'ROYAL',
-        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.ROYAL,
+        tier: 'DIAMOND',
+        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.DIAMOND,
+        rareCosmetics: true,
+        stripePriceId: config.stripePriceDiamond || undefined,
+        imageUrl: subscriptionBannerImages.DIAMOND
+      },
+      {
+        tier: 'BLACK',
+        priceRubMonthly: SUBSCRIPTION_PRICES_RUB.BLACK,
         apiStats: true,
-        stripePriceId: config.stripePriceRoyal || undefined,
-        imageUrl: subscriptionBannerImages.ROYAL
+        stripePriceId: config.stripePriceBlack || undefined,
+        imageUrl: subscriptionBannerImages.BLACK
       }
     ],
     chipPacks: [

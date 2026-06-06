@@ -74,6 +74,7 @@ type AppStore = {
   }) => Promise<void>;
   readyNextHand: () => Promise<void>;
   leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
+  clearTableSession: () => void;
   register: (email: string, password: string, displayName: string, nickname: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   fetchProfile: () => Promise<void>;
@@ -248,7 +249,9 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       socket.on('connect', () => {
         const sid = get().session?.sessionId;
-        if (sid) socket.emit('reconnectSession', { sessionId: sid });
+        if (!sid) return;
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/table/')) return;
+        socket.emit('reconnectSession', { sessionId: sid });
       });
       set({ socket });
     },
@@ -447,12 +450,17 @@ export const useAppStore = create<AppStore>((set, get) => {
       const data = (await res.json()) as { session: SessionState };
       set({ session: data.session, sessionError: undefined });
     },
+    clearTableSession: () => {
+      get().stopPolling();
+      set({ session: undefined, sessionError: undefined });
+    },
     leaveTable: async (sessionId) => {
       get().stopPolling();
+      const clearLocal = () => set({ session: undefined, sessionError: undefined });
       if (usesRealtimeSocket()) {
         get().connect();
         get().socket?.emit('leaveTable', { sessionId, userId: get().userId });
-        set({ session: undefined, sessionError: undefined });
+        clearLocal();
         return { ok: true };
       }
       const res = await get().apiFetch('/game/leave', {
@@ -462,10 +470,14 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         const reason = (err as { code?: string }).code ?? 'leave_failed';
+        if (reason === 'NOT_SEATED' || reason === 'SESSION_NOT_FOUND') {
+          clearLocal();
+          return { ok: true, reason };
+        }
         set({ sessionError: reason });
         return { ok: false, reason };
       }
-      set({ session: undefined, sessionError: undefined });
+      clearLocal();
       return { ok: true };
     },
     register: async (email, password, displayName, nickname) => {
@@ -563,7 +575,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!token) return;
       try {
         const res = await get().apiFetch('/auth/me');
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (res.status === 401) {
+            set({ userRole: 'USER' });
+          }
+          return;
+        }
         const data = (await res.json()) as {
           user: {
             chips: number;
@@ -742,6 +759,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (def.slot === 'deck') next.deck = itemId;
       if (def.slot === 'chip') next.chip = itemId;
       if (def.slot === 'frame') next.frame = itemId;
+      if (def.slot === 'title') next.title = itemId;
       writeEquipped(userId, next);
       set({ equipped: next });
     },

@@ -26,7 +26,8 @@ export type CosmeticItem = {
 const defaultSlotTabs: { id: CosmeticSlot; label: string }[] = [
   { id: 'deck', label: 'Card backs' },
   { id: 'chip', label: 'Chips' },
-  { id: 'frame', label: 'Avatars' }
+  { id: 'frame', label: 'Avatars' },
+  { id: 'title', label: 'Titles' }
 ];
 
 export function SkinSelector({
@@ -47,7 +48,7 @@ export function SkinSelector({
   catalog?: CosmeticItem[];
   subscriptionTier?: SubscriptionTier;
   inventory?: string[];
-  equipped?: { deck?: string; chip?: string; frame?: string };
+  equipped?: { deck?: string; chip?: string; frame?: string; title?: string };
   eyebrow?: string;
   title?: string;
   description?: string;
@@ -82,7 +83,8 @@ export function SkinSelector({
           const isEquipped =
             (slot === 'deck' && equipped?.deck === item.id) ||
             (slot === 'chip' && equipped?.chip === item.id) ||
-            (slot === 'frame' && equipped?.frame === item.id);
+            (slot === 'frame' && equipped?.frame === item.id) ||
+            (slot === 'title' && equipped?.title === item.id);
           const needsTier = !tierMeetsRequirement(subscriptionTier, item.requiredTier);
           return (
             <div
@@ -108,7 +110,7 @@ export function SkinSelector({
                 alt=""
                 className={cn(
                   'mb-2 object-contain transition-transform duration-300 group-hover:scale-105',
-                  slot === 'deck' ? 'h-20 w-14' : 'h-16 w-16'
+                  slot === 'deck' ? 'h-20 w-14' : slot === 'title' ? 'h-10 w-36 max-w-full' : 'h-16 w-16'
                 )}
                 loading="lazy"
               />

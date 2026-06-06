@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180" fill="none">
   <defs>
-    <linearGradient id="s" x1="0" y1="0" x2="400" y2="80">
-      <stop stop-color="#d4d4d8"/>
-      <stop offset="1" stop-color="#52525b"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="420" y2="180">
+      <stop stop-color="#1c1c24"/><stop offset="1" stop-color="#09090b"/>
     </linearGradient>
-    <linearGradient id="sBg" x1="0" y1="0" x2="400" y2="80">
-      <stop stop-color="#050508"/>
-      <stop offset="1" stop-color="#14141f"/>
+    <linearGradient id="gem" x1="0" y1="0" x2="80" y2="80">
+      <stop stop-color="#d4d4d8"/><stop offset="0.5" stop-color="#e8e8e8"/><stop offset="1" stop-color="#a1a1aa"/>
     </linearGradient>
+    <pattern id="p" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M15 0 Q22 15 15 30 Q8 15 15 0" stroke="#e8e8e8" stroke-opacity="0.1" fill="none"/>
+    </pattern>
   </defs>
-  <rect width="400" height="80" fill="url(#sBg)"/>
-  <rect width="400" height="80" fill="url(#s)" opacity="0.2"/>
-  <text x="24" y="48" fill="#d4d4d8" font-family="Georgia,serif" font-size="28" font-weight="600">SILVER</text>
+  <rect width="420" height="180" fill="url(#bg)"/>
+  <rect width="420" height="180" fill="url(#p)" opacity="0.5"/>
+  <polygon points="60,90 90,50 120,90 90,130" fill="url(#gem)" stroke="#d4d4d8" stroke-width="1"/>
+  <polygon points="60,90 75,70 90,90 75,110" fill="#fafafa" fill-opacity="0.4"/>
+  <text x="150" y="78" fill="#d4d4d8" font-family="Georgia,serif" font-size="28" font-weight="700">DP CLUB</text>
+  <text x="150" y="108" fill="#e8e8e8" font-family="system-ui,sans-serif" font-size="16" font-weight="600" letter-spacing="0.15em">SILVER CLUB</text>
+  <text x="150" y="138" fill="#a1a1aa" font-family="system-ui,sans-serif" font-size="11" opacity="0.7">Premium subscription tier</text>
 </svg>

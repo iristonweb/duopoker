@@ -55,10 +55,12 @@ export const config = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
   /** Optional Stripe Price IDs for subscriptions (Dashboard → Products → Price ID) */
+  stripePriceBronze: process.env.STRIPE_PRICE_BRONZE ?? '',
   stripePriceSilver: process.env.STRIPE_PRICE_SILVER ?? '',
   stripePriceGold: process.env.STRIPE_PRICE_GOLD ?? '',
   stripePricePlatinum: process.env.STRIPE_PRICE_PLATINUM ?? '',
-  stripePriceRoyal: process.env.STRIPE_PRICE_ROYAL ?? '',
+  stripePriceDiamond: process.env.STRIPE_PRICE_DIAMOND ?? '',
+  stripePriceBlack: process.env.STRIPE_PRICE_BLACK ?? '',
   yookassaShopId: process.env.YOOKASSA_SHOP_ID ?? '',
   yookassaSecretKey: process.env.YOOKASSA_SECRET_KEY ?? '',
   publicWebUrl: process.env.PUBLIC_WEB_URL ?? 'http://localhost:5173',

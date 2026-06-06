@@ -116,6 +116,7 @@ export const ProfilePage = () => {
                     name={nickLabel}
                     avatarUrl={avatarUrl}
                     frameId={equipped.frame}
+                    titleId={equipped.title}
                     tier={subscriptionTier}
                     tableStatus={tableStatus}
                     size="lg"
@@ -165,7 +166,8 @@ export const ProfilePage = () => {
             slotTabs={[
               { id: 'deck' as const, label: t('cosmetics.tabs.deck') },
               { id: 'chip' as const, label: t('cosmetics.tabs.chip') },
-              { id: 'frame' as const, label: t('cosmetics.tabs.frame') }
+              { id: 'frame' as const, label: t('cosmetics.tabs.frame') },
+              { id: 'title' as const, label: t('cosmetics.tabs.title') }
             ]}
             equipLabel={t('cosmetics.equip')}
             equippedLabel={t('cosmetics.equipped')}
@@ -185,12 +187,12 @@ export const ProfilePage = () => {
             />
             {subscriptionTier === 'FREE' ? (
               <SubscriptionTierCard
-                tier="SILVER"
-                price={t('subscriptions.priceSilver')}
-                tierName={t('subscriptions.silver')}
-                perkDescription={t('subscriptions.perkSummary.silver')}
-                perks={tierPerks('SILVER')}
-                bannerUrl={subscriptionBannerImages.SILVER}
+                tier="BRONZE"
+                price={t('subscriptions.priceBronze')}
+                tierName={t('subscriptions.bronze')}
+                perkDescription={t('subscriptions.perkSummary.bronze')}
+                perks={tierPerks('BRONZE')}
+                bannerUrl={subscriptionBannerImages.BRONZE}
                 featured
               >
                 <Link to="/lobby#subscriptions">

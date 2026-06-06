@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { allCosmetics } from '@duopoker/shared-types';
 import { PrismaClient } from '@duopoker/db-schema';
 
 const prisma = new PrismaClient();
@@ -6,25 +7,7 @@ const prisma = new PrismaClient();
 const LIFETIME_EXPIRES = new Date('2099-12-31T23:59:59.999Z');
 const FOUNDER_EMAIL = 'iristonweb@gmail.com';
 
-const ALL_COSMETIC_ITEMS = [
-  { id: 'deck_classic', rarity: 'COMMON' as const },
-  { id: 'deck_silver', rarity: 'RARE' as const },
-  { id: 'deck_gold', rarity: 'EPIC' as const },
-  { id: 'deck_platinum', rarity: 'EPIC' as const },
-  { id: 'deck_royal', rarity: 'LEGENDARY' as const },
-  { id: 'deck_neon', rarity: 'RARE' as const },
-  { id: 'chip_classic', rarity: 'COMMON' as const },
-  { id: 'chip_silver', rarity: 'RARE' as const },
-  { id: 'chip_gold', rarity: 'EPIC' as const },
-  { id: 'chip_platinum', rarity: 'EPIC' as const },
-  { id: 'chip_royal', rarity: 'LEGENDARY' as const },
-  { id: 'table_void', rarity: 'EPIC' as const },
-  { id: 'frame_none', rarity: 'COMMON' as const },
-  { id: 'frame_silver', rarity: 'RARE' as const },
-  { id: 'frame_gold', rarity: 'EPIC' as const },
-  { id: 'frame_platinum', rarity: 'EPIC' as const },
-  { id: 'frame_royal', rarity: 'LEGENDARY' as const }
-];
+const ALL_COSMETIC_ITEMS = allCosmetics.map((c) => ({ id: c.id, rarity: c.rarity }));
 
 async function grantFounder(email: string) {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -39,15 +22,15 @@ async function grantFounder(email: string) {
   });
 
   await prisma.subscription.upsert({
-    where: { id: `${user.id}-ROYAL` },
+    where: { id: `${user.id}-BLACK` },
     create: {
-      id: `${user.id}-ROYAL`,
+      id: `${user.id}-BLACK`,
       userId: user.id,
-      tier: 'ROYAL',
+      tier: 'BLACK',
       status: 'ACTIVE',
       expiresAt: LIFETIME_EXPIRES
     },
-    update: { tier: 'ROYAL', status: 'ACTIVE', expiresAt: LIFETIME_EXPIRES }
+    update: { tier: 'BLACK', status: 'ACTIVE', expiresAt: LIFETIME_EXPIRES }
   });
 
   for (const item of ALL_COSMETIC_ITEMS) {
@@ -61,7 +44,7 @@ async function grantFounder(email: string) {
     }
   }
 
-  console.log(`Founder package granted: ${email} — SUPERADMIN, ROYAL lifetime, all cosmetics`);
+  console.log(`Founder package granted: ${email} — SUPERADMIN, BLACK lifetime, all cosmetics`);
 }
 
 async function seedSuperAdmin() {

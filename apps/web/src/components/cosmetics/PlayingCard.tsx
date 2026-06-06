@@ -99,7 +99,8 @@ export function PlayingCard({
           'relative overflow-hidden shadow-[0_10px_28px_rgba(0,0,0,0.5)] ring-1 ring-white/15',
           s.box,
           s.radius,
-          premium && deckId === 'deck_royal' && 'card-back-royal',
+          premium && deckId === 'deck_black' && 'card-back-black',
+          premium && deckId === 'deck_diamond' && 'card-back-diamond',
           premium && deckId === 'deck_platinum' && 'card-back-platinum',
           className
         )}

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
+import type { PaidSubscriptionTier } from '@duopoker/shared-types';
 import {
   catalogGameModes,
   clubsHeroBanner,
@@ -33,6 +34,7 @@ import { PlayingCard } from '../components/cosmetics/PlayingCard';
 import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { PokerTable3D } from '../components/PokerTable3D';
+import { SubscriptionPerksMatrix } from '../components/subscriptions/SubscriptionPerksMatrix';
 import { VoiceRoom } from '../components/VoiceRoom';
 import { useAppStore } from '../store/useAppStore';
 import { translateAuthError, translateQueueError } from '../lib/translate-store-error';
@@ -98,6 +100,7 @@ function AuthPanel() {
               name={nickLabel}
               avatarUrl={avatarUrl}
               frameId={equipped.frame}
+              titleId={equipped.title}
               tier={subscriptionTier}
               size="md"
               showTier
@@ -436,30 +439,31 @@ export const Lobby = () => {
     }
   };
 
-  const tierPerkBullets = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') => {
-    const key = `subscriptions.perkBullets.${tier.toLowerCase()}` as
-      | 'subscriptions.perkBullets.silver'
-      | 'subscriptions.perkBullets.gold'
-      | 'subscriptions.perkBullets.platinum'
-      | 'subscriptions.perkBullets.royal';
+  const PAID_TIERS: PaidSubscriptionTier[] = [
+    'BRONZE',
+    'SILVER',
+    'GOLD',
+    'PLATINUM',
+    'DIAMOND',
+    'BLACK'
+  ];
+
+  const tierPerkBullets = (tier: PaidSubscriptionTier) => {
+    const key = `subscriptions.perkBullets.${tier.toLowerCase()}`;
     const bullets = t(key, { returnObjects: true });
     return Array.isArray(bullets) ? (bullets as string[]) : [];
   };
 
-  const subscriptionPriceLabel = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') => {
+  const subscriptionPriceLabel = (tier: PaidSubscriptionTier) => {
     const fromCatalog = catalogSubs.find((s) => s.tier === tier)?.priceRubMonthly;
     if (typeof fromCatalog === 'number') {
       return `${fromCatalog.toLocaleString('ru-RU')} ₽/мес`;
     }
-    const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}` as
-      | 'subscriptions.priceSilver'
-      | 'subscriptions.priceGold'
-      | 'subscriptions.pricePlatinum'
-      | 'subscriptions.priceRoyal';
+    const priceKey = `subscriptions.price${tier.charAt(0)}${tier.slice(1).toLowerCase()}`;
     return t(priceKey);
   };
 
-  const tierPerks = (tier: 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL') =>
+  const tierPerks = (tier: PaidSubscriptionTier) =>
     subscriptionCosmetics
       .filter((c) => c.requiredTier === tier)
       .map((c) => c.name);
@@ -751,20 +755,23 @@ export const Lobby = () => {
             {checkoutMsg ? (
               <p className="rounded-xl border border-gold/25 bg-gold/10 px-4 py-3 text-sm text-gold-light">{checkoutMsg}</p>
             ) : null}
-            <div id="subscriptions" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL'] as const).map((tier) => {
+            <div className="mb-6">
+              <SubscriptionPerksMatrix />
+            </div>
+            <div id="subscriptions" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {PAID_TIERS.map((tier) => {
                 const active = subscriptionTier === tier;
                 return (
                   <SubscriptionTierCard
                     key={tier}
                     tier={tier}
                     price={subscriptionPriceLabel(tier)}
-                    tierName={t(`subscriptions.${tier.toLowerCase()}` as 'subscriptions.silver')}
-                    perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}` as 'subscriptions.perkSummary.silver')}
+                    tierName={t(`subscriptions.${tier.toLowerCase()}`)}
+                    perkDescription={t(`subscriptions.perkSummary.${tier.toLowerCase()}`)}
                     featureBullets={tierPerkBullets(tier)}
                     perks={tierPerks(tier)}
                     active={active}
-                    featured={tier === 'ROYAL'}
+                    featured={tier === 'BLACK'}
                     bannerUrl={subBanner(tier)}
                   >
                     <Button

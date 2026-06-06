@@ -6,11 +6,15 @@ import { prisma } from '../services/prisma.js';
 
 const stripe = config.stripeSecretKey ? new Stripe(config.stripeSecretKey) : null;
 
-const tierFromPrice = (priceId: string): 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL' | null => {
+const tierFromPrice = (
+  priceId: string
+): 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK' | null => {
+  if (priceId && priceId === process.env.STRIPE_PRICE_BRONZE) return 'BRONZE';
   if (priceId && priceId === process.env.STRIPE_PRICE_SILVER) return 'SILVER';
   if (priceId && priceId === process.env.STRIPE_PRICE_GOLD) return 'GOLD';
   if (priceId && priceId === process.env.STRIPE_PRICE_PLATINUM) return 'PLATINUM';
-  if (priceId && priceId === process.env.STRIPE_PRICE_ROYAL) return 'ROYAL';
+  if (priceId && priceId === process.env.STRIPE_PRICE_DIAMOND) return 'DIAMOND';
+  if (priceId && priceId === process.env.STRIPE_PRICE_BLACK) return 'BLACK';
   return null;
 };
 

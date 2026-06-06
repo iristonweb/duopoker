@@ -2,14 +2,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
   <defs>
     <linearGradient id="body" x1="0" y1="0" x2="120" y2="120">
-      <stop stop-color="#6d28d9"/>
-      <stop offset="0.5" stop-color="#a78bfa"/>
-      <stop offset="1" stop-color="#ddd6fe"/>
+      <stop stop-color="#141820"/><stop offset="1" stop-color="#0a0c14"/>
     </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="120" y2="120">
+      <stop stop-color="#c8e0f8"/><stop offset="1" stop-color="#a8c8e8"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="1.5"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <circle cx="60" cy="60" r="54" fill="url(#body)" stroke="#faf5ff" stroke-width="5"/>
-  <circle cx="60" cy="60" r="44" fill="none" stroke="#4c1d95" stroke-opacity="0.35" stroke-width="2" stroke-dasharray="5 6"/>
-  <circle cx="60" cy="60" r="26" fill="#1e1035" stroke="#e9d5ff" stroke-opacity="0.35" stroke-width="1"/>
-  <text x="60" y="58" text-anchor="middle" fill="#faf5ff" font-family="Georgia,serif" font-size="16" font-weight="700">DP</text>
-  <text x="60" y="70" text-anchor="middle" fill="#ede9fe" font-family="system-ui,sans-serif" font-size="6" font-weight="700" letter-spacing="0.28em">CLUB</text>
+  <circle cx="60" cy="60" r="54" fill="url(#body)" stroke="url(#edge)" stroke-width="6" filter="url(#glow)"/>
+  <circle cx="60" cy="60" r="44" fill="none" stroke="#e8f4fc" stroke-opacity="0.35" stroke-width="2" stroke-dasharray="4 6"/>
+  <circle cx="60" cy="60" r="28" fill="#0a0c14" stroke="#e8f4fc" stroke-opacity="0.25" stroke-width="1"/>
+  
+  
+  <text x="60" y="58" text-anchor="middle" fill="#c8e0f8" font-family="Georgia,serif" font-size="14" font-weight="700">DP</text>
+  <text x="60" y="70" text-anchor="middle" fill="#e8f4fc" font-family="system-ui,sans-serif" font-size="5.5" font-weight="700" letter-spacing="0.28em">CLUB</text>
 </svg>

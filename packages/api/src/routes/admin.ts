@@ -18,7 +18,7 @@ import {
 } from '../services/vip-table.js';
 
 const subscriptionSchema = z.object({
-  tier: z.enum(['SILVER', 'GOLD', 'PLATINUM', 'ROYAL']),
+  tier: z.enum(['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK']),
   lifetime: z.boolean().optional().default(false)
 });
 

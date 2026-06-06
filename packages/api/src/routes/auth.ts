@@ -14,18 +14,7 @@ import {
 import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
 import { decryptProfileRow } from '../lib/profile-privacy.js';
 import { jsonError } from '../lib/http-error.js';
-import { grantFounderPackage } from '../services/admin-grants.js';
-
-const ensureFounderAccount = async (email: string): Promise<'SUPERADMIN' | 'USER' | null> => {
-  if (email.toLowerCase() !== config.founderEmail) return null;
-  const result = await grantFounderPackage(email);
-  if (!result.ok) return null;
-  const updated = await prisma.user.findUnique({
-    where: { id: result.userId },
-    select: { role: true }
-  });
-  return updated?.role ?? 'SUPERADMIN';
-};
+import { resolveUserRole } from '../services/admin-access.js';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -109,7 +98,7 @@ authRoutes.post('/register', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
-    const founderRole = await ensureFounderAccount(user.email);
+    const role = (await resolveUserRole(user.id, user.email)) ?? user.role;
     return c.json(
       {
         ...tokens,
@@ -119,7 +108,7 @@ authRoutes.post('/register', async (c) => {
           displayName: user.displayName,
           nickname: user.nickname,
           emailVerified: user.emailVerified,
-          role: founderRole ?? user.role
+          role
         },
         verificationRequired: verify && !user.emailVerified
       },
@@ -153,7 +142,7 @@ authRoutes.post('/login', async (c) => {
     }
     const deviceId = c.req.header('x-device-id') ?? 'web';
     const tokens = await issueSession(user.id, user.email, deviceId);
-    const founderRole = await ensureFounderAccount(user.email);
+    const role = (await resolveUserRole(user.id, user.email)) ?? user.role;
     return c.json({
       ...tokens,
       user: {
@@ -162,7 +151,7 @@ authRoutes.post('/login', async (c) => {
         displayName: user.displayName,
         nickname: user.nickname,
         emailVerified: user.emailVerified,
-        role: founderRole ?? user.role
+        role
       }
     });
   } catch (error) {
@@ -270,9 +259,10 @@ authRoutes.get('/me', async (c) => {
       }
     });
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const role = (await resolveUserRole(user.id, user.email)) ?? user.role;
     const { subscriptions, inventory, ...profile } = user;
     return c.json({
-      user: decryptProfileRow(profile),
+      user: { ...decryptProfileRow(profile), role },
       subscription: subscriptions[0] ?? null,
       inventory
     });

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#1a1208"/><stop offset="1" stop-color="#0d0906"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#d4a574"/><stop offset="0.5" stop-color="#b87333"/><stop offset="1" stop-color="#8B5A2B"/>
+    </linearGradient>
+    <pattern id="filigree" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M10 0 Q15 10 10 20 Q5 10 10 0" stroke="#b87333" stroke-opacity="0.15" fill="none" stroke-width="0.8"/>
+      <circle cx="10" cy="10" r="1.5" fill="#b87333" fill-opacity="0.2"/>
+    </pattern>
+    
+  </defs>
+  <rect width="140" height="200" rx="10" fill="url(#bg)" stroke="url(#metal)" stroke-width="2"/>
+  <rect x="6" y="6" width="128" height="188" rx="8" fill="url(#filigree)" opacity="0.6"/>
+  <rect x="12" y="12" width="116" height="176" rx="6" stroke="url(#metal)" stroke-opacity="0.4" stroke-width="1"/>
+  
+  
+  <circle cx="24" cy="24" r="3" fill="#b87333" fill-opacity="0.35"/>
+  <circle cx="116" cy="176" r="3" fill="#b87333" fill-opacity="0.35"/>
+  <circle cx="116" cy="24" r="2" fill="#d4a574" fill-opacity="0.25"/>
+  <circle cx="24" cy="176" r="2" fill="#d4a574" fill-opacity="0.25"/>
+  <path d="M30 100 Q70 80 110 100 Q70 120 30 100" stroke="url(#metal)" stroke-opacity="0.3" fill="none" stroke-width="1"/>
+  <text x="70" y="96" text-anchor="middle" fill="url(#metal)" font-family="Georgia,serif" font-size="32" font-weight="700">DP</text>
+  <text x="70" y="118" text-anchor="middle" fill="#d4a574" font-family="system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="0.34em">CLUB</text>
+  <text x="70" y="168" text-anchor="middle" fill="#b87333" fill-opacity="0.5" font-family="system-ui,sans-serif" font-size="7" font-weight="600" letter-spacing="0.2em">BRONZE CLUB</text>
+</svg>

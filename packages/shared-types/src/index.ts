@@ -48,6 +48,7 @@ export {
   subscriptionCosmetics,
   subscriptionCosmeticsBySlot,
   tierLabel,
+  titleBadgeLabel,
   tierMeetsRequirement,
   TIER_RANK,
   type CosmeticDefinition,
@@ -132,7 +133,7 @@ export interface SessionState {
 }
 
 /** Minimum subscription tier to reveal ghost board after a preflop muck-win. */
-export const GHOST_BOARD_MIN_TIER = 'SILVER' as const;
+export const GHOST_BOARD_MIN_TIER = 'BRONZE' as const;
 
 export interface ReplayFrame {
   at: number;

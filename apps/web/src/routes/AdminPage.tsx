@@ -85,6 +85,7 @@ export function AdminPage() {
   const userRole = useAppStore((s) => s.userRole);
   const apiFetch = useAppStore((s) => s.apiFetch);
   const accessToken = useAppStore((s) => s.accessToken);
+  const fetchProfile = useAppStore((s) => s.fetchProfile);
   const joinSession = useAppStore((s) => s.joinSession);
 
   const [tab, setTab] = useState<Tab>('overview');
@@ -110,7 +111,12 @@ export function AdminPage() {
       apiFetch('/admin/queue'),
       apiFetch('/admin/vip-tables')
     ]);
-    if (!statsRes.ok || !usersRes.ok) throw new Error('forbidden');
+    if (!statsRes.ok || !usersRes.ok) {
+      const failed = !statsRes.ok ? statsRes : usersRes;
+      if (failed.status === 401) throw new Error('unauthorized');
+      if (failed.status === 403) throw new Error('forbidden');
+      throw new Error('server');
+    }
     setStats((await statsRes.json()) as AdminStats);
     const usersData = (await usersRes.json()) as { users: AdminUser[]; total: number };
     setUsers(usersData.users);
@@ -124,15 +130,34 @@ export function AdminPage() {
   }, [apiFetch, search]);
 
   useEffect(() => {
-    if (!accessToken || userRole !== 'SUPERADMIN') {
+    if (!accessToken) {
       setLoading(false);
       return;
     }
+    let cancelled = false;
     setLoading(true);
-    void loadCore()
-      .catch(() => setError(t('admin.forbidden')))
-      .finally(() => setLoading(false));
-  }, [accessToken, userRole, loadCore, t]);
+    setError(undefined);
+    void fetchProfile()
+      .then(() => {
+        if (cancelled) return;
+        if (useAppStore.getState().userRole !== 'SUPERADMIN') {
+          setLoading(false);
+          return;
+        }
+        return loadCore().catch((err: Error) => {
+          if (cancelled) return;
+          if (err.message === 'unauthorized') setError(t('admin.sessionExpired'));
+          else if (err.message === 'forbidden') setError(t('admin.forbidden'));
+          else setError(t('admin.loadFailed'));
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, fetchProfile, loadCore, t]);
 
   const openUser = async (id: string) => {
     setBusy(true);
@@ -218,10 +243,12 @@ export function AdminPage() {
     }
   };
 
-  if (userRole !== 'SUPERADMIN') {
+  if (!accessToken || (!loading && userRole !== 'SUPERADMIN')) {
     return (
       <PageShell maxWidth="2xl" back={<Link to="/lobby" className="premium-link text-sm">{t('nav.backLobby')}</Link>}>
-        <GlassPanel className="border-white/10 p-6 text-muted">{t('admin.forbidden')}</GlassPanel>
+        <GlassPanel className="border-white/10 p-6 text-muted">
+          {!accessToken ? t('auth.signInRequired') : t('admin.forbidden')}
+        </GlassPanel>
       </PageShell>
     );
   }
@@ -344,7 +371,7 @@ export function AdminPage() {
                   <div><span className="text-subtle">{t('admin.inventory')}</span><p className="font-semibold">{selected.inventory.length} {t('admin.items')}</p></div>
                 </div>
                 <div className="mt-6 flex flex-wrap gap-2">
-                  <button type="button" disabled={busy} className="premium-btn premium-btn-primary text-xs" onClick={() => void grantAction('/subscription', { tier: 'ROYAL', lifetime: true })}>
+                  <button type="button" disabled={busy} className="premium-btn premium-btn-primary text-xs" onClick={() => void grantAction('/subscription', { tier: 'BLACK', lifetime: true })}>
                     {t('admin.grantRoyal')}
                   </button>
                   <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/cosmetics', { grantAll: true })}>

@@ -14,10 +14,12 @@ datasource db {
 }
 
 enum Tier {
+  BRONZE
   SILVER
   GOLD
   PLATINUM
-  ROYAL
+  DIAMOND
+  BLACK
 }
 
 enum Status {

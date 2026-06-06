@@ -1,7 +1,7 @@
 import { allCosmetics } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
 
-type PaidTier = 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
+type PaidTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
 
 export const LIFETIME_EXPIRES = new Date('2099-12-31T23:59:59.999Z');
 
@@ -53,7 +53,9 @@ export const grantAllCosmetics = async (userId: string) =>
   );
 
 export const grantFounderPackage = async (email: string) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } }
+  });
   if (!user) {
     return { ok: false as const, error: 'USER_NOT_FOUND' };
   }
@@ -67,7 +69,7 @@ export const grantFounderPackage = async (email: string) => {
     }
   });
 
-  await grantSubscription(user.id, 'ROYAL', true);
+  await grantSubscription(user.id, 'BLACK', true);
   const items = await grantAllCosmetics(user.id);
 
   return {

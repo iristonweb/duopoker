@@ -2,21 +2,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 200" fill="none">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="140" y2="200">
-      <stop stop-color="#1e1035"/>
-      <stop offset="1" stop-color="#090612"/>
+      <stop stop-color="#141820"/><stop offset="1" stop-color="#0a0c14"/>
     </linearGradient>
-    <linearGradient id="platinum" x1="0" y1="0" x2="140" y2="200">
-      <stop stop-color="#e9d5ff"/>
-      <stop offset="0.5" stop-color="#a78bfa"/>
-      <stop offset="1" stop-color="#7c3aed"/>
+    <linearGradient id="metal" x1="0" y1="0" x2="140" y2="200">
+      <stop stop-color="#c8e0f8"/><stop offset="0.5" stop-color="#e8f4fc"/><stop offset="1" stop-color="#a8c8e8"/>
     </linearGradient>
-    <pattern id="prism" width="16" height="16" patternUnits="userSpaceOnUse">
-      <path d="M8 0L16 8L8 16L0 8Z" fill="#a78bfa" fill-opacity="0.08"/>
+    <pattern id="filigree" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M10 0 Q15 10 10 20 Q5 10 10 0" stroke="#e8f4fc" stroke-opacity="0.15" fill="none" stroke-width="0.8"/>
+      <circle cx="10" cy="10" r="1.5" fill="#e8f4fc" fill-opacity="0.2"/>
     </pattern>
+    <filter id="glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <rect width="140" height="200" rx="10" fill="url(#bg)" stroke="url(#platinum)" stroke-opacity="0.55" stroke-width="1.8"/>
-  <rect x="8" y="8" width="124" height="184" rx="7" fill="url(#prism)"/>
-  <rect x="14" y="14" width="112" height="172" rx="6" stroke="url(#platinum)" stroke-opacity="0.4" stroke-width="1"/>
-  <text x="70" y="96" text-anchor="middle" fill="url(#platinum)" font-family="Georgia,serif" font-size="38" font-weight="700">DP</text>
-  <text x="70" y="118" text-anchor="middle" fill="#ddd6fe" font-family="system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="0.34em">CLUB</text>
+  <rect width="140" height="200" rx="10" fill="url(#bg)" stroke="url(#metal)" stroke-width="2"/>
+  <rect x="6" y="6" width="128" height="188" rx="8" fill="url(#filigree)" opacity="0.6"/>
+  <rect x="12" y="12" width="116" height="176" rx="6" stroke="url(#metal)" stroke-opacity="0.4" stroke-width="1"/>
+  <polygon points="70,28 78,44 70,60 62,44" fill="#d0e8ff" fill-opacity="0.6" filter="url(#glow)"/>
+  
+  <circle cx="24" cy="24" r="3" fill="#e8f4fc" fill-opacity="0.35"/>
+  <circle cx="116" cy="176" r="3" fill="#e8f4fc" fill-opacity="0.35"/>
+  <circle cx="116" cy="24" r="2" fill="#c8e0f8" fill-opacity="0.25"/>
+  <circle cx="24" cy="176" r="2" fill="#c8e0f8" fill-opacity="0.25"/>
+  <path d="M30 100 Q70 80 110 100 Q70 120 30 100" stroke="url(#metal)" stroke-opacity="0.3" fill="none" stroke-width="1"/>
+  <text x="70" y="96" text-anchor="middle" fill="url(#metal)" font-family="Georgia,serif" font-size="32" font-weight="700">DP</text>
+  <text x="70" y="118" text-anchor="middle" fill="#c8e0f8" font-family="system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="0.34em">CLUB</text>
+  <text x="70" y="168" text-anchor="middle" fill="#e8f4fc" fill-opacity="0.5" font-family="system-ui,sans-serif" font-size="7" font-weight="600" letter-spacing="0.2em">PLATINUM CLUB</text>
 </svg>

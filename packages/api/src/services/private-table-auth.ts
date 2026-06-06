@@ -145,6 +145,7 @@ export const getSessionPlayerProfiles = async (userIds: string[]): Promise<Sessi
       if (itemId.startsWith('deck_')) equippedFromDb.deck = itemId;
       if (itemId.startsWith('chip_') || itemId === 'table_void') equippedFromDb.chip = itemId;
       if (itemId.startsWith('frame_')) equippedFromDb.frame = itemId;
+      if (itemId.startsWith('title_')) equippedFromDb.title = itemId;
     }
     return {
       userId: id,

@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.js';
 
 const DAILY_BONUS_PROVIDER = 'STRIPE' as const;
 
-export type PaidSubscriptionTier = 'SILVER' | 'GOLD' | 'PLATINUM' | 'ROYAL';
+export type PaidSubscriptionTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'BLACK';
 
 export const activateSubscription = async (userId: string, tier: PaidSubscriptionTier) => {
   const subId = `${userId}-${tier}`;

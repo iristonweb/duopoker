@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
@@ -39,6 +39,7 @@ export const Table = () => {
   const pollSession = useAppStore((s) => s.pollSession);
   const stopPolling = useAppStore((s) => s.stopPolling);
   const leaveTable = useAppStore((s) => s.leaveTable);
+  const clearTableSession = useAppStore((s) => s.clearTableSession);
   const mode = useAppStore((s) => s.mode);
 
   const equipped = useAppStore((s) => s.equipped);
@@ -192,19 +193,54 @@ export const Table = () => {
     setGhostBoardVisible(false);
   }, [session?.handNumber]);
 
-  const handleLeaveTable = async () => {
-    const id = session?.sessionId ?? routeSessionId;
-    if (!id || leaving) return;
-    setLeaving(true);
-    await leaveTable(id);
-    navigate('/lobby');
+  const exitToLobby = () => {
+    clearTableSession();
+    navigate('/lobby', { replace: true });
   };
 
-  useEffect(() => {
-    if (sessionError === 'NOT_SEATED' && routeSessionId) {
-      navigate('/lobby');
+  const handleLeaveTable = async () => {
+    const id = session?.sessionId ?? routeSessionId;
+    if (leaving) return;
+    if (!id) {
+      exitToLobby();
+      return;
     }
-  }, [sessionError, routeSessionId, navigate]);
+    setLeaving(true);
+    try {
+      const result = await leaveTable(id);
+      if (
+        result.ok ||
+        result.reason === 'NOT_SEATED' ||
+        result.reason === 'SESSION_NOT_FOUND'
+      ) {
+        exitToLobby();
+        return;
+      }
+    } finally {
+      setLeaving(false);
+    }
+  };
+
+  const sessionExitCodes = [
+    'NOT_SEATED',
+    'NOT_ASSIGNED',
+    'join_failed',
+    'SESSION_NOT_FOUND',
+    'AUTH_REQUIRED'
+  ];
+
+  useEffect(() => {
+    if (!sessionError || !routeSessionId) return;
+    if (sessionExitCodes.includes(sessionError)) {
+      exitToLobby();
+    }
+  }, [sessionError, routeSessionId]);
+
+  useEffect(() => {
+    if (matchRoute && session) return;
+    const timer = window.setTimeout(() => exitToLobby(), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [matchRoute, session, routeSessionId]);
 
   if (!routeSessionId) {
     return (
@@ -219,9 +255,9 @@ export const Table = () => {
       <PageShell
         maxWidth="lg"
         back={
-          <Link to="/lobby" className="premium-link text-sm">
+          <button type="button" className="premium-link text-sm" onClick={() => exitToLobby()}>
             {t('nav.backLobby')}
-          </Link>
+          </button>
         }
         eyebrow={t('table.connecting')}
         title={t('table.joiningTitle')}
@@ -230,6 +266,9 @@ export const Table = () => {
           <LoadingSkeleton lines={2} className="mb-4" />
           <p className="text-sm text-muted">{t('table.connectingTo', { id: routeSessionId })}</p>
           <p className="mt-2 text-xs text-subtle">{t('table.connectingHint')}</p>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={() => exitToLobby()}>
+            {t('table.backToLobby')}
+          </Button>
         </GlassPanel>
       </PageShell>
     );
