@@ -2,6 +2,7 @@ import { Redirect, router, Link } from 'expo-router';
 import { useState } from 'react';
 import { colors } from '@duopoker/shared-types';
 import { useMobileStore } from '../src/state/useMobileStore';
+import { strings } from '../src/lib/strings';
 import { mobileTheme } from '../src/theme';
 
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -35,11 +36,11 @@ export default function LoginScreen() {
           <Text style={styles.title}>
             Duo<Text style={styles.titleAccent}>Poker</Text>
           </Text>
-          <Text style={styles.subtitle}>Sign in to receive table invites and join club tables.</Text>
+          <Text style={styles.subtitle}>{strings.login.subtitle}</Text>
           <TextInput
             autoCapitalize="none"
             keyboardType="email-address"
-            placeholder="Email"
+            placeholder={strings.login.email}
             placeholderTextColor={colors.textSubtle}
             value={email}
             onChangeText={setEmail}
@@ -47,23 +48,23 @@ export default function LoginScreen() {
           />
           <TextInput
             secureTextEntry
-            placeholder="Password"
+            placeholder={strings.login.password}
             placeholderTextColor={colors.textSubtle}
             value={password}
             onChangeText={setPassword}
             style={styles.input}
           />
-          {authError ? <Text style={styles.error}>Invalid email or password</Text> : null}
+          {authError ? <Text style={styles.error}>{strings.login.invalidCredentials}</Text> : null}
           <Pressable disabled={busy} onPress={() => void onSubmit()} style={styles.cta}>
             {busy ? (
               <ActivityIndicator color={colors.background} />
             ) : (
-              <Text style={styles.ctaText}>Sign in</Text>
+              <Text style={styles.ctaText}>{strings.login.signIn}</Text>
             )}
           </Pressable>
           <Link href="https://duopoker.ru/register" asChild>
             <Pressable>
-              <Text style={styles.link}>Create account on web</Text>
+              <Text style={styles.link}>{strings.login.createAccount}</Text>
             </Pressable>
           </Link>
         </View>

@@ -22,7 +22,12 @@ export const voiceRoutes = new Hono();
 
 voiceRoutes.get('/status', (c) => {
   const cfg = liveKitCfg();
-  return c.json({ livekit: isLiveKitConfigured(cfg) ? 'configured' : 'missing' });
+  const configured = isLiveKitConfigured(cfg);
+  return c.json({
+    livekit: configured ? 'configured' : 'missing',
+    minTier: config.mockCheckout ? null : 'GOLD',
+    requiresAuth: true
+  });
 });
 
 voiceRoutes.post('/token', authGuard, async (c) => {
@@ -33,9 +38,11 @@ voiceRoutes.post('/token', authGuard, async (c) => {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
 
-  const tier = await resolveUserSubscriptionTier(userId);
-  if (TIER_RANK[tier] < TIER_RANK.GOLD) {
-    return c.json({ error: 'Voice chat requires Gold subscription or higher', code: 'TIER_REQUIRED' }, 403);
+  if (!config.mockCheckout) {
+    const tier = await resolveUserSubscriptionTier(userId);
+    if (TIER_RANK[tier] < TIER_RANK.GOLD) {
+      return c.json({ error: 'Voice chat requires Gold subscription or higher', code: 'TIER_REQUIRED' }, 403);
+    }
   }
 
   const access = await assertVoiceSessionAccess(parsed.data.sessionId, userId);

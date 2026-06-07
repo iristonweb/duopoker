@@ -3,6 +3,28 @@ export const JOKER_TOTAL_HANDS = 24;
 
 export const JOKER_RECOMMENDED_PLAYERS = 4;
 
+export type MatchMode = 'HOLDEM' | 'JOKER';
+
+/** Minimum seated players before the first hand is dealt. */
+export const minPlayersToStart = (mode: MatchMode): number =>
+  mode === 'JOKER' ? JOKER_RECOMMENDED_PLAYERS : 2;
+
+/** Players required in matchmaking before a human JOKER table opens. */
+export const matchmakingPlayerTarget = (mode: MatchMode): number =>
+  mode === 'JOKER' ? JOKER_RECOMMENDED_PLAYERS : 2;
+
+/** Clamp bot-table size; JOKER is always 4 per club rules. */
+export const clampMatchPlayerCount = (mode: MatchMode, n?: number): number => {
+  if (mode === 'JOKER') return JOKER_RECOMMENDED_PLAYERS;
+  return Math.min(6, Math.max(2, n ?? 2));
+};
+
+/** Club private tables: JOKER is always 4 seats per official rules. */
+export const clubTableMaxPlayers = (mode: MatchMode, requested?: number): number => {
+  if (mode === 'JOKER') return JOKER_RECOMMENDED_PLAYERS;
+  return Math.min(9, Math.max(2, requested ?? 6));
+};
+
 /** Cards dealt to each player for hand index 0..23. */
 export const jokerCardsPerHand = (handIndex: number): number => {
   const i = ((handIndex % JOKER_TOTAL_HANDS) + JOKER_TOTAL_HANDS) % JOKER_TOTAL_HANDS;

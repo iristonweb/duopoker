@@ -1,0 +1,303 @@
+import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import { computeSidePots, winnersAmongEligible } from '@duopoker/game-engine';
+import { potIndexForChipFlight } from '../holdem/side-pots';
+
+export const TABLE_STEP_MS = 300;
+
+export type TableSessionStep =
+  | { kind: 'action'; userId: string; text: string; action: PlayerAction; potIndex?: number }
+  | { kind: 'postBlind'; userId: string; amount: number; blindType: 'SB' | 'BB'; text: string }
+  | { kind: 'collectBets' }
+  | { kind: 'dealHole'; userId: string; cardIndex: number }
+  | { kind: 'dealBoard'; cardIndex: number }
+  | { kind: 'jokerPlay'; userId: string; card: Card }
+  | { kind: 'winnerChips'; userId: string; amount: number; handNumber: number; potIndex?: number }
+  | { kind: 'potPulse' };
+
+export type SessionSnap = {
+  handNumber: number;
+  actionLen: number;
+  street: string;
+  boardLen: number;
+  jokerTrickLen: number;
+};
+
+export const sessionSnap = (session: SessionState): SessionSnap => {
+  const boardLen =
+    session.mode === 'JOKER' && session.street === 'TRICKS' && session.joker
+      ? session.joker.currentTrick.length
+      : (session.communityCards?.length ?? 0);
+  return {
+    handNumber: session.handNumber,
+    actionLen: session.actionLog?.length ?? 0,
+    street: session.street ?? '',
+    boardLen,
+    jokerTrickLen: session.joker?.currentTrick.length ?? 0
+  };
+};
+
+export const buildTableSessionSteps = (
+  prev: SessionSnap | null,
+  session: SessionState,
+  formatAction: (action: PlayerAction) => string,
+  formatBlind?: (type: 'SB' | 'BB', amount: number) => string
+): TableSessionStep[] => {
+  if (!prev) return [];
+
+  const steps: TableSessionStep[] = [];
+  const snap = sessionSnap(session);
+
+  if (prev.handNumber !== snap.handNumber) {
+    const dealTargets = session.players;
+    for (const uid of dealTargets) {
+      const count = (session.playerCards[uid] ?? []).length || 2;
+      for (let i = 0; i < count; i++) {
+        steps.push({ kind: 'dealHole', userId: uid, cardIndex: i });
+      }
+    }
+
+    if (session.mode === 'HOLDEM' && formatBlind) {
+      const bb = session.bigBlind ?? 0;
+      const posted = new Set<string>();
+      for (const uid of session.players) {
+        const bet = session.playerRoundBet?.[uid] ?? 0;
+        if (bet <= 0 || posted.has(uid)) continue;
+        const blindType: 'SB' | 'BB' = bet >= bb ? 'BB' : 'SB';
+        steps.push({
+          kind: 'postBlind',
+          userId: uid,
+          amount: bet,
+          blindType,
+          text: formatBlind(blindType, bet)
+        });
+        posted.add(uid);
+      }
+    }
+
+    return steps;
+  }
+
+  if (
+    prev.street !== snap.street &&
+    prev.street !== 'LOBBY' &&
+    snap.street !== 'LOBBY' &&
+    session.mode !== 'JOKER'
+  ) {
+    steps.push({ kind: 'collectBets' }, { kind: 'potPulse' });
+  }
+
+  if (snap.actionLen > prev.actionLen) {
+    const newActions = session.actionLog!.slice(prev.actionLen);
+    const simContrib = { ...(session.handContributions ?? {}) };
+    for (const a of newActions) {
+      if (['bet', 'call', 'raise'].includes(a.type) && (a.amount ?? 0) > 0) {
+        simContrib[a.userId] = Math.max(0, (simContrib[a.userId] ?? 0) - (a.amount ?? 0));
+      }
+    }
+
+    for (const action of newActions) {
+      if (action.type === 'playCard' && action.card && session.mode === 'JOKER') {
+        steps.push({ kind: 'jokerPlay', userId: action.userId, card: action.card });
+      }
+
+      let potIndex: number | undefined;
+      if (
+        session.mode === 'HOLDEM' &&
+        ['bet', 'call', 'raise'].includes(action.type) &&
+        (action.amount ?? 0) > 0
+      ) {
+        const amount = action.amount ?? 0;
+        const nextContrib = {
+          ...simContrib,
+          [action.userId]: (simContrib[action.userId] ?? 0) + amount
+        };
+        potIndex = potIndexForChipFlight(
+          session.players,
+          nextContrib,
+          session.foldedPlayerIds,
+          action.userId,
+          amount
+        );
+        simContrib[action.userId] = nextContrib[action.userId]!;
+      }
+
+      steps.push({
+        kind: 'action',
+        userId: action.userId,
+        text: formatAction(action),
+        action,
+        potIndex
+      });
+    }
+  }
+
+  if (snap.boardLen > prev.boardLen && session.mode !== 'JOKER') {
+    for (let i = prev.boardLen; i < snap.boardLen; i++) {
+      steps.push({ kind: 'dealBoard', cardIndex: i });
+    }
+  }
+
+  if (session.mode === 'JOKER' && snap.jokerTrickLen > prev.jokerTrickLen && session.joker) {
+    const trickCard = session.joker.currentTrick[snap.jokerTrickLen - 1];
+    if (trickCard) {
+      steps.push({ kind: 'jokerPlay', userId: trickCard.userId, card: trickCard.card });
+    }
+  }
+
+  if (snap.street === 'COMPLETE' && prev.street !== 'COMPLETE') {
+    if (session.mode === 'HOLDEM' && session.handContributions) {
+      const folded = new Set(session.foldedPlayerIds ?? []);
+      const pots = computeSidePots(session.players, session.handContributions, folded);
+      if (pots.length > 1) {
+        for (let i = 0; i < pots.length; i++) {
+          const pot = pots[i]!;
+          const tied = winnersAmongEligible(
+            pot.eligible,
+            session.playerCards,
+            session.communityCards ?? [],
+            'HOLDEM'
+          );
+          const share = Math.floor(pot.amount / tied.length);
+          const remainder = pot.amount - share * tied.length;
+          tied.forEach((uid, j) => {
+            steps.push({
+              kind: 'winnerChips',
+              userId: uid,
+              amount: share + (j < remainder ? 1 : 0),
+              handNumber: session.handNumber,
+              potIndex: i
+            });
+          });
+        }
+        steps.push({ kind: 'potPulse' });
+        return steps;
+      }
+    }
+
+    if (session.winners?.length) {
+      for (const uid of session.winners) {
+        steps.push({
+          kind: 'winnerChips',
+          userId: uid,
+          amount: session.winnersShare?.[uid] ?? session.pot,
+          handNumber: session.handNumber,
+          potIndex: 0
+        });
+      }
+      steps.push({ kind: 'potPulse' });
+    }
+  }
+
+  return steps;
+};
+
+export const initHandDisplay = (target: SessionState, heroId: string): SessionState => {
+  const display = structuredClone(target);
+  display.communityCards = [];
+  display.ghostCommunityCards = [];
+  display.actionLog = [];
+  if (display.joker) {
+    display.joker = { ...display.joker, currentTrick: [] };
+  }
+  if (target.mode === 'HOLDEM' || target.mode === 'JOKER') {
+    display.playerCards = Object.fromEntries(target.players.map((uid) => [uid, []]));
+  } else if (heroId) {
+    display.playerCards = { ...display.playerCards, [heroId]: [] };
+  }
+  return display;
+};
+
+export const applyDisplayStep = (
+  display: SessionState,
+  target: SessionState,
+  step: TableSessionStep,
+  heroId: string
+): SessionState => {
+  const next = structuredClone(display);
+
+  switch (step.kind) {
+    case 'dealHole': {
+      const all = target.playerCards[step.userId] ?? [];
+      const dealt = all.slice(0, step.cardIndex + 1);
+      if (step.userId === heroId) {
+        next.playerCards = { ...next.playerCards, [heroId]: dealt };
+      } else {
+        next.playerCards = {
+          ...next.playerCards,
+          [step.userId]: Array.from({ length: dealt.length }, (_, i) => `__${step.userId}_${i}` as const)
+        };
+      }
+      break;
+    }
+    case 'postBlind': {
+      next.playerRoundBet = { ...(next.playerRoundBet ?? {}), [step.userId]: step.amount };
+      next.activePlayerIndex = target.activePlayerIndex;
+      break;
+    }
+    case 'action': {
+      next.actionLog = [...(next.actionLog ?? []), step.action];
+      next.activePlayerIndex = target.activePlayerIndex;
+      const logLen = next.actionLog.length;
+      const targetLen = target.actionLog?.length ?? 0;
+      if (logLen >= targetLen) {
+        next.stacks = { ...target.stacks };
+        next.playerRoundBet = { ...(target.playerRoundBet ?? {}) };
+        next.pot = target.pot;
+        next.foldedPlayerIds = [...(target.foldedPlayerIds ?? [])];
+        next.currentBet = target.currentBet;
+      } else {
+        const uid = step.action.userId;
+        if (step.action.type === 'fold') {
+          next.foldedPlayerIds = [...(next.foldedPlayerIds ?? []), uid].filter(
+            (id, i, arr) => arr.indexOf(id) === i
+          );
+        }
+        if (['bet', 'call', 'raise'].includes(step.action.type)) {
+          const paid = step.action.amount ?? 0;
+          next.playerRoundBet = {
+            ...(next.playerRoundBet ?? {}),
+            [uid]: (display.playerRoundBet?.[uid] ?? 0) + paid
+          };
+        }
+      }
+      break;
+    }
+    case 'collectBets': {
+      next.playerRoundBet = Object.fromEntries(next.players.map((uid) => [uid, 0]));
+      next.pot = target.pot;
+      next.street = target.street;
+      break;
+    }
+    case 'dealBoard': {
+      const board = target.communityCards ?? [];
+      next.communityCards = board.slice(0, step.cardIndex + 1);
+      break;
+    }
+    case 'jokerPlay':
+      if (target.joker && next.joker) {
+        const idx = target.joker.currentTrick.findIndex(
+          (c) => c.userId === step.userId && c.card === step.card
+        );
+        if (idx >= 0) {
+          next.joker = {
+            ...next.joker,
+            currentTrick: target.joker.currentTrick.slice(0, idx + 1)
+          };
+        }
+      }
+      break;
+    case 'potPulse':
+      next.stacks = { ...target.stacks };
+      next.pot = target.pot;
+      if (target.street === 'COMPLETE') {
+        next.street = target.street;
+        next.winners = target.winners ? [...target.winners] : undefined;
+        next.playerRoundBet = Object.fromEntries(next.players.map((uid) => [uid, 0]));
+      }
+      break;
+    default:
+      break;
+  }
+
+  return next;
+};

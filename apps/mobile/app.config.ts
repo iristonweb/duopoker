@@ -7,18 +7,21 @@ const config: ExpoConfig = {
   slug: 'duopoker',
   scheme: 'duopoker',
   version: '0.1.0',
-  orientation: 'portrait',
+  orientation: 'default',
   userInterfaceStyle: 'dark',
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'app.duopoker.mobile',
     infoPlist: {
-      UIBackgroundModes: ['remote-notification']
+      UIBackgroundModes: ['remote-notification'],
+      NSMicrophoneUsageDescription:
+        'Микрофон нужен для голосового чата за покерным столом.'
     }
   },
   android: {
-    package: 'app.duopoker.mobile'
+    package: 'app.duopoker.mobile',
+    permissions: ['RECORD_AUDIO']
   },
   plugins: ['expo-router', 'expo-secure-store', 'expo-notifications'],
   experiments: {

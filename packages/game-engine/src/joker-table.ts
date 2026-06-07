@@ -1,7 +1,14 @@
-import type { Card, JokerHandState, PlayerAction, SessionState, Suit } from '@duopoker/shared-types/index';
-import { jokerCardsPerHand, jokerPoolLabel } from '@duopoker/shared-types/index';
+import type {
+  Card,
+  JokerHandState,
+  JokerTrickPlay,
+  PlayerAction,
+  SessionState,
+  Suit
+} from '@duopoker/shared-types/index';
+import { isNominalTrumpBanned, jokerCardsPerHand, jokerPoolLabel } from '@duopoker/shared-types/index';
 import { createJokerDeck } from './joker-deck';
-import { jokerPointsForHand } from './joker-scoring';
+import { applyPoolPremiums, isPoolEndHand, jokerPointsForHand } from './joker-scoring';
 import {
   cardSuit,
   isJokerCard,
@@ -56,41 +63,156 @@ const allBidsPlaced = (j: JokerHandState, players: string[]): boolean =>
 
 const maxBid = (cardsThisDeal: number): number => Math.min(9, cardsThisDeal);
 
+const needsTrumpChoice = (pool: 1 | 2 | 3 | 4, cardsThisDeal: number): boolean =>
+  (pool === 2 || pool === 4) && cardsThisDeal === 9;
+
 const withHandComplete = (state: SessionState): SessionState => ({
   ...state,
   handCompletedAt: Date.now(),
   actionDeadlineAt: undefined
 });
 
+const isAce = (c: Card): boolean => c[0] === 'A';
+
+/** Tuzovanie: reveal cards clockwise until a player receives an ace. */
+export const runTuzovanie = (
+  state: SessionState,
+  rng: SeededRng
+): { dealerIndex: number; log: { userId: string; card: Card }[] } => {
+  const deck = shuffle(createJokerDeck(), rng);
+  const log: { userId: string; card: Card }[] = [];
+  let deckIdx = 0;
+  let seat = 0;
+  while (deckIdx < deck.length) {
+    const userId = state.players[seat]!;
+    const card = deck[deckIdx++]!;
+    log.push({ userId, card });
+    if (isAce(card)) {
+      return { dealerIndex: seat, log };
+    }
+    seat = nextSeat(state.players.length, seat);
+  }
+  return { dealerIndex: 0, log };
+};
+
+const bidSum = (bids: Record<string, number | undefined>, players: string[]): number =>
+  players.reduce((s, p) => s + (bids[p] ?? 0), 0);
+
+const dealerBidBlocked = (
+  bid: number,
+  bids: Record<string, number | undefined>,
+  players: string[],
+  dealerId: string,
+  cardsThisDeal: number
+): boolean => {
+  const temp = { ...bids, [dealerId]: bid };
+  if (!players.every((p) => p === dealerId || temp[p] !== undefined)) return false;
+  return bidSum(temp, players) === cardsThisDeal;
+};
+
+/** Auto-correct dealer bid for bots/timeouts only. */
+export const correctDealerBidForBot = (
+  bid: number,
+  bids: Record<string, number | undefined>,
+  players: string[],
+  dealerIndex: number,
+  cardsThisDeal: number
+): number => {
+  const dealerId = players[dealerIndex]!;
+  const max = Math.min(9, cardsThisDeal);
+  if (!dealerBidBlocked(bid, bids, players, dealerId, cardsThisDeal)) return bid;
+  if (bid < max) return bid + 1;
+  if (bid > 0) return bid - 1;
+  const other = players.find((p) => p !== dealerId && (bids[p] ?? 0) > 0);
+  if (other) return bid;
+  return 0;
+};
+
 export const startJokerHand = (
   state: SessionState,
   dealerIndex: number,
   rng: SeededRng
 ): SessionState => {
+  let dealer = dealerIndex;
+  let tuzovanieRevealed: Record<string, Card[]> | undefined;
+  let tuzovanieLog = state.joker?.tuzovanieLog;
+
+  if (state.handNumber === 0) {
+    const tuz = runTuzovanie(state, rng);
+    dealer = tuz.dealerIndex;
+    tuzovanieLog = tuz.log;
+    const revealed: Record<string, Card[]> = {};
+    for (const e of tuz.log) {
+      revealed[e.userId] = [...(revealed[e.userId] ?? []), e.card];
+    }
+    tuzovanieRevealed = revealed;
+  }
+
   const matchHandIndex = state.handNumber % 24;
   const cardsThisDeal = jokerCardsPerHand(matchHandIndex);
+  const pool = jokerPoolLabel(matchHandIndex);
   const shuffled = shuffle(createJokerDeck(), rng);
-  const { playerCards, deck: afterDeal } = dealFromDeck(shuffled, state.players, cardsThisDeal);
-  const { trumpCard, trumpSuit, deck } = revealTrump(afterDeal);
+  const trumpChoice = needsTrumpChoice(pool, cardsThisDeal);
+  const initialDealCount = trumpChoice ? 3 : cardsThisDeal;
+  const { playerCards, deck: afterDeal } = dealFromDeck(shuffled, state.players, initialDealCount);
+
   const prevScores = state.joker?.scores;
   const dealHistory = state.joker?.dealHistory ?? [];
-  const joker: JokerHandState = {
+  const poolPremiums = state.joker?.poolPremiums;
+
+  const baseJoker: JokerHandState = {
     matchHandIndex,
     cardsThisDeal,
-    pool: jokerPoolLabel(matchHandIndex),
-    trumpSuit,
-    trumpCard,
+    pool,
+    trumpSuit: null,
     bids: {},
     tricksWon: Object.fromEntries(state.players.map((p) => [p, 0])),
     currentTrick: [],
     trickNumber: 0,
     scores: emptyJokerScores(state.players, prevScores),
-    dealHistory
+    dealHistory,
+    tuzovanieRevealed,
+    tuzovanieLog,
+    poolPremiums
   };
-  const firstBidder = leftOfDealer({ ...state, dealerIndex });
+
+  if (trumpChoice) {
+    const chooser = leftOfDealer({ ...state, dealerIndex: dealer });
+    return {
+      ...state,
+      dealerIndex: dealer,
+      handNumber: state.handNumber + 1,
+      street: 'TRUMP_CHOICE',
+      phase: 'DEAL',
+      communityCards: [],
+      foldedPlayerIds: [],
+      playerCards,
+      deck: afterDeal,
+      pot: 0,
+      currentBet: 0,
+      playerRoundBet: Object.fromEntries(state.players.map((p) => [p, 0])),
+      lastAggressor: null,
+      lastRaiseSize: state.bigBlind,
+      allInPlayerIds: [],
+      actedThisRound: Object.fromEntries(state.players.map((p) => [p, false])),
+      handContributions: Object.fromEntries(state.players.map((p) => [p, 0])),
+      readyForNextHand: [],
+      activePlayerIndex: chooser,
+      activePlayerId: state.players[chooser],
+      actionLog: [],
+      winners: undefined,
+      winnersShare: undefined,
+      ghostCommunityCards: undefined,
+      joker: baseJoker
+    };
+  }
+
+  const { trumpCard, trumpSuit, deck } = revealTrump(afterDeal);
+  const firstBidder = leftOfDealer({ ...state, dealerIndex: dealer });
+
   return {
     ...state,
-    dealerIndex,
+    dealerIndex: dealer,
     handNumber: state.handNumber + 1,
     street: 'BIDDING',
     phase: 'DEAL',
@@ -102,6 +224,7 @@ export const startJokerHand = (
     currentBet: 0,
     playerRoundBet: Object.fromEntries(state.players.map((p) => [p, 0])),
     lastAggressor: null,
+    lastRaiseSize: state.bigBlind,
     allInPlayerIds: [],
     actedThisRound: Object.fromEntries(state.players.map((p) => [p, false])),
     handContributions: Object.fromEntries(state.players.map((p) => [p, 0])),
@@ -112,7 +235,7 @@ export const startJokerHand = (
     winners: undefined,
     winnersShare: undefined,
     ghostCommunityCards: undefined,
-    joker
+    joker: { ...baseJoker, trumpSuit, trumpCard, firstBidderIndex: firstBidder, voidTrumpDiscards: false }
   };
 };
 
@@ -122,7 +245,7 @@ const rotateActive = (state: SessionState): SessionState => {
 };
 
 const beginTricks = (state: SessionState): SessionState => {
-  const leader = leftOfDealer(state);
+  const leader = state.joker?.firstBidderIndex ?? leftOfDealer(state);
   return {
     ...state,
     street: 'TRICKS',
@@ -135,6 +258,17 @@ const beginTricks = (state: SessionState): SessionState => {
   };
 };
 
+const trickHadVoidDump = (plays: JokerTrickPlay[], trumpSuit: Suit | null): boolean => {
+  if (trumpSuit !== null) return false;
+  const lead = leadSuitFromTrick(plays);
+  if (lead === null) return false;
+  return plays.some((p) => {
+    if (isJokerCard(p.card)) return false;
+    const suit = cardSuit(p.card);
+    return suit !== lead;
+  });
+};
+
 const finishTrick = (state: SessionState): SessionState => {
   const j = state.joker!;
   const winnerIdx = trickWinnerIndex(j.currentTrick, state.players, j.trumpSuit);
@@ -144,25 +278,37 @@ const finishTrick = (state: SessionState): SessionState => {
   const handDone = trickNumber >= j.cardsThisDeal;
 
   if (!handDone) {
+    const voidDump = trickHadVoidDump(j.currentTrick, j.trumpSuit);
     return {
       ...state,
       activePlayerIndex: winnerIdx,
       activePlayerId: winnerId,
-      joker: { ...j, tricksWon, currentTrick: [], trickNumber }
+      joker: {
+        ...j,
+        tricksWon,
+        currentTrick: [],
+        trickNumber,
+        lastTrickWinner: winnerId,
+        voidTrumpDiscards: j.voidTrumpDiscards || voidDump
+      }
     };
   }
 
   const handPoints: Record<string, number> = {};
-  const scores = { ...j.scores };
+  let scores = { ...j.scores };
   for (const p of state.players) {
     const bid = j.bids[p] ?? 0;
     const taken = tricksWon[p] ?? 0;
-    const pts = jokerPointsForHand(bid, taken, j.cardsThisDeal);
+    const pts = jokerPointsForHand(
+      bid,
+      taken,
+      j.cardsThisDeal,
+      state.jokerRules?.scoringMode ?? 'classic'
+    );
     handPoints[p] = pts;
     scores[p] = (scores[p] ?? 0) + pts;
   }
 
-  const best = state.players.reduce((a, b) => ((scores[a] ?? 0) >= (scores[b] ?? 0) ? a : b));
   const bids: Record<string, number> = {};
   for (const p of state.players) {
     bids[p] = j.bids[p] ?? 0;
@@ -176,6 +322,15 @@ const finishTrick = (state: SessionState): SessionState => {
     handPoints: { ...handPoints }
   };
   const dealHistory = [...(j.dealHistory ?? []), dealRecord];
+  let poolPremiums = { ...j.poolPremiums };
+  const endPool = isPoolEndHand(j.matchHandIndex);
+  if (endPool) {
+    const applied = applyPoolPremiums(endPool, dealHistory, state.players, scores);
+    scores = applied.scores;
+    poolPremiums = { ...poolPremiums, ...applied.premiums };
+  }
+
+  const best = state.players.reduce((a, b) => ((scores[a] ?? 0) >= (scores[b] ?? 0) ? a : b));
   return withHandComplete({
     ...state,
     street: 'COMPLETE',
@@ -184,43 +339,74 @@ const finishTrick = (state: SessionState): SessionState => {
     winnersShare: handPoints,
     activePlayerIndex: state.dealerIndex,
     activePlayerId: state.players[state.dealerIndex],
-    joker: { ...j, tricksWon, currentTrick: [], trickNumber, scores, handPoints, dealHistory }
+    joker: {
+      ...j,
+      tricksWon,
+      currentTrick: [],
+      trickNumber,
+      scores,
+      handPoints,
+      dealHistory,
+      poolPremiums,
+      lastTrickWinner: winnerId
+    }
   });
 };
 
-const fixBidSum = (
-  bids: Record<string, number | undefined>,
-  players: string[],
-  dealerIndex: number,
-  cardsThisDeal: number
-): Record<string, number | undefined> => {
-  const max = Math.min(9, cardsThisDeal);
-  const sum = () => players.reduce((s, p) => s + (bids[p] ?? 0), 0);
-  if (sum() !== cardsThisDeal) return bids;
-
-  const dealerId = players[dealerIndex]!;
-  const dealerBid = bids[dealerId] ?? 0;
-
-  if (dealerBid < max) {
-    return { ...bids, [dealerId]: dealerBid + 1 };
-  }
-  if (dealerBid > 0) {
-    return { ...bids, [dealerId]: dealerBid - 1 };
+const applyChooseTrump = (
+  state: SessionState,
+  userId: string,
+  trumpSuit: Suit | null,
+  action: PlayerAction
+): SessionState => {
+  const j = state.joker!;
+  const chooser = state.players[leftOfDealer(state)]!;
+  if (userId !== chooser) {
+    throw new Error('WRONG_PLAYER');
   }
 
-  const other = players.find((p) => p !== dealerId && (bids[p] ?? 0) > 0);
-  if (other) {
-    return { ...bids, [other]: (bids[other] ?? 0) - 1 };
+  const remaining = j.cardsThisDeal - 3;
+  const { playerCards, deck: afterMore } = dealFromDeck(state.deck, state.players, remaining);
+  const mergedCards: Record<string, Card[]> = {};
+  for (const p of state.players) {
+    mergedCards[p] = [...(state.playerCards[p] ?? []), ...(playerCards[p] ?? [])];
   }
-  return bids;
+
+  const { trumpCard, deck } = revealTrump(afterMore);
+  const resolvedTrump: Suit | null = trumpSuit === undefined ? null : trumpSuit;
+
+  const firstBidder = leftOfDealer(state);
+  return {
+    ...state,
+    street: 'BIDDING',
+    communityCards: trumpCard ? [trumpCard] : [],
+    playerCards: mergedCards,
+    deck,
+    actionLog: [...state.actionLog, action],
+    activePlayerIndex: firstBidder,
+    activePlayerId: state.players[firstBidder],
+    joker: {
+      ...j,
+      trumpSuit: resolvedTrump,
+      trumpCard,
+      firstBidderIndex: firstBidder,
+      voidTrumpDiscards: false
+    }
+  };
 };
 
 const applyBid = (state: SessionState, userId: string, amount: number, action: PlayerAction): SessionState => {
   const j = state.joker!;
   const max = maxBid(j.cardsThisDeal);
   const bid = Math.max(0, Math.min(max, Math.floor(amount)));
-  let bids = { ...j.bids, [userId]: bid };
-  let ns: SessionState = {
+  const dealerId = state.players[state.dealerIndex]!;
+
+  if (userId === dealerId && dealerBidBlocked(bid, j.bids, state.players, dealerId, j.cardsThisDeal)) {
+    throw new Error('DEALER_BID_BLOCKED');
+  }
+
+  const bids = { ...j.bids, [userId]: bid };
+  const ns: SessionState = {
     ...state,
     actionLog: [...state.actionLog, action],
     joker: { ...j, bids }
@@ -230,13 +416,15 @@ const applyBid = (state: SessionState, userId: string, amount: number, action: P
     return rotateActive(ns);
   }
 
-  bids = fixBidSum(bids, state.players, state.dealerIndex, j.cardsThisDeal);
-  ns = { ...ns, joker: { ...ns.joker!, bids } };
-
   return beginTricks(ns);
 };
 
-const applyPlayCard = (state: SessionState, userId: string, cardRaw: Card, action: PlayerAction): SessionState => {
+const applyPlayCard = (
+  state: SessionState,
+  userId: string,
+  cardRaw: Card,
+  action: PlayerAction
+): SessionState => {
   const card = normalizeJokerCard(cardRaw) ?? cardRaw;
   const j = state.joker!;
   const hand = state.playerCards[userId] ?? [];
@@ -245,20 +433,28 @@ const applyPlayCard = (state: SessionState, userId: string, cardRaw: Card, actio
     throw new Error('CARD_NOT_IN_HAND');
   }
   const leadSuit = leadSuitFromTrick(j.currentTrick);
-  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit);
+  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit, state.jokerRules?.strictJoker);
   if (!allowed.includes(card)) {
     throw new Error('ILLEGAL_CARD');
+  }
+
+  if (isJokerCard(card) && action.declaration === undefined) {
+    throw new Error('JOKER_DECLARATION_REQUIRED');
+  }
+  const declaration = isJokerCard(card) ? action.declaration : undefined;
+  if (isJokerCard(card) && declaration === 'nominal' && isNominalTrumpBanned(card, j.trumpSuit, j.voidTrumpDiscards)) {
+    throw new Error('NOMINAL_TRUMP_BANNED');
   }
 
   const playerCards = {
     ...state.playerCards,
     [userId]: [...hand.slice(0, idx), ...hand.slice(idx + 1)]
   };
-  const currentTrick = [...j.currentTrick, { userId, card }];
+  const currentTrick = [...j.currentTrick, { userId, card, declaration }];
   const ns: SessionState = {
     ...state,
     playerCards,
-    actionLog: [...state.actionLog, action],
+    actionLog: [...state.actionLog, { ...action, card, declaration }],
     joker: { ...j, currentTrick }
   };
 
@@ -273,7 +469,7 @@ export const applyJokerAction = (
   action: PlayerAction
 ): { ok: true; state: SessionState } | { ok: false; reason: string } => {
   if (!state.joker) return { ok: false, reason: 'NO_JOKER_STATE' };
-  if (state.street !== 'BIDDING' && state.street !== 'TRICKS') {
+  if (state.street !== 'BIDDING' && state.street !== 'TRICKS' && state.street !== 'TRUMP_CHOICE') {
     return { ok: false, reason: 'NO_ACTIVE_HAND' };
   }
 
@@ -281,6 +477,11 @@ export const applyJokerAction = (
   if (cur !== action.userId) return { ok: false, reason: 'WRONG_TURN' };
 
   try {
+    if (state.street === 'TRUMP_CHOICE') {
+      if (action.type !== 'chooseTrump') return { ok: false, reason: 'INVALID_ACTION' };
+      const suit = action.trumpSuit === undefined ? null : action.trumpSuit;
+      return { ok: true, state: applyChooseTrump(state, action.userId, suit, action) };
+    }
     if (state.street === 'BIDDING') {
       if (action.type !== 'bid') return { ok: false, reason: 'INVALID_ACTION' };
       return { ok: true, state: applyBid(state, action.userId, action.amount ?? 0, action) };
@@ -301,20 +502,59 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
   const base = { sessionId: state.sessionId, userId, at };
   const j = state.joker!;
 
+  if (state.street === 'TRUMP_CHOICE') {
+    const suits: (Suit | null)[] = ['S', 'H', 'D', 'C', null];
+    const trumpSuit = suits[Math.floor(Math.random() * suits.length)] ?? null;
+    return { ...base, type: 'chooseTrump', trumpSuit };
+  }
+
   if (state.street === 'BIDDING') {
     const max = maxBid(j.cardsThisDeal);
-    const bid = Math.floor(Math.random() * (max + 1));
+    let bid = Math.floor(Math.random() * (max + 1));
+    const dealerId = state.players[state.dealerIndex]!;
+    if (userId === dealerId) {
+      bid = correctDealerBidForBot(bid, j.bids, state.players, state.dealerIndex, j.cardsThisDeal);
+    }
     return { ...base, type: 'bid', amount: bid };
   }
 
   const hand = state.playerCards[userId] ?? [];
   const leadSuit = leadSuitFromTrick(j.currentTrick);
-  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit);
-  const card = allowed[0] ?? hand[0]!;
-  return { ...base, type: 'playCard', card };
+  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit, state.jokerRules?.strictJoker);
+  const card =
+    allowed.find((c) => !isNominalTrumpBanned(c, j.trumpSuit, j.voidTrumpDiscards)) ??
+    allowed[0] ??
+    hand[0]!;
+  let declaration: PlayerAction['declaration'];
+  if (isJokerCard(card)) {
+    declaration = 'senior';
+  }
+  return { ...base, type: 'playCard', card, declaration };
 };
 
-export const jokerTimeoutAction = (state: SessionState, userId: string): PlayerAction =>
-  state.street === 'BIDDING'
-    ? { sessionId: state.sessionId, userId, type: 'bid', amount: 0, at: Date.now() }
-    : pickBotJokerAction(state, userId);
+export const jokerTimeoutAction = (state: SessionState, userId: string): PlayerAction => {
+  if (state.street === 'TRUMP_CHOICE') {
+    return {
+      sessionId: state.sessionId,
+      userId,
+      type: 'chooseTrump',
+      trumpSuit: null,
+      at: Date.now()
+    };
+  }
+  if (state.street === 'BIDDING') {
+    const j = state.joker!;
+    const dealerId = state.players[state.dealerIndex]!;
+    let bid = 0;
+    if (userId === dealerId) {
+      bid = correctDealerBidForBot(0, j.bids, state.players, state.dealerIndex, j.cardsThisDeal);
+    }
+    return { sessionId: state.sessionId, userId, type: 'bid', amount: bid, at: Date.now() };
+  }
+  return pickBotJokerAction(state, userId);
+};
+
+export const isJokerMatchComplete = (state: SessionState): boolean =>
+  state.mode === 'JOKER' &&
+  state.street === 'COMPLETE' &&
+  (state.joker?.matchHandIndex ?? 0) >= 23;

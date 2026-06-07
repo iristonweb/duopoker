@@ -9,6 +9,21 @@ type Props = {
   chipId: string;
 };
 
+const sidePotAnchor = (potIndex: number, potCount: number): { x: number; y: number } => {
+  const center = { x: 50, y: 50 };
+  if (potCount <= 1) return center;
+  const offsets = [
+    { x: -10, y: -6 },
+    { x: 10, y: -6 },
+    { x: -10, y: 8 },
+    { x: 10, y: 8 },
+    { x: 0, y: -12 },
+    { x: 0, y: 12 }
+  ];
+  const off = offsets[potIndex % offsets.length] ?? offsets[0]!;
+  return { x: center.x + off.x, y: center.y + off.y };
+};
+
 const seatAnchor = (index: number, total: number): { x: number; y: number } => {
   if (total <= 2) {
     return index === 0 ? { x: 50, y: 8 } : { x: 50, y: 92 };
@@ -25,7 +40,7 @@ const seatAnchor = (index: number, total: number): { x: number; y: number } => {
 };
 
 export function ChipFlightLayer({ flights, playerIndex, playerCount, chipId }: Props) {
-  const pot = { x: 50, y: 50 };
+  const potCount = Math.max(1, ...flights.map((f) => (f.potIndex ?? 0) + 1));
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[15]">
@@ -34,6 +49,7 @@ export function ChipFlightLayer({ flights, playerIndex, playerCount, chipId }: P
           const seatIdx = playerIndex.get(flight.userId);
           if (seatIdx === undefined) return null;
           const from = seatAnchor(seatIdx, playerCount);
+          const pot = sidePotAnchor(flight.potIndex ?? 0, potCount);
           const toPot = flight.kind === 'toPot';
           const fromPt = toPot ? from : pot;
           const toPt = toPot ? pot : from;

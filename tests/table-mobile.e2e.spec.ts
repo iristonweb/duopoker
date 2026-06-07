@@ -1,0 +1,113 @@
+import { test, expect } from '@playwright/test';
+import { io, type Socket } from 'socket.io-client';
+import type { SessionState } from '@duopoker/shared-types/index';
+
+const BASE = 'http://127.0.0.1:5180';
+const API = 'http://localhost:4000';
+
+const waitForState = (
+  socket: Socket,
+  predicate: (s: SessionState) => boolean,
+  timeoutMs = 15_000
+): Promise<SessionState> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      socket.off('stateUpdate', onUpdate);
+      reject(new Error('stateUpdate timeout'));
+    }, timeoutMs);
+
+    const onUpdate = (state: SessionState) => {
+      if (predicate(state)) {
+        clearTimeout(timer);
+        socket.off('stateUpdate', onUpdate);
+        resolve(state);
+      }
+    };
+    socket.on('stateUpdate', onUpdate);
+  });
+
+test.describe('mobile table layout', () => {
+  test('lobby fits 375px viewport without horizontal scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE}/lobby`);
+    await expect(page.getByRole('heading', { name: /DP\s*CLUB/i })).toBeVisible();
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+  });
+
+  test('lobby fits 390px viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${BASE}/lobby`);
+    await expect(page.getByRole('heading', { name: /DP\s*CLUB/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /С людьми/i })).toBeVisible();
+  });
+
+  test('table route does not 404 on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    const res = await page.goto(`${BASE}/table/smoke-test-session`);
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.locator('body')).not.toContainText('404: NOT_FOUND');
+  });
+
+  test('landscape lobby renders without horizontal overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.goto(`${BASE}/lobby`);
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+  });
+
+  test('pwa hint can be dismissed on mobile lobby', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.addInitScript(() => {
+      localStorage.removeItem('duopoker-pwa-hint-dismissed');
+    });
+    await page.goto(`${BASE}/lobby`);
+    const hint = page.getByText(/Добавьте на экран|Add to home screen/i);
+    await expect(hint).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: /Понятно|Got it/i }).click();
+    await expect(hint).not.toBeVisible();
+  });
+
+  test('live session renders game table shell on mobile', async ({ page, request }, testInfo) => {
+    const health = await request.get(`${API}/health`).catch(() => null);
+    if (!health?.ok()) {
+      testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
+      return;
+    }
+
+    const sessionId = `e2e-mobile-ui-${Date.now()}`;
+    const userId = `e2e-mobile-${Date.now()}`;
+    const userId2 = `e2e-mobile-p2-${Date.now()}`;
+
+    const p1 = io(API, { transports: ['websocket'] });
+    const p2 = io(API, { transports: ['websocket'] });
+    await Promise.all([
+      new Promise<void>((res) => p1.once('connect', () => res())),
+      new Promise<void>((res) => p2.once('connect', () => res()))
+    ]);
+    p1.emit('joinSession', { sessionId, userId, mode: 'HOLDEM', buyIn: 100 });
+    p2.emit('joinSession', { sessionId, userId: userId2, mode: 'HOLDEM', buyIn: 100 });
+    try {
+      await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2, 12_000);
+    } catch {
+      p1.disconnect();
+      p2.disconnect();
+      testInfo.skip(true, 'Backend socket unavailable — start full backend on port 4000.');
+      return;
+    }
+    p1.disconnect();
+    p2.disconnect();
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.addInitScript((uid) => {
+      localStorage.setItem('duopoker_user_id', uid);
+      localStorage.setItem('duopoker_guest_id', uid);
+    }, userId);
+
+    await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('table-top-hud')).toBeVisible({ timeout: 15_000 });
+  });
+});

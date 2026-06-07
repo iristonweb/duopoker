@@ -23,15 +23,23 @@ export const computeSidePots = (
 
   const pots: SidePot[] = [];
   let prev = 0;
+  let orphan = 0;
   for (const level of levels) {
     const layer = level - prev;
     const contributors = players.filter((p) => (handContributions[p] ?? 0) >= level);
-    const amount = layer * contributors.length;
+    const amount = layer * contributors.length + orphan;
     const eligible = contributors.filter((p) => !folded.has(p));
     if (amount > 0 && eligible.length > 0) {
       pots.push({ amount, eligible });
+      orphan = 0;
+    } else if (amount > 0) {
+      orphan = amount;
     }
     prev = level;
+  }
+  if (orphan > 0 && pots.length > 0) {
+    const last = pots[pots.length - 1]!;
+    pots[pots.length - 1] = { amount: last.amount + orphan, eligible: last.eligible };
   }
   return pots;
 };

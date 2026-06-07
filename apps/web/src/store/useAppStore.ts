@@ -53,10 +53,14 @@ type AppStore = {
   sessionError?: string;
   opponentType: 'HUMAN' | 'BOT';
   botPlayerCount: number;
+  jokerStrict: boolean;
+  jokerMinusScoring: boolean;
   pollTimer?: ReturnType<typeof setInterval>;
   setMode: (mode: 'HOLDEM' | 'JOKER') => void;
   setOpponentType: (opponentType: 'HUMAN' | 'BOT') => void;
   setBotPlayerCount: (count: number) => void;
+  setJokerStrict: (v: boolean) => void;
+  setJokerMinusScoring: (v: boolean) => void;
   setTokens: (access: string, refresh: string, userId: string) => void;
   logout: () => void;
   refreshAccessToken: () => Promise<boolean>;
@@ -74,9 +78,11 @@ type AppStore = {
   stopPolling: () => void;
   playerAction: (payload: {
     sessionId: string;
-    type: 'bet' | 'check' | 'fold' | 'call' | 'raise' | 'bid' | 'playCard';
+    type: 'bet' | 'check' | 'fold' | 'call' | 'raise' | 'bid' | 'playCard' | 'chooseTrump';
     amount?: number;
     card?: string;
+    trumpSuit?: 'S' | 'H' | 'D' | 'C' | null;
+    declaration?: 'nominal' | 'senior' | 'minor' | { suit: 'S' | 'H' | 'D' | 'C'; rankMode: 'senior' | 'minor' };
   }) => Promise<void>;
   readyNextHand: () => Promise<void>;
   leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
@@ -224,6 +230,8 @@ export const useAppStore = create<AppStore>((set, get) => {
     tableVoluntaryLeave: false,
     opponentType: 'BOT',
     botPlayerCount: 2,
+    jokerStrict: false,
+    jokerMinusScoring: false,
     vipInvites: [],
     vipLiveSession: null,
     tableInvites: [],
@@ -235,6 +243,8 @@ export const useAppStore = create<AppStore>((set, get) => {
       }),
     setOpponentType: (opponentType) => set({ opponentType }),
     setBotPlayerCount: (botPlayerCount) => set({ botPlayerCount }),
+    setJokerStrict: (jokerStrict) => set({ jokerStrict }),
+    setJokerMinusScoring: (jokerMinusScoring) => set({ jokerMinusScoring }),
     setTokens: (access, refresh, userId) => {
       localStorage.setItem(LS_ACCESS, access);
       localStorage.setItem(LS_REFRESH, refresh);
@@ -387,7 +397,14 @@ export const useAppStore = create<AppStore>((set, get) => {
           mode: get().mode,
           buyIn: 100,
           opponent: get().opponentType === 'BOT' ? 'bot' : 'human',
-          playerCount: get().botPlayerCount
+          playerCount: get().botPlayerCount,
+          jokerRules:
+            get().mode === 'JOKER'
+              ? {
+                  strictJoker: get().jokerStrict,
+                  scoringMode: get().jokerMinusScoring ? 'minus' : 'classic'
+                }
+              : undefined
         });
         return { status: 'waiting' as const };
       }
@@ -397,7 +414,14 @@ export const useAppStore = create<AppStore>((set, get) => {
           mode: get().mode,
           buyIn: 100,
           opponent: get().opponentType === 'BOT' ? 'bot' : 'human',
-          playerCount: get().botPlayerCount
+          playerCount: get().botPlayerCount,
+          jokerRules:
+            get().mode === 'JOKER'
+              ? {
+                  strictJoker: get().jokerStrict,
+                  scoringMode: get().jokerMinusScoring ? 'minus' : 'classic'
+                }
+              : undefined
         })
       });
       if (!res.ok) {
@@ -504,7 +528,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (t) clearInterval(t);
       set({ pollTimer: undefined });
     },
-    playerAction: async ({ sessionId, type, amount, card }) => {
+    playerAction: async ({ sessionId, type, amount, card, trumpSuit, declaration }) => {
       if (usesRealtimeSocket()) {
         const socket = get().socket;
         if (!socket?.connected) {
@@ -518,6 +542,8 @@ export const useAppStore = create<AppStore>((set, get) => {
           type,
           amount,
           card,
+          trumpSuit,
+          declaration,
           at: Date.now()
         });
         return;
@@ -529,6 +555,8 @@ export const useAppStore = create<AppStore>((set, get) => {
           type,
           amount,
           card,
+          trumpSuit,
+          declaration,
           at: Date.now()
         })
       });
@@ -825,9 +853,13 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!res.ok) throw new Error('Failed to add member');
     },
     createPrivateTable: async (clubId, data) => {
+      const payload = {
+        ...data,
+        maxPlayers: data.mode === 'JOKER' ? 4 : data.maxPlayers
+      };
       const res = await get().apiFetch(`/clubs/${clubId}/private-tables`, {
         method: 'POST',
-        body: JSON.stringify(data)
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Failed to create table');
       return (await res.json()) as { table: { id: string } };

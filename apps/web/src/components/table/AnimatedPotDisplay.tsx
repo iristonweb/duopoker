@@ -8,10 +8,11 @@ type Props = {
   chipId: string;
   street?: string;
   pulseKey?: number;
+  sidePots?: number[];
   className?: string;
 };
 
-export function AnimatedPotDisplay({ pot, chipId, street, pulseKey = 0, className }: Props) {
+export function AnimatedPotDisplay({ pot, chipId, street, pulseKey = 0, sidePots = [], className }: Props) {
   const { t } = useTranslation();
   const chipCount = Math.min(6, Math.max(2, 2 + Math.floor(Math.log10(Math.max(10, pot)) * 1.2)));
 
@@ -59,6 +60,15 @@ export function AnimatedPotDisplay({ pot, chipId, street, pulseKey = 0, classNam
         <span className="ml-1 rounded-full border border-emerald/35 bg-emerald/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald sm:hidden">
           {street}
         </span>
+      ) : null}
+      {sidePots.length > 1 ? (
+        <div className="ml-2 hidden flex-col gap-0.5 border-l border-white/10 pl-2 sm:flex">
+          {sidePots.map((amount, i) => (
+            <span key={i} className="font-mono text-[9px] text-subtle">
+              {t('table.sidePotShort', { index: i + 1, amount })}
+            </span>
+          ))}
+        </div>
       ) : null}
     </motion.div>
   );

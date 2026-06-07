@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { clubTableMaxPlayers, normalizeGameMode } from '@duopoker/shared-types/index';
 import { authGuard } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
 import { normalizeNicknameInput } from '../lib/nickname.js';
@@ -38,12 +39,20 @@ const inviteSchema = z
   })
   .refine((d) => d.userId || d.nickname, { message: 'userId or nickname required' });
 
-const createTableSchema = z.object({
-  name: z.string().trim().min(3).max(50),
-  mode: z.enum(['HOLDEM', 'JOKER']),
-  maxPlayers: z.number().int().min(2).max(9).default(6),
-  virtualBuyIn: z.number().int().min(100).max(100000).default(1000)
-});
+const createTableSchema = z
+  .object({
+    name: z.string().trim().min(3).max(50),
+    mode: z.preprocess(
+      (v) => (typeof v === 'string' ? normalizeGameMode(v as 'HOLDEM' | 'JOKER' | 'RASPISNOY') : v),
+      z.enum(['HOLDEM', 'JOKER'])
+    ),
+    maxPlayers: z.number().int().min(2).max(9).default(6),
+    virtualBuyIn: z.number().int().min(100).max(100000).default(1000)
+  })
+  .transform((data) => ({
+    ...data,
+    maxPlayers: clubTableMaxPlayers(data.mode, data.maxPlayers)
+  }));
 
 const checkoutSchema = z.object({
   tier: z.enum(['PRO', 'NETWORK'])

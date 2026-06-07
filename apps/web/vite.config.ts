@@ -19,7 +19,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@duopoker/shared-types/index': path.join(repoRoot, 'packages/shared-types/src/index.ts'),
-        '@duopoker/shared-types': path.join(repoRoot, 'packages/shared-types/src/index.ts')
+        '@duopoker/shared-types': path.join(repoRoot, 'packages/shared-types/src/index.ts'),
+        '@duopoker/game-engine': path.join(repoRoot, 'packages/game-engine/src/index.ts')
       }
     },
     plugins: [

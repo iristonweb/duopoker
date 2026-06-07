@@ -21,6 +21,7 @@ export function PlayerAvatar({
   size = 'md',
   showTier = false,
   isBot = false,
+  hideName = false,
   className
 }: {
   name: string;
@@ -34,6 +35,7 @@ export function PlayerAvatar({
   size?: 'sm' | 'md' | 'lg';
   showTier?: boolean;
   isBot?: boolean;
+  hideName?: boolean;
   className?: string;
 }) {
   const outer = size === 'sm' ? 'h-12 w-12' : size === 'lg' ? 'h-20 w-20' : 'h-16 w-16';
@@ -89,7 +91,7 @@ export function PlayerAvatar({
           </span>
         ) : null}
       </div>
-      {titleSrc ? (
+      {titleSrc && !hideName ? (
         <img
           src={titleSrc}
           alt={titleText ?? ''}
@@ -97,15 +99,26 @@ export function PlayerAvatar({
           title={titleText}
         />
       ) : null}
-      <p className={cn('mt-1 truncate text-center text-[11px]', nameMax, active ? 'text-gold-light' : 'text-muted')}>
-        {name}
-      </p>
-      {!titleSrc && tableStatus ? (
-        <p className="mt-0.5 max-w-[96px] truncate text-center text-[9px] leading-tight text-gold/75" title={tableStatus}>
+      {!hideName ? (
+        <p
+          className={cn(
+            'seat-name mt-1 truncate text-center text-[11px] max-sm:text-[9px]',
+            nameMax,
+            active ? 'text-gold-light' : 'text-muted'
+          )}
+        >
+          {name}
+        </p>
+      ) : null}
+      {!hideName && !titleSrc && tableStatus ? (
+        <p
+          className="seat-status mt-0.5 max-w-[96px] truncate text-center text-[9px] leading-tight text-gold/75"
+          title={tableStatus}
+        >
           {tableStatus}
         </p>
       ) : null}
-      {showTier && tier !== 'FREE' ? (
+      {showTier && tier !== 'FREE' && !hideName ? (
         <Badge variant="gold" className="mt-1 scale-90">
           {tierLabel[tier]}
         </Badge>

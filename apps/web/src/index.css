@@ -273,6 +273,42 @@
     background: linear-gradient(180deg, rgba(245, 230, 168, 0.55), rgba(232, 197, 71, 0.45));
     background-clip: padding-box;
   }
+
+  .premium-range {
+    @apply h-2 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/[0.08];
+    background-image: linear-gradient(
+      90deg,
+      rgba(232, 197, 71, 0.55) 0%,
+      rgba(232, 197, 71, 0.25) 100%
+    );
+    background-size: var(--range-fill, 50%) 100%;
+    background-repeat: no-repeat;
+  }
+
+  .premium-range::-webkit-slider-thumb {
+    @apply h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gold/60 bg-gradient-to-b from-gold-light to-gold;
+    box-shadow:
+      0 0 16px rgba(232, 197, 71, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .premium-range::-moz-range-thumb {
+    @apply h-5 w-5 cursor-pointer rounded-full border-2 border-gold/60 bg-gradient-to-b from-gold-light to-gold;
+    box-shadow: 0 0 16px rgba(232, 197, 71, 0.45);
+  }
+
+  .premium-range::-moz-range-track {
+    @apply h-2 rounded-full bg-white/[0.08];
+  }
+
+  .table-action-segment {
+    @apply flex items-stretch overflow-hidden rounded-2xl border border-gold/30 bg-black/40 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)];
+  }
+
+  .table-action-segment-active {
+    @apply border-gold/45 shadow-glow-gold;
+    animation: dock-pulse 2.4s ease-in-out infinite;
+  }
 }
 
 @keyframes shimmer {
@@ -304,6 +340,20 @@
   }
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes dock-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 24px rgba(232, 197, 71, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 36px rgba(232, 197, 71, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 }
 

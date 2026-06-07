@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { z } from 'zod';
 import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
 import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import { normalizeGameMode } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
@@ -28,31 +29,53 @@ import {
 } from '@duopoker/game-engine/index';
 import { attachSocketAuth, resolveUserId } from './socket-auth.js';
 
+const gameModeSchema = z.preprocess(
+  (v) => (typeof v === 'string' ? normalizeGameMode(v as 'HOLDEM' | 'JOKER' | 'RASPISNOY') : v),
+  z.enum(['HOLDEM', 'JOKER'])
+);
+
 const joinSchema = z.object({
   sessionId: z.string().min(1),
   userId: z.string().min(1),
-  mode: z.enum(['HOLDEM', 'JOKER']).default('HOLDEM'),
+  mode: gameModeSchema.default('HOLDEM'),
   buyIn: z.number().int().positive().default(100)
 });
 
 const actionSchema = z.object({
   sessionId: z.string().min(1),
   userId: z.string().min(1),
-  type: z.enum(['bet', 'check', 'fold', 'call', 'raise', 'bid', 'playCard']),
+  type: z.enum(['bet', 'check', 'fold', 'call', 'raise', 'bid', 'playCard', 'chooseTrump']),
   amount: z.number().int().nonnegative().optional(),
+  raiseBy: z.number().int().nonnegative().optional(),
   card: z
     .string()
     .regex(/^[6-9TJQKA][SHDC]$/)
+    .optional(),
+  trumpSuit: z.enum(['S', 'H', 'D', 'C']).nullable().optional(),
+  declaration: z
+    .union([
+      z.enum(['nominal', 'senior', 'minor']),
+      z.object({
+        suit: z.enum(['S', 'H', 'D', 'C']),
+        rankMode: z.enum(['senior', 'minor'])
+      })
+    ])
     .optional(),
   at: z.number().default(() => Date.now())
 });
 
 const matchmakingSchema = z.object({
   userId: z.string().min(1),
-  mode: z.enum(['HOLDEM', 'JOKER']),
+  mode: gameModeSchema,
   buyIn: z.number().int().positive(),
   opponent: z.enum(['human', 'bot']).optional().default('human'),
-  playerCount: z.number().int().min(2).max(6).optional().default(2)
+  playerCount: z.number().int().min(2).max(6).optional().default(2),
+  jokerRules: z
+    .object({
+      strictJoker: z.boolean().optional(),
+      scoringMode: z.enum(['classic', 'minus']).optional()
+    })
+    .optional()
 });
 
 const BOT_PREFIX = 'duopoker-bot';
@@ -402,7 +425,7 @@ export const createRealtimeServer = (app: Express) => {
         return;
       }
       registerUserSocket(userId, socket.id);
-      const { opponent, playerCount, ...ticketFields } = parsed.data;
+      const { opponent, playerCount, jokerRules, ...ticketFields } = parsed.data;
       const ready = enqueueMatchmaking(
         {
           ...ticketFields,
@@ -432,7 +455,8 @@ export const createRealtimeServer = (app: Express) => {
         match.sessionId,
         match.players,
         match.mode as 'HOLDEM' | 'JOKER',
-        match.buyIn
+        match.buyIn,
+        jokerRules
       );
       const initial = await getSessionSnapshot(match.sessionId);
       if (initial) {

@@ -1,7 +1,8 @@
 import type { Card, GameStreet, PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import { JOKER_RECOMMENDED_PLAYERS } from '@duopoker/shared-types/index';
 import { isAutomatedPlayer } from './bot-actions';
 import { createDeck, shuffle } from './cards';
-import { applyJokerAction, jokerTimeoutAction, startJokerHand } from './joker-table';
+import { applyJokerAction, isJokerMatchComplete, jokerTimeoutAction, startJokerHand } from './joker-table';
 import { peekGhostCommunityFromDeck } from './ghost-board';
 import {
   computeSidePots,
@@ -148,6 +149,7 @@ const advanceStreetDeck = (state: SessionState): SessionState => {
     currentBet: 0,
     playerRoundBet: resetBets,
     lastAggressor: null,
+    lastRaiseSize: state.bigBlind,
     actedThisRound: emptyActed(state.players),
     activePlayerIndex: first
   };
@@ -309,7 +311,8 @@ export const createInitialTableState = (
   sessionId: string,
   mode: SessionState['mode'],
   buyIn: number,
-  seed: number
+  seed: number,
+  jokerRules?: SessionState['jokerRules']
 ): SessionState => {
   const bb = Math.max(2, Math.floor(buyIn / 50) * 2);
   const sb = Math.max(1, Math.floor(bb / 2));
@@ -336,16 +339,19 @@ export const createInitialTableState = (
     actionLog: [],
     deck: [],
     lastAggressor: null,
+    lastRaiseSize: bb,
     allInPlayerIds: [],
     actedThisRound: {},
     handContributions: {},
-    readyForNextHand: []
+    readyForNextHand: [],
+    jokerRules: mode === 'JOKER' ? jokerRules : undefined
   };
 };
 
 export const addPlayerToTable = (state: SessionState, userId: string): SessionState => {
   if (state.players.includes(userId)) return state;
-  if (state.players.length >= 6) return state;
+  const maxSeats = state.mode === 'JOKER' ? JOKER_RECOMMENDED_PLAYERS : 6;
+  if (state.players.length >= maxSeats) return state;
   const next = [...state.players, userId];
   const stacks = { ...state.stacks, [userId]: state.buyIn };
   return { ...state, players: next, stacks };
@@ -417,6 +423,7 @@ export const startNewHand = (state: SessionState): SessionState => {
       currentBet: bbAmt,
       playerRoundBet,
       lastAggressor: state.players[bb]!,
+      lastRaiseSize: state.bigBlind,
       allInPlayerIds,
       actedThisRound,
       handContributions,
@@ -496,12 +503,17 @@ export const applyTableAction = (
       [action.userId]: (state.playerRoundBet[action.userId] ?? 0) + pay
     };
     const mx = Math.max(maxRoundBet({ ...state, playerRoundBet }), playerRoundBet[action.userId] ?? 0);
+    const logged: PlayerAction = {
+      ...action,
+      amount: pay,
+      allIn: stacks[action.userId] === 0
+    };
     let ns: SessionState = {
       ...state,
       stacks,
       playerRoundBet,
       currentBet: mx,
-      actionLog: [...state.actionLog, action]
+      actionLog: [...state.actionLog, logged]
     };
     ns = addContribution(ns, action.userId, pay);
     ns = markActed(ns, action.userId);
@@ -518,7 +530,7 @@ export const applyTableAction = (
     const stack = state.stacks[action.userId] ?? 0;
     if (stack === 0) return null;
     const need = toCall(state, action.userId);
-    const minRaise = state.bigBlind;
+    const minRaise = state.lastRaiseSize ?? state.bigBlind;
     const inc = Math.max(minRaise, raiseIncrement);
     const desiredRound = (state.playerRoundBet[action.userId] ?? 0) + need + inc;
     const maxAffordable = (state.playerRoundBet[action.userId] ?? 0) + stack;
@@ -528,22 +540,35 @@ export const applyTableAction = (
     if (pay <= 0) return null;
     if (newRound <= prevMax && newRound < maxAffordable) return null;
 
+    const raiseSize = newRound - prevMax;
+    const isAllIn = newRound === maxAffordable && stack > 0;
+    const isFullRaise = raiseSize >= minRaise;
+
     const stacks = { ...state.stacks };
     stacks[action.userId] = (stacks[action.userId] ?? 0) - pay;
     const playerRoundBet = { ...state.playerRoundBet, [action.userId]: newRound };
     const mx = Math.max(prevMax, newRound);
+    const logged: PlayerAction = {
+      ...action,
+      amount: pay,
+      raiseBy: action.type === 'raise' ? raiseSize : undefined,
+      allIn: isAllIn && stacks[action.userId] === 0
+    };
     let ns: SessionState = {
       ...state,
       stacks,
       playerRoundBet,
       currentBet: mx,
       lastAggressor: action.userId,
-      actionLog: [...state.actionLog, action]
+      actionLog: [...state.actionLog, logged]
     };
     ns = addContribution(ns, action.userId, pay);
     ns = markAllIn(ns, action.userId);
-    if (newRound > prevMax) {
-      ns = resetActedExcept(ns, action.userId);
+    if (newRound > prevMax && isFullRaise) {
+      ns = {
+        ...resetActedExcept(ns, action.userId),
+        lastRaiseSize: raiseSize
+      };
     } else {
       ns = markActed(ns, action.userId);
     }
@@ -644,6 +669,9 @@ export const markReadyForNextHand = (
   const humans = state.players.filter((p) => !isAutomatedPlayer(p));
   const allHumansReady = humans.every((p) => readyWithBots.includes(p));
   if (!allHumansReady) {
+    return { ok: true, started: false, state: { ...state, readyForNextHand: readyWithBots } };
+  }
+  if (isJokerMatchComplete(state)) {
     return { ok: true, started: false, state: { ...state, readyForNextHand: readyWithBots } };
   }
   return { ok: true, started: true, state: startNewHand({ ...state, readyForNextHand: [] }) };

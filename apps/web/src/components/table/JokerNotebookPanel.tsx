@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { JokerDealRecord, JokerHandState } from '@duopoker/shared-types/index';
 import { cn } from '@duopoker/ui-kit';
+import { tableFabBottomClass } from '../../hooks/useTableDockHeight';
 
 const CELL_FULL = 30;
 const INK = '#1a3a6e';
@@ -22,6 +23,7 @@ type Props = {
   tricksLabel: string;
   pointsLabel: string;
   totalLabel: string;
+  poolPremiumLabel: string;
   liveLabel: string;
   modeLabel: string;
   className?: string;
@@ -166,6 +168,7 @@ type NotebookBodyProps = {
   tricksLabel: string;
   pointsLabel: string;
   totalLabel: string;
+  poolPremiumLabel: string;
   liveLabel: string;
   fullscreen?: boolean;
   onClose?: () => void;
@@ -187,6 +190,7 @@ function NotebookBody({
   tricksLabel,
   pointsLabel,
   totalLabel,
+  poolPremiumLabel,
   liveLabel,
   fullscreen,
   onClose
@@ -354,6 +358,35 @@ function NotebookBody({
                 ))
               )}
 
+              {joker.poolPremiums && Object.keys(joker.poolPremiums).length > 0 ? (
+                <div className="mt-2 flex" style={{ marginBottom: cell * 0.5 }}>
+                  <div
+                    className="shrink-0 font-medium italic"
+                    style={{ width: cell * 2, fontSize: dealSize, color: INK_LIGHT, ...inkWobble(97) }}
+                  >
+                    {poolPremiumLabel}
+                  </div>
+                  {players.map((uid, i) => {
+                    const pts = joker.poolPremiums?.[uid];
+                    if (pts === undefined) return <div key={uid} style={{ width: colWidth }} />;
+                    return (
+                      <div
+                        key={uid}
+                        className="text-center font-medium"
+                        style={{
+                          width: colWidth,
+                          fontSize: ptsSize,
+                          color: pts >= 0 ? INK_GREEN : INK_RED,
+                          ...inkWobble(98 + i)
+                        }}
+                      >
+                        {formatPts(pts)}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
               <div
                 className="mt-2 flex border-t-2 border-double pt-2"
                 style={{ borderColor: `${INK}44`, marginTop: cell }}
@@ -409,6 +442,7 @@ export function JokerNotebookPanel({
   tricksLabel,
   pointsLabel,
   totalLabel,
+  poolPremiumLabel,
   liveLabel,
   modeLabel,
   className
@@ -460,6 +494,7 @@ export function JokerNotebookPanel({
       tricksLabel={tricksLabel}
       pointsLabel={pointsLabel}
       totalLabel={totalLabel}
+      poolPremiumLabel={poolPremiumLabel}
       liveLabel={liveLabel}
       fullscreen
       onClose={() => setOpen(false)}
@@ -467,7 +502,14 @@ export function JokerNotebookPanel({
   );
 
   return (
-    <div className={cn('flex flex-col items-end gap-2', className)}>
+    <div
+      className={cn(
+        'pointer-events-auto fixed right-3 z-30 flex flex-col items-end gap-2',
+        tableFabBottomClass,
+        'sm:absolute sm:bottom-auto sm:right-4 sm:top-[4.5rem]',
+        className
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -492,7 +534,7 @@ export function JokerNotebookPanel({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.22 }}
-                  className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4"
+                  className="fixed inset-0 z-[120] flex items-end justify-center p-0 sm:items-center sm:p-4"
                 >
                   <button
                     type="button"
@@ -508,7 +550,7 @@ export function JokerNotebookPanel({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 12, scale: 0.98 }}
                     transition={{ duration: 0.28, ease: 'easeOut' }}
-                    className="relative z-[1] w-[min(95vw,72rem)] max-h-[88dvh]"
+                    className="relative z-[1] w-full max-h-[88dvh] rounded-t-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:w-[min(95vw,72rem)] sm:rounded-none sm:pb-0"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {notebookContent}

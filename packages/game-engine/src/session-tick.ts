@@ -1,6 +1,7 @@
 import type { SessionState } from '@duopoker/shared-types/index';
 import { isAutomatedPlayer } from './bot-actions';
 import { resetToLobbyAfterGame, startNewHand } from './holdem-table';
+import { isJokerMatchComplete } from './joker-table';
 
 export const ACTION_TIMEOUT_MS = 60_000;
 export const NEXT_HAND_DELAY_MS = 2800;
@@ -38,13 +39,20 @@ export const shouldForceActionTimeout = (state: SessionState, now = Date.now()):
 
 export const shouldAutoStartNextHand = (state: SessionState, now = Date.now()): boolean => {
   if (state.street !== 'COMPLETE') return false;
+  if (isJokerMatchComplete(state)) return false;
   const completedAt = state.handCompletedAt ?? 0;
   if (now - completedAt < NEXT_HAND_DELAY_MS) return false;
+  if (state.mode === 'JOKER') return state.players.length >= 2;
   return playersWithChips(state).length >= 2;
 };
 
 export const buildAutoNextHand = (state: SessionState): SessionState => {
-  const active = playersWithChips(state);
+  if (isJokerMatchComplete(state)) {
+    return resetToLobbyAfterGame(state);
+  }
+
+  const active =
+    state.mode === 'JOKER' ? state.players : playersWithChips(state);
   if (active.length < 2) {
     return resetToLobbyAfterGame(state);
   }
@@ -60,7 +68,11 @@ export const buildAutoNextHand = (state: SessionState): SessionState => {
     winnersShare: undefined
   });
 
-  if (hand.street !== 'PREFLOP' && !(hand.mode === 'JOKER' && hand.street === 'BIDDING')) {
+  const jokerStartStreets = ['BIDDING', 'TRUMP_CHOICE'] as const;
+  if (
+    hand.street !== 'PREFLOP' &&
+    !(hand.mode === 'JOKER' && (jokerStartStreets as readonly string[]).includes(hand.street))
+  ) {
     return resetToLobbyAfterGame(state);
   }
 

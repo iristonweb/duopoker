@@ -38,6 +38,7 @@ import { PokerTable3D } from '../components/PokerTable3D';
 import { SubscriptionDetailModal } from '../components/subscriptions/SubscriptionDetailModal';
 import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { useAppStore } from '../store/useAppStore';
+import { PwaInstallHint } from '../components/PwaInstallHint';
 import {
   isAuthReferralWarning,
   translateAuthError,
@@ -292,7 +293,23 @@ export const Lobby = () => {
   const navigate = useNavigate();
   useInviteNotifications();
   usePushLoginPrompt();
-  const { mode, setMode, opponentType, setOpponentType, botPlayerCount, setBotPlayerCount, connect, queue, pollQueueStatus, session, fetchProfile } =
+  const {
+    mode,
+    setMode,
+    opponentType,
+    setOpponentType,
+    botPlayerCount,
+    setBotPlayerCount,
+    jokerStrict,
+    setJokerStrict,
+    jokerMinusScoring,
+    setJokerMinusScoring,
+    connect,
+    queue,
+    pollQueueStatus,
+    session,
+    fetchProfile
+  } =
     useAppStore();
   const accessToken = useAppStore((s) => s.accessToken);
   const sessionError = useAppStore((s) => s.sessionError);
@@ -340,9 +357,17 @@ export const Lobby = () => {
     }
   }, [fetchProfile, t]);
 
+  const queueWaitingLabel = () =>
+    mode === 'JOKER' && opponentType === 'HUMAN' ? t('queue.waitingJoker') : t('queue.waiting');
+
+  const queueWaitingSocketLabel = () =>
+    mode === 'JOKER' && opponentType === 'HUMAN'
+      ? t('queue.waitingSocketJoker')
+      : t('queue.waitingSocket');
+
   useEffect(() => {
     if (!usesRealtimeSocket() || !socket) return;
-    const onWait = () => setQueueBanner(t('queue.waitingSocket'));
+    const onWait = () => setQueueBanner(queueWaitingSocketLabel());
     const onFound = () => setQueueBanner(null);
     socket.on('matchmakingWaiting', onWait);
     socket.on('matchFound', onFound);
@@ -350,7 +375,7 @@ export const Lobby = () => {
       socket.off('matchmakingWaiting', onWait);
       socket.off('matchFound', onFound);
     };
-  }, [socket, t]);
+  }, [socket, t, mode, opponentType]);
 
   useEffect(() => {
     return () => {
@@ -389,7 +414,7 @@ export const Lobby = () => {
           setQueueBanner(null);
           navigate(`/table/${pollResult.sessionId}`);
         } else if (pollResult.status === 'waiting') {
-          setQueueBanner(t('queue.waiting'));
+          setQueueBanner(queueWaitingLabel());
         } else if (pollResult.status === 'error') {
           if (queuePollRef.current) clearInterval(queuePollRef.current);
           queuePollRef.current = null;
@@ -643,6 +668,29 @@ export const Lobby = () => {
                 onClick={() => setMode('JOKER')}
               />
             </div>
+            {mode === 'JOKER' ? (
+              <div className="mt-2 flex flex-col gap-2 text-xs text-subtle sm:text-sm">
+                <p className="text-center">{t('table.jokerPlayerCountHint')}</p>
+                <label className="flex cursor-pointer items-center justify-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={jokerStrict}
+                    onChange={(e) => setJokerStrict(e.target.checked)}
+                    className="rounded border-white/20"
+                  />
+                  <span>{t('lobby.jokerStrict')}</span>
+                </label>
+                <label className="flex cursor-pointer items-center justify-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={jokerMinusScoring}
+                    onChange={(e) => setJokerMinusScoring(e.target.checked)}
+                    className="rounded border-white/20"
+                  />
+                  <span>{t('lobby.jokerMinusScoring')}</span>
+                </label>
+              </div>
+            ) : null}
             <GlassPanel
               glow={opponentType === 'BOT' ? 'emerald' : 'gold'}
               className="relative mt-2 overflow-hidden border-white/10 p-0"
@@ -698,13 +746,18 @@ export const Lobby = () => {
                 ]}
                 className="mb-0 border-0 bg-transparent p-0"
               />
-              {opponentType === 'BOT' ? (
+              {opponentType === 'BOT' && mode === 'HOLDEM' ? (
                 <PlayerCountSelector
                   value={botPlayerCount}
                   onChange={setBotPlayerCount}
                   label={t('lobby.botPlayerCount')}
                   hint={t('lobby.botPlayerCountHint')}
                 />
+              ) : null}
+              {opponentType === 'BOT' && mode === 'JOKER' ? (
+                <p className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-center text-xs text-subtle">
+                  {t('lobby.jokerBotPlayerCount')}
+                </p>
               ) : null}
               <Button
                 variant={opponentType === 'BOT' ? 'secondary' : 'primary'}
@@ -917,6 +970,7 @@ export const Lobby = () => {
           <LegalDisclaimer text={t('legal.disclaimer')} />
         </motion.footer>
       </motion.div>
+      <PwaInstallHint />
     </div>
   );
 };

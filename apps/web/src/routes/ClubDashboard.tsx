@@ -31,6 +31,7 @@ export const ClubDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [memberQuery, setMemberQuery] = useState('');
   const [tableName, setTableName] = useState('');
+  const [tableMode, setTableMode] = useState<'HOLDEM' | 'JOKER'>('HOLDEM');
   const [msg, setMsg] = useState<string>();
 
   const reload = () => {
@@ -193,25 +194,43 @@ export const ClubDashboard = () => {
               <p className="mb-4 text-sm text-muted">{t('clubs.noActiveTables')}</p>
             )}
             {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') && (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  className="flex-1"
-                  placeholder={t('clubs.namePlaceholder')}
-                  value={tableName}
-                  onChange={(e) => setTableName(e.target.value)}
-                />
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => {
-                    void createPrivateTable(clubId, { name: tableName, mode: 'HOLDEM' }).then(({ table }) => {
-                      navigate(`/clubs/${clubId}/tables/${table.id}`);
-                    });
-                  }}
-                >
-                  {t('clubs.createBtn')}
-                </Button>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {(['HOLDEM', 'JOKER'] as const).map((m) => (
+                    <Button
+                      key={m}
+                      type="button"
+                      variant={tableMode === m ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={() => setTableMode(m)}
+                    >
+                      {t(`modes.${m}.title`)}
+                    </Button>
+                  ))}
+                  {tableMode === 'JOKER' ? (
+                    <span className="self-center text-xs text-muted">{t('lobby.jokerBotPlayerCount')}</span>
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    className="flex-1"
+                    placeholder={t('clubs.namePlaceholder')}
+                    value={tableName}
+                    onChange={(e) => setTableName(e.target.value)}
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      void createPrivateTable(clubId, { name: tableName, mode: tableMode }).then(({ table }) => {
+                        navigate(`/clubs/${clubId}/tables/${table.id}`);
+                      });
+                    }}
+                  >
+                    {t('clubs.createBtn')}
+                  </Button>
+                </div>
               </div>
             )}
           </GlassPanel>

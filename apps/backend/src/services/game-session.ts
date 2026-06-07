@@ -18,6 +18,11 @@ import {
   startNewHand
 } from '@duopoker/game-engine/index';
 import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import {
+  clampMatchPlayerCount,
+  matchmakingPlayerTarget,
+  minPlayersToStart
+} from '@duopoker/shared-types/index';
 import { loadGameSnapshot, persistGameSnapshot } from './session-persistence.js';
 
 const BOT_PREFIX = 'duopoker-bot';
@@ -53,12 +58,13 @@ export const ensureSessionState = (
   sessionId: string,
   mode: SessionState['mode'],
   buyIn = 100,
-  seed?: number
+  seed?: number,
+  jokerRules?: SessionState['jokerRules']
 ) => {
   if (!sessions.has(sessionId)) {
     sessions.set(
       sessionId,
-      createInitialTableState(sessionId, mode, buyIn, seed ?? Date.now())
+      createInitialTableState(sessionId, mode, buyIn, seed ?? Date.now(), jokerRules)
     );
   }
   return sessions.get(sessionId)!;
@@ -69,24 +75,25 @@ export const seatPlayersBatch = (
   sessionId: string,
   userIds: string[],
   mode: SessionState['mode'],
-  buyIn: number
+  buyIn: number,
+  jokerRules?: SessionState['jokerRules']
 ) => {
-  let state = ensureSessionState(sessionId, mode, buyIn);
+  let state = ensureSessionState(sessionId, mode, buyIn, undefined, jokerRules);
   for (const userId of userIds) {
     state = addPlayerToTable(state, userId);
   }
-  if (state.players.length >= 2 && state.street === 'LOBBY') {
+  if (state.players.length >= minPlayersToStart(mode) && state.street === 'LOBBY') {
     state = startNewHand(state);
   }
   sessions.set(sessionId, state);
   return save(state);
 };
 
-/** Add player; auto-start hand when 2+ seated in LOBBY. */
+/** Add player; auto-start hand when table is full enough for the mode. */
 export const joinTable = (sessionId: string, userId: string, mode: SessionState['mode'], buyIn: number) => {
   let state = ensureSessionState(sessionId, mode, buyIn);
   state = addPlayerToTable(state, userId);
-  if (state.players.length >= 2 && state.street === 'LOBBY') {
+  if (state.players.length >= minPlayersToStart(mode) && state.street === 'LOBBY') {
     state = startNewHand(state);
   }
   return save(state);
@@ -137,12 +144,10 @@ export const enqueueMatchmaking = (
   opts?: { allowSoloQueue?: boolean; opponent?: 'human' | 'bot'; playerCount?: number }
 ) => {
   type Ticket = import('@duopoker/shared-types/index').MatchmakingTicket;
-  const clampCount = (n?: number) => Math.min(6, Math.max(2, n ?? 2));
-
   if (opts?.opponent === 'bot') {
     const idx = queue.findIndex((q) => q.userId === ticket.userId);
     if (idx >= 0) queue.splice(idx, 1);
-    const count = clampCount(opts.playerCount);
+    const count = clampMatchPlayerCount(ticket.mode, opts.playerCount);
     const base = Date.now();
     const bots: Ticket[] = Array.from({ length: count - 1 }, (_, i) => ({
       userId: `${BOT_PREFIX}-${base}-${i}`,
@@ -156,24 +161,28 @@ export const enqueueMatchmaking = (
   const allowSolo = opts?.opponent === 'human' ? false : opts?.allowSoloQueue === true;
   queue.push(ticket);
   const compatible = queue.filter((q) => q.mode === ticket.mode && q.buyIn === ticket.buyIn).slice(0, 6);
-  if (compatible.length >= 2) {
-    compatible.forEach((item) => {
+  const target = matchmakingPlayerTarget(ticket.mode);
+  if (compatible.length >= target) {
+    const picked = compatible.slice(0, target);
+    picked.forEach((item) => {
       const idx = queue.findIndex((q) => q.userId === item.userId && q.createdAt === item.createdAt);
       if (idx >= 0) queue.splice(idx, 1);
     });
-    return compatible;
+    return picked;
   }
   if (allowSolo && compatible.length === 1) {
     const human = compatible[0]!;
     const idx = queue.findIndex((q) => q.userId === human.userId && q.createdAt === human.createdAt);
     if (idx >= 0) queue.splice(idx, 1);
-    const bot: Ticket = {
-      userId: `${BOT_PREFIX}-${Date.now()}`,
+    const botCount = matchmakingPlayerTarget(human.mode) - 1;
+    const base = Date.now();
+    const bots: Ticket[] = Array.from({ length: botCount }, (_, i) => ({
+      userId: `${BOT_PREFIX}-${base}-${i}`,
       mode: human.mode,
       buyIn: human.buyIn,
       createdAt: Date.now()
-    };
-    return [human, bot];
+    }));
+    return [human, ...bots];
   }
   return null;
 };

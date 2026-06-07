@@ -9,12 +9,17 @@ node_modules
 !**/.env.example
 !**/.env.vercel.example
 dist
+**/dist/
+apps/web/dist
 coverage
 packages/db-schema/src/generated
 packages/db-schema/dist
 test-results
+playwright-report
 # accidental JS emit next to TS sources
 packages/shared-types/src/*.js
+packages/shared-types/src/*.d.ts
+packages/shared-types/src/*.d.ts.map
 packages/db-schema/src/index.js
 .expo
 .idea

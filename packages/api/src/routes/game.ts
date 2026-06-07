@@ -22,27 +22,50 @@ import {
 } from '../services/vip-table.js';
 import { listLiveTableInvites, listPendingTableInvites } from '../services/table-invites.js';
 import { prisma } from '../lib/prisma.js';
+import { normalizeGameMode } from '@duopoker/shared-types/index';
+
+const gameModeSchema = z.preprocess(
+  (v) => (typeof v === 'string' ? normalizeGameMode(v as 'HOLDEM' | 'JOKER' | 'RASPISNOY') : v),
+  z.enum(['HOLDEM', 'JOKER'])
+);
 
 const queueSchema = z.object({
-  mode: z.enum(['HOLDEM', 'JOKER']),
+  mode: gameModeSchema,
   buyIn: z.number().int().positive(),
   opponent: z.enum(['human', 'bot']).optional().default('human'),
-  playerCount: z.number().int().min(2).max(6).optional().default(2)
+  playerCount: z.number().int().min(2).max(6).optional().default(2),
+  jokerRules: z
+    .object({
+      strictJoker: z.boolean().optional(),
+      scoringMode: z.enum(['classic', 'minus']).optional()
+    })
+    .optional()
 });
 
 const joinSchema = z.object({
   sessionId: z.string().min(1),
-  mode: z.enum(['HOLDEM', 'JOKER']).default('HOLDEM'),
+  mode: gameModeSchema.default('HOLDEM'),
   buyIn: z.number().int().positive().default(100)
 });
 
 const actionSchema = z.object({
   sessionId: z.string().min(1),
-  type: z.enum(['bet', 'check', 'fold', 'call', 'raise', 'bid', 'playCard']),
+  type: z.enum(['bet', 'check', 'fold', 'call', 'raise', 'bid', 'playCard', 'chooseTrump']),
   amount: z.number().int().nonnegative().optional(),
+  raiseBy: z.number().int().nonnegative().optional(),
   card: z
     .string()
     .regex(/^[6-9TJQKA][SHDC]$/)
+    .optional(),
+  trumpSuit: z.enum(['S', 'H', 'D', 'C']).nullable().optional(),
+  declaration: z
+    .union([
+      z.enum(['nominal', 'senior', 'minor']),
+      z.object({
+        suit: z.enum(['S', 'H', 'D', 'C']),
+        rankMode: z.enum(['senior', 'minor'])
+      })
+    ])
     .optional(),
   at: z.number().default(() => Date.now())
 });
@@ -128,13 +151,14 @@ gameRoutes.post('/queue', async (c) => {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
 
-  const { opponent, playerCount, ...ticketFields } = parsed.data;
+  const { opponent, playerCount, jokerRules, ...ticketFields } = parsed.data;
   const result = await enterMatchmaking(
     { userId, ...ticketFields, createdAt: Date.now() },
     {
       allowSoloQueue: matchmakingAllowsSolo(),
       opponent,
-      playerCount: opponent === 'bot' ? playerCount : undefined
+      playerCount: opponent === 'bot' ? playerCount : undefined,
+      jokerRules
     }
   );
 

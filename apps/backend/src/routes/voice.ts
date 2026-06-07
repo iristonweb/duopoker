@@ -23,6 +23,8 @@ voiceRouter.get('/status', (_req, res) => {
   const configured = isLiveKitConfigured(cfg);
   res.json({
     livekit: configured ? 'configured' : 'missing',
+    minTier: config.mockCheckout ? null : 'GOLD',
+    requiresAuth: false,
     checks: {
       apiKey: Boolean(cfg.apiKey),
       apiSecret: Boolean(cfg.apiSecret),
@@ -61,12 +63,14 @@ voiceRouter.post('/token', async (req, res) => {
     });
   }
 
-  const tier = await getUserSubscriptionTier(parsed.data.userId);
-  if (TIER_RANK[tier] < TIER_RANK.GOLD) {
-    return res.status(403).json({
-      error: 'Voice chat requires Gold subscription or higher',
-      code: 'TIER_REQUIRED'
-    });
+  if (!config.mockCheckout) {
+    const tier = await getUserSubscriptionTier(parsed.data.userId);
+    if (TIER_RANK[tier] < TIER_RANK.GOLD) {
+      return res.status(403).json({
+        error: 'Voice chat requires Gold subscription or higher',
+        code: 'TIER_REQUIRED'
+      });
+    }
   }
 
   const result = await createVoiceRoomToken(cfg, parsed.data);

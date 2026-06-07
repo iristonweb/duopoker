@@ -4,9 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '@duopoker/shared-types';
-import { acceptInviteRequest } from '../src/lib/api';
-import { useMobileStore } from '../src/state/useMobileStore';
-import { mobileTheme } from '../src/theme';
+import { acceptInviteRequest } from '../../src/lib/api';
+import { useMobileStore } from '../../src/state/useMobileStore';
+import { strings } from '../../src/lib/strings';
+import { mobileTheme } from '../../src/theme';
 
 export default function InviteScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -22,7 +23,7 @@ export default function InviteScreen() {
         router.replace('/lobby');
         setError(null);
       })
-      .catch(() => setError('Could not accept invite'))
+      .catch(() => setError(strings.invite.acceptFailed))
       .finally(() => setBusy(false));
   }, [accessToken, code, busy]);
 
@@ -31,11 +32,13 @@ export default function InviteScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.inner}>
           {busy ? <ActivityIndicator color={colors.gold} size="large" /> : null}
-          <Text style={styles.title}>Club invitation</Text>
-          <Text style={styles.subtitle}>Code: {code}</Text>
+          <Text style={styles.title}>{strings.invite.title}</Text>
+          <Text style={styles.subtitle}>
+            {strings.invite.code}: {code}
+          </Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Pressable onPress={() => router.replace('/lobby')} style={styles.cta}>
-            <Text style={styles.ctaText}>Back to lobby</Text>
+            <Text style={styles.ctaText}>{strings.invite.backToLobby}</Text>
           </Pressable>
         </View>
       </SafeAreaView>

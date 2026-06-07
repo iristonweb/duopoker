@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button, cn } from '@duopoker/ui-kit';
@@ -5,6 +6,7 @@ import type { Card, GameStreet } from '@duopoker/shared-types/index';
 import { PlayingCard } from '../cosmetics/PlayingCard';
 import { TurnTimer } from './TurnTimer';
 import { formatTableError } from '../../lib/table-errors';
+import { tableHaptic } from '../../lib/table-haptics';
 
 type Props = {
   myTurn: boolean;
@@ -60,17 +62,19 @@ export function TableActionDock({
   sessionError
 }: Props) {
   const { t } = useTranslation();
+  const [moreOpen, setMoreOpen] = useState(false);
   const showActions = myTurn && street !== 'COMPLETE' && street !== 'LOBBY';
   const clampedRaise = Math.min(maxTotal, Math.max(minTotal, raiseAmount || minTotal));
 
   return (
     <motion.footer
+      data-testid="table-action-dock"
       initial={false}
       animate={{ y: 0, opacity: 1 }}
       className={cn(
         'glass-shine relative z-40 shrink-0 border-t bg-background/92 backdrop-blur-xl',
         showActions
-          ? 'border-gradient-gold border-gold/35 shadow-glow-gold'
+          ? 'border-gradient-gold border-gold/35 shadow-glow-gold table-action-segment-active'
           : 'border-white/10'
       )}
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
@@ -78,7 +82,7 @@ export function TableActionDock({
       {showActions ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
       ) : null}
-      <div className="mx-auto max-w-6xl px-3 py-3 sm:px-5 sm:py-4">
+      <div className="mx-auto max-w-6xl px-3 py-2.5 max-sm:landscape:py-1.5 sm:px-5 sm:py-4">
         {sessionError ? (
           <p className="mb-2 rounded-lg border border-rose/30 bg-rose/10 px-3 py-1.5 text-xs text-rose">
             {formatTableError(sessionError, t)}
@@ -148,7 +152,7 @@ export function TableActionDock({
           </div>
 
           {showActions ? (
-            <div className="flex items-center gap-3 text-xs sm:text-sm">
+            <div className="hidden items-center gap-3 text-xs sm:flex sm:text-sm">
               <span className="font-mono text-muted">
                 {t('table.pot')}: <span className="font-semibold text-gold-light">{kettle.toLocaleString()}</span>
               </span>
@@ -162,58 +166,97 @@ export function TableActionDock({
         </div>
 
         {showActions ? (
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {secondsLeft !== null ? <TurnTimer secondsLeft={secondsLeft} className="hidden sm:flex" /> : null}
-
-            <Button
-              variant="ghost"
-              size="lg"
-              className="min-h-12 min-w-[4.5rem] border-rose/25 text-rose hover:border-rose/40 hover:bg-rose/10"
-              onClick={onFold}
+          <div className="flex flex-col gap-2 sm:gap-3">
+            <div
+              className={cn(
+                'table-action-segment w-full max-sm:grid max-sm:grid-cols-3 sm:w-auto sm:inline-flex',
+                showActions && 'table-action-segment-active'
+              )}
             >
-              {t('table.fold')}
-            </Button>
+              <Button
+                variant="ghost"
+                size="lg"
+                className="min-h-11 min-w-0 rounded-xl border-0 border-r border-rose/20 bg-rose/[0.08] text-rose shadow-[0_0_12px_rgba(244,63,94,0.1)] hover:bg-rose/15 max-sm:px-2 max-sm:text-xs sm:min-h-12 sm:min-w-[4.75rem]"
+                onClick={() => {
+                  tableHaptic('light');
+                  onFold();
+                }}
+              >
+                {t('table.fold')}
+              </Button>
 
-            <div className="relative">
-              {secondsLeft !== null ? (
-                <TurnTimer secondsLeft={secondsLeft} size={48} className="absolute -left-1 -top-1 sm:hidden" />
-              ) : null}
-              {need === 0 ? (
+              <div className="relative max-sm:min-w-0">
+                {secondsLeft !== null ? (
+                  <TurnTimer secondsLeft={secondsLeft} size={40} className="absolute -left-1 -top-1 sm:hidden" />
+                ) : null}
+                {need === 0 ? (
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] shadow-[0_0_14px_rgba(74,222,128,0.12)] max-sm:px-2 max-sm:text-xs sm:min-h-12 sm:min-w-[5.5rem]"
+                    onClick={() => {
+                      tableHaptic('medium');
+                      onCheck();
+                    }}
+                  >
+                    {t('table.check')}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] px-2 shadow-[0_0_14px_rgba(74,222,128,0.12)] max-sm:text-xs sm:min-h-12 sm:min-w-[5.5rem] sm:px-4"
+                    onClick={() => {
+                      tableHaptic('medium');
+                      onCall();
+                    }}
+                  >
+                    <span className="truncate">{t('table.call', { amount: need })}</span>
+                  </Button>
+                )}
+              </div>
+
+              {canRaise ? (
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   size="lg"
-                  className="min-h-12 min-w-[5.5rem] border-emerald/30 shadow-[0_0_16px_rgba(74,222,128,0.12)]"
-                  onClick={onCheck}
+                  className="min-h-11 min-w-0 rounded-xl border-0 shadow-glow-gold max-sm:px-2 max-sm:text-xs sm:hidden"
+                  onClick={() => {
+                    tableHaptic('heavy');
+                    onRaise();
+                  }}
                 >
-                  {t('table.check')}
+                  {currentBet > 0 ? t('table.raise') : t('table.bet')}
                 </Button>
               ) : (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="min-h-12 min-w-[5.5rem] border-emerald/30 shadow-[0_0_16px_rgba(74,222,128,0.12)]"
-                  onClick={onCall}
-                >
-                  {t('table.call', { amount: need })}
-                </Button>
+                <div className="hidden min-h-12 min-w-[5.5rem] sm:block" aria-hidden />
               )}
             </div>
 
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
+              {secondsLeft !== null ? <TurnTimer secondsLeft={secondsLeft} className="hidden sm:flex" /> : null}
+
             <Button
               variant="ghost"
               size="lg"
-              className="min-h-12 border-gold/25 text-gold-light hover:border-gold/40 hover:bg-gold/10"
+              className="hidden min-h-12 border-gold/25 text-gold-light hover:border-gold/40 hover:bg-gold/10 sm:inline-flex"
               disabled={!canRaise}
-              onClick={() => onRaiseAmountChange(halfPotRaise)}
+              onClick={() => {
+                tableHaptic('light');
+                onRaiseAmountChange(halfPotRaise);
+              }}
             >
               {t('table.halfPot')}
             </Button>
             <Button
               variant="ghost"
               size="lg"
-              className="min-h-12 border-gold/25 text-gold-light hover:border-gold/40 hover:bg-gold/10"
+              className="hidden min-h-12 border-gold/25 text-gold-light hover:border-gold/40 hover:bg-gold/10 sm:inline-flex"
               disabled={!canRaise}
-              onClick={() => onRaiseAmountChange(potRaise)}
+              onClick={() => {
+                tableHaptic('light');
+                onRaiseAmountChange(potRaise);
+              }}
             >
               {t('table.potBet')}
             </Button>
@@ -227,7 +270,13 @@ export function TableActionDock({
                   step={1}
                   value={clampedRaise}
                   onChange={(e) => onRaiseAmountChange(Number(e.target.value))}
-                  className="h-2 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-gold [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gold"
+                  style={{
+                    ['--range-fill' as string]:
+                      maxTotal > minTotal
+                        ? `${((clampedRaise - minTotal) / (maxTotal - minTotal)) * 100}%`
+                        : '0%'
+                  }}
+                  className="premium-range"
                   aria-label={t('table.raise')}
                 />
                 <span className="w-14 shrink-0 text-center font-mono text-sm font-bold text-gold-light">
@@ -236,13 +285,55 @@ export function TableActionDock({
                 <Button
                   variant="primary"
                   size="lg"
-                  className="min-h-12 shrink-0 border border-gold/30 shadow-glow-gold"
-                  onClick={onRaise}
+                  className="hidden min-h-12 shrink-0 border border-gold/30 shadow-glow-gold sm:inline-flex"
+                  onClick={() => {
+                    tableHaptic('heavy');
+                    onRaise();
+                  }}
                 >
                   {currentBet > 0 ? t('table.raise') : t('table.bet')}
                 </Button>
               </div>
             ) : null}
+
+            {canRaise ? (
+              <div className="w-full sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen((v) => !v)}
+                  className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle transition hover:border-gold/30 hover:text-gold-light"
+                >
+                  {t('table.moreActions')}
+                </button>
+                {moreOpen ? (
+                  <div className="mt-1.5 flex gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="lg"
+                      className="min-h-10 flex-1 border-gold/25 text-xs text-gold-light"
+                      onClick={() => {
+                        tableHaptic('light');
+                        onRaiseAmountChange(halfPotRaise);
+                      }}
+                    >
+                      {t('table.halfPot')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="lg"
+                      className="min-h-10 flex-1 border-gold/25 text-xs text-gold-light"
+                      onClick={() => {
+                        tableHaptic('light');
+                        onRaiseAmountChange(potRaise);
+                      }}
+                    >
+                      {t('table.potBet')}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            </div>
           </div>
         ) : street !== 'COMPLETE' && street !== 'LOBBY' ? (
           <p className="text-center text-sm text-subtle">

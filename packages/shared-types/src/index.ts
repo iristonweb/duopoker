@@ -92,19 +92,26 @@ export {
   type ReferralRewardKind
 } from './referrals';
 
-export type GameMode = 'HOLDEM' | 'JOKER';
+import type { GameMode } from './game-mode';
+export type { GameMode, LegacyGameMode } from './game-mode';
+export { normalizeGameMode } from './game-mode';
 
 export {
   JOKER_RECOMMENDED_PLAYERS,
   JOKER_TOTAL_HANDS,
+  clampMatchPlayerCount,
+  clubTableMaxPlayers,
   jokerCardsPerHand,
-  jokerPoolLabel
+  jokerPoolLabel,
+  matchmakingPlayerTarget,
+  minPlayersToStart
 } from './joker-schedule';
 
 export {
   JOKER_WILD_IDS,
   cardSuit,
   isJokerCard,
+  isNominalTrumpBanned,
   jokerLegalPlays,
   leadSuitFromTrick,
   normalizeJokerCard
@@ -113,11 +120,13 @@ export {
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type GameStreet =
   | 'LOBBY'
+  | 'TUZOVANIE'
   | 'PREFLOP'
   | 'FLOP'
   | 'TURN'
   | 'RIVER'
   | 'SHOWDOWN'
+  | 'TRUMP_CHOICE'
   | 'BIDDING'
   | 'TRICKS'
   | 'COMPLETE';
@@ -125,9 +134,16 @@ export type Suit = 'S' | 'H' | 'D' | 'C';
 export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'T' | 'J' | 'Q' | 'K' | 'A';
 export type Card = `${Rank}${Suit}`;
 
+export type JokerDeclaration =
+  | 'nominal'
+  | 'senior'
+  | 'minor'
+  | { suit: Suit; rankMode: 'senior' | 'minor' };
+
 export interface JokerTrickPlay {
   userId: string;
   card: Card;
+  declaration?: JokerDeclaration;
 }
 
 export interface JokerDealRecord {
@@ -137,6 +153,15 @@ export interface JokerDealRecord {
   bids: Record<string, number>;
   tricksWon: Record<string, number>;
   handPoints: Record<string, number>;
+}
+
+export type JokerScoringMode = 'classic' | 'minus';
+
+/** Optional JOKER match rules (club variants). */
+export interface JokerMatchRules {
+  /** Lead with joker only when hand is all jokers */
+  strictJoker?: boolean;
+  scoringMode?: JokerScoringMode;
 }
 
 export interface JokerHandState {
@@ -157,14 +182,36 @@ export interface JokerHandState {
   handPoints?: Record<string, number>;
   /** Completed deals in this match (for score notebook) */
   dealHistory?: JokerDealRecord[];
+  /** Winner of the most recently completed trick */
+  lastTrickWinner?: string;
+  /** Tuzovanie: cards revealed per player until an ace is found */
+  tuzovanieRevealed?: Record<string, Card[]>;
+  /** Tuzovanie: chronological reveal order for step-by-step UI */
+  tuzovanieLog?: { userId: string; card: Card }[];
+  /** Tuzovanie: index of player currently receiving a reveal card */
+  tuzovanieActiveIndex?: number;
+  /** Pool premium adjustments applied at end of each pool */
+  poolPremiums?: Record<string, number>;
+  /** True after a void-suit dump trick while no trump was in play (blocks nominal trump jokers). */
+  voidTrumpDiscards?: boolean;
+  /** Seat index of the player who made the first bid this hand (leads trick 1). */
+  firstBidderIndex?: number;
 }
 
 export interface PlayerAction {
   sessionId: string;
   userId: string;
-  type: 'bet' | 'check' | 'fold' | 'call' | 'raise' | 'bid' | 'playCard';
+  type: 'bet' | 'check' | 'fold' | 'call' | 'raise' | 'bid' | 'playCard' | 'chooseTrump';
   amount?: number;
+  /** Raise increment above the previous max bet (display only) */
+  raiseBy?: number;
   card?: Card;
+  /** Trump suit for chooseTrump; omit or null = no trump */
+  trumpSuit?: Suit | null;
+  /** Joker play declaration (6♠ / 6♣ only) */
+  declaration?: JokerDeclaration;
+  /** True when the action committed the player's entire remaining stack */
+  allIn?: boolean;
   at: number;
 }
 
@@ -192,6 +239,8 @@ export interface SessionState {
   actionLog: PlayerAction[];
   deck: Card[];
   lastAggressor: string | null;
+  /** Minimum raise increment this betting round (NLHE: last full raise size) */
+  lastRaiseSize: number;
   /** Players who have committed their entire stack this hand */
   allInPlayerIds: string[];
   /** Whether each player has acted since the last raise this street */
@@ -210,6 +259,8 @@ export interface SessionState {
   ghostCommunityCards?: Card[];
   /** Trick-taking state for Joker mode */
   joker?: JokerHandState;
+  /** JOKER-only match rule variants */
+  jokerRules?: JokerMatchRules;
   /** @deprecated still populated for older clients — use activePlayerIndex */
   activePlayerId?: string;
 }

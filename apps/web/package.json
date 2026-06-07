@@ -7,10 +7,12 @@
     "dev": "vite --port 5180 --strictPort",
     "build": "vite build",
     "lint": "eslint src",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@duopoker/game-engine": "workspace:*",
     "@duopoker/shared-types": "workspace:*",
+    "@duopoker/table-client": "workspace:*",
     "@duopoker/ui-kit": "workspace:*",
     "@react-three/drei": "^9.120.4",
     "@react-three/fiber": "^8.17.14",

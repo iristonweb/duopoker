@@ -1,13 +1,20 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import type { GameMode } from '@duopoker/shared-types/index';
+import type { TableLeaderboardEntry } from '@duopoker/table-client';
 import { Button, GlassPanel, cn } from '@duopoker/ui-kit';
+import { LeaderboardPodium, type LeaderboardProfile } from './LeaderboardPodium';
 
 type Props = {
   visible: boolean;
   winners?: string;
   /** When set, replaces the winners line (e.g. Joker hand points). */
   summaryText?: string;
+  /** Winning hand rank(s) at showdown (Hold'em). */
+  handRankLine?: string;
+  /** Side pot breakdown when multiple pots exist. */
+  sidePotLine?: string;
   summaryHeading?: string;
   gameOver: boolean;
   gameOverMessage?: string;
@@ -16,6 +23,11 @@ type Props = {
   ghostBoardVisible?: boolean;
   onToggleGhostBoard?: () => void;
   showGhostUpsell?: boolean;
+  leaderboardEntries?: TableLeaderboardEntry[];
+  leaderboardProfiles?: Record<string, LeaderboardProfile>;
+  heroId?: string;
+  mode?: GameMode;
+  buyIn?: number;
   className?: string;
 };
 
@@ -23,6 +35,8 @@ export function HandResultOverlay({
   visible,
   winners,
   summaryText,
+  handRankLine,
+  sidePotLine,
   summaryHeading,
   gameOver,
   gameOverMessage,
@@ -31,6 +45,11 @@ export function HandResultOverlay({
   ghostBoardVisible = false,
   onToggleGhostBoard,
   showGhostUpsell = false,
+  leaderboardEntries,
+  leaderboardProfiles = {},
+  heroId,
+  mode = 'HOLDEM',
+  buyIn,
   className
 }: Props) {
   const { t } = useTranslation();
@@ -48,13 +67,16 @@ export function HandResultOverlay({
           exit={{ opacity: 0, y: -12, scale: 0.98 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
-            'absolute inset-x-0 top-16 z-20 flex justify-center px-4 sm:top-[4.5rem]',
+            'absolute inset-x-0 top-[9.5rem] z-20 flex justify-center px-3 sm:top-[5.5rem] sm:px-4',
             className
           )}
         >
           <GlassPanel
             glow="gold"
-            className="relative max-w-lg overflow-hidden px-6 py-4 text-center shadow-[0_0_48px_rgba(232,197,71,0.2)]"
+            className={cn(
+              'relative max-w-lg overflow-hidden px-4 py-3 text-center text-sm shadow-[0_0_48px_rgba(232,197,71,0.2)] sm:px-6 sm:py-4 sm:text-base',
+              gameOver && 'ring-1 ring-gold/30'
+            )}
           >
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               {[0, 1, 2, 3, 4].map((i) => (
@@ -79,8 +101,63 @@ export function HandResultOverlay({
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
               {summaryHeading ?? t('table.handResult')}
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold text-gradient-gold">{t('table.handComplete')}</p>
-            <p className="mt-2 text-sm text-muted">{resultLine}</p>
+            <p className="mt-1 font-display text-xl font-semibold text-gradient-gold sm:text-2xl">
+              {gameOver ? t('table.gameOver') : t('table.handComplete')}
+            </p>
+            {!gameOver ? <p className="mt-2 text-sm text-muted">{resultLine}</p> : null}
+            {handRankLine ? <p className="mt-1 text-xs text-subtle">{handRankLine}</p> : null}
+            {sidePotLine ? <p className="mt-1 text-[11px] text-subtle/90">{sidePotLine}</p> : null}
+            {gameOver && leaderboardEntries?.length ? (
+              <div className="mt-4 flex flex-col items-center gap-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold/60">
+                  👑 {t('table.leaderboardTitle')}
+                </p>
+                <LeaderboardPodium
+                  entries={leaderboardEntries}
+                  mode={mode}
+                  heroId={heroId}
+                  profiles={leaderboardProfiles}
+                />
+                <div className="w-full space-y-1 border-t border-white/10 pt-3 text-left">
+                  {leaderboardEntries.slice(0, 5).map((entry) => {
+                    const name = leaderboardProfiles[entry.userId]?.name ?? entry.userId.slice(0, 8);
+                    const delta = entry.handDelta;
+                    const netPl =
+                      mode === 'HOLDEM' && buyIn !== undefined ? entry.score - buyIn : undefined;
+                    return (
+                      <div
+                        key={entry.userId}
+                        className={cn(
+                          'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs',
+                          entry.rank === 1 && 'bg-gold/[0.12] ring-1 ring-gold/20',
+                          entry.rank === 2 && 'bg-white/[0.03]',
+                          entry.rank === 3 && 'bg-amber-900/[0.08]',
+                          entry.userId === heroId && entry.rank !== 1 && 'bg-gold/[0.08]'
+                        )}
+                      >
+                        <span className="truncate text-muted">
+                          #{entry.rank} {name}
+                        </span>
+                        <span className="shrink-0 font-mono font-semibold text-gold-light">
+                          {entry.score.toLocaleString()}
+                          {netPl !== undefined ? (
+                            <span className={cn('ml-1 text-[10px]', netPl >= 0 ? 'text-emerald' : 'text-rose')}>
+                              ({netPl >= 0 ? '+' : ''}
+                              {netPl})
+                            </span>
+                          ) : delta !== undefined ? (
+                            <span className={cn('ml-1 text-[10px]', delta >= 0 ? 'text-emerald' : 'text-rose')}>
+                              ({delta >= 0 ? '+' : ''}
+                              {delta})
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
             {canPeekGhostBoard && onToggleGhostBoard ? (
               <div className="pointer-events-auto mt-3">
                 <Button
@@ -108,7 +185,7 @@ export function HandResultOverlay({
               </div>
             ) : null}
             {gameOver ? (
-              <p className="mt-2 text-xs text-subtle">
+              <p className="mt-3 text-sm font-medium text-gradient-gold">
                 {gameOverMessage ?? t('table.gameOver')}
               </p>
             ) : nextHandSeconds !== null && nextHandSeconds > 0 ? (

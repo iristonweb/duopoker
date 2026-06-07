@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
@@ -5,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { attachNotificationListeners } from '../src/notifications/register';
 import { useMobileStore } from '../src/state/useMobileStore';
 import { colors } from '@duopoker/shared-types';
+import '../src/i18n';
 
 export default function RootLayout() {
   const router = useRouter();

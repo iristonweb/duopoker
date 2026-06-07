@@ -1,5 +1,35 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const webServer = process.env.CI
+  ? [
+      {
+        command:
+          'pnpm --filter @duopoker/backend exec tsx src/main.ts',
+        url: 'http://127.0.0.1:4000/health',
+        reuseExistingServer: false,
+        timeout: 120_000,
+        env: {
+          PORT: '4000',
+          ALLOW_OPEN_JOIN: 'true',
+          ALLOW_SOLO_QUEUE: 'true',
+          JWT_SECRET: 'ci-jwt-secret-minimum-32-characters-long',
+          JWT_REFRESH_SECRET: 'ci-jwt-refresh-secret-min-32-chars-long'
+        }
+      },
+      {
+        command: 'pnpm --filter @duopoker/web exec vite --host 127.0.0.1 --port 5180',
+        url: 'http://127.0.0.1:5180/lobby',
+        reuseExistingServer: false,
+        timeout: 120_000
+      }
+    ]
+  : {
+      command: 'pnpm --filter @duopoker/web exec vite --host 127.0.0.1 --port 5180',
+      url: 'http://127.0.0.1:5180/lobby',
+      reuseExistingServer: true,
+      timeout: 120_000
+    };
+
 export default defineConfig({
   testDir: './tests',
   timeout: 60_000,
@@ -9,14 +39,8 @@ export default defineConfig({
     trace: process.env.CI ? 'on-first-retry' : 'off',
     screenshot: process.env.CI ? 'only-on-failure' : 'off'
   },
-  // CI uses system Chrome — avoids ~170MB Chromium download that hangs on GitHub runners.
   projects: process.env.CI
     ? [{ name: 'Google Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }]
     : undefined,
-  webServer: {
-    command: 'pnpm --filter @duopoker/web exec vite --host 127.0.0.1 --port 5180',
-    url: 'http://127.0.0.1:5180/lobby',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000
-  }
+  webServer
 });

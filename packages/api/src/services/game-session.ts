@@ -18,6 +18,11 @@ import {
   startNewHand
 } from '@duopoker/game-engine/index';
 import type { MatchmakingTicket, PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import {
+  clampMatchPlayerCount,
+  matchmakingPlayerTarget,
+  minPlayersToStart
+} from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { newSessionId } from './session-access.js';
 import { loadGameSnapshot, persistGameSnapshot } from './session-persistence.js';
@@ -43,11 +48,12 @@ const ensureSessionState = async (
   sessionId: string,
   mode: SessionState['mode'],
   buyIn = 100,
-  seed?: number
+  seed?: number,
+  jokerRules?: SessionState['jokerRules']
 ): Promise<SessionState> => {
   const existing = await getSessionSnapshot(sessionId);
   if (existing) return existing;
-  return createInitialTableState(sessionId, mode, buyIn, seed ?? Date.now());
+  return createInitialTableState(sessionId, mode, buyIn, seed ?? Date.now(), jokerRules);
 };
 
 /** Add player; auto-start hand when 2+ seated in LOBBY. */
@@ -60,7 +66,7 @@ const seatPlayer = async (
 ) => {
   let state = await ensureSessionState(sessionId, mode, buyIn);
   state = addPlayerToTable(state, userId);
-  if (state.players.length >= 2 && state.street === 'LOBBY') {
+  if (state.players.length >= minPlayersToStart(mode) && state.street === 'LOBBY') {
     state = startNewHand(state);
   }
   await saveState(state);
@@ -116,9 +122,10 @@ export type MatchmakingOpts = {
   allowSoloQueue?: boolean;
   opponent?: 'human' | 'bot';
   playerCount?: number;
+  jokerRules?: SessionState['jokerRules'];
 };
 
-const clampPlayerCount = (n?: number) => Math.min(6, Math.max(2, n ?? 2));
+const clampPlayerCount = (mode: SessionState['mode'], n?: number) => clampMatchPlayerCount(mode, n);
 
 const spawnBotTickets = (
   human: MatchmakingTicket,
@@ -139,13 +146,14 @@ const seatPlayersBatch = async (
   sessionId: string,
   userIds: string[],
   mode: SessionState['mode'],
-  buyIn: number
+  buyIn: number,
+  jokerRules?: SessionState['jokerRules']
 ) => {
-  let state = await ensureSessionState(sessionId, mode, buyIn);
+  let state = await ensureSessionState(sessionId, mode, buyIn, undefined, jokerRules);
   for (const userId of userIds) {
     state = addPlayerToTable(state, userId);
   }
-  if (state.players.length >= 2 && state.street === 'LOBBY') {
+  if (state.players.length >= minPlayersToStart(mode) && state.street === 'LOBBY') {
     state = startNewHand(state);
   }
   await saveState(state);
@@ -158,7 +166,7 @@ export const enqueueMatchmaking = async (
 ): Promise<MatchmakingTicket[] | null> => {
   if (opts?.opponent === 'bot') {
     await prisma.matchmakingTicket.deleteMany({ where: { userId: ticket.userId } });
-    return spawnBotTickets(ticket, clampPlayerCount(opts.playerCount));
+    return spawnBotTickets(ticket, clampPlayerCount(ticket.mode, opts.playerCount));
   }
 
   const allowSolo = opts?.opponent === 'human' ? false : opts?.allowSoloQueue === true;
@@ -183,8 +191,9 @@ export const enqueueMatchmaking = async (
     take: 6
   });
 
-  if (compatible.length >= 2) {
-    const picked = compatible.slice(0, 2);
+  const target = matchmakingPlayerTarget(ticket.mode);
+  if (compatible.length >= target) {
+    const picked = compatible.slice(0, target);
     await prisma.matchmakingTicket.deleteMany({
       where: { userId: { in: picked.map((p) => p.userId) } }
     });
@@ -199,12 +208,14 @@ export const enqueueMatchmaking = async (
   if (allowSolo && compatible.length === 1) {
     const human = compatible[0]!;
     await prisma.matchmakingTicket.deleteMany({ where: { userId: human.userId } });
-    const bot: MatchmakingTicket = {
-      userId: `${BOT_PREFIX}-${Date.now()}`,
+    const botCount = matchmakingPlayerTarget(human.mode) - 1;
+    const base = Date.now();
+    const bots: MatchmakingTicket[] = Array.from({ length: botCount }, (_, i) => ({
+      userId: `${BOT_PREFIX}-${base}-${i}`,
       mode: human.mode,
       buyIn: human.buyIn,
       createdAt: Date.now()
-    };
+    }));
     return [
       {
         userId: human.userId,
@@ -212,7 +223,7 @@ export const enqueueMatchmaking = async (
         buyIn: human.buyIn,
         createdAt: human.createdAt.getTime()
       },
-      bot
+      ...bots
     ];
   }
 
@@ -318,14 +329,16 @@ export const createVipSession = async (
 export const createMatchFromQueue = async (
   ready: MatchmakingTicket[],
   mode: SessionState['mode'],
-  buyIn: number
+  buyIn: number,
+  jokerRules?: SessionState['jokerRules']
 ) => {
   const sessionId = newSessionId();
   await seatPlayersBatch(
     sessionId,
     ready.map((r) => r.userId),
     mode,
-    buyIn
+    buyIn,
+    jokerRules
   );
   await tickSession(sessionId);
 
@@ -422,7 +435,7 @@ export const enterMatchmaking = async (
     return waiting.status === 'waiting' ? waiting : { status: 'waiting', mode: ticket.mode, buyIn: ticket.buyIn };
   }
 
-  const match = await createMatchFromQueue(ready, ticket.mode, ticket.buyIn);
+  const match = await createMatchFromQueue(ready, ticket.mode, ticket.buyIn, opts?.jokerRules);
   const humans = match.players.filter((id) => !id.startsWith(BOT_PREFIX));
   await recordMatchForPlayers(match.sessionId, humans, match.mode, match.buyIn);
 

@@ -102,7 +102,7 @@ export { sanitizeStateForViewer, type SanitizeViewerOptions } from './viewer-sta
 export { peekGhostCommunityFromDeck } from './ghost-board';
 export { normalizeSessionState } from './normalize-state';
 export { parseLoadedSessionState, sessionStateSchema } from './session-schema';
-export { computeSidePots, distributeSidePots } from './pot-calculator';
+export { computeSidePots, distributeSidePots, winnersAmongEligible } from './pot-calculator';
 export { bestStrengthFromSeven, strengthFiveCards, compareStrength, describeStrength } from './poker-eval';
 export { createDeck, shuffle } from './cards';
 export { SeededRng } from './rng';
@@ -112,9 +112,11 @@ export {
   applyJokerAction,
   jokerTimeoutAction,
   pickBotJokerAction,
-  startJokerHand
+  startJokerHand,
+  isJokerMatchComplete,
+  runTuzovanie
 } from './joker-table';
-export { jokerPointsForHand } from './joker-scoring';
+export { jokerPointsForHand, applyPoolPremiums, isPoolEndHand } from './joker-scoring';
 export {
   amountToCall,
   BOT_USER_PREFIX,

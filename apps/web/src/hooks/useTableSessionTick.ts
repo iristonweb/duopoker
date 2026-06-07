@@ -1,11 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { NEXT_HAND_DELAY_MS } from '@duopoker/shared-types';
+import { useMemo } from 'react';
+import { useTableSessionTick as useTableSessionTickBase } from '@duopoker/table-client';
 import type { SessionState } from '@duopoker/shared-types/index';
 import { usesRealtimeSocket } from '../config/api';
-import { isBotUserId } from '../lib/table-layout';
 import { useAppStore } from '../store/useAppStore';
-
-const BOT_STUCK_MS = 8000;
 
 /** Nudge server tick when hand-complete timer elapsed or a bot turn appears stuck. */
 export function useTableSessionTick(
@@ -13,85 +10,31 @@ export function useTableSessionTick(
   sessionId: string | undefined
 ) {
   const apiFetch = useAppStore((s) => s.apiFetch);
-  const botStuckSince = useRef<number | null>(null);
-  const lastActiveKey = useRef<string | null>(null);
-  const hasNudged = useRef(false);
 
-  useEffect(() => {
-    if (!session || !sessionId || session.street !== 'COMPLETE') return;
-
-    const overdue =
-      !session.handCompletedAt || Date.now() - session.handCompletedAt >= NEXT_HAND_DELAY_MS;
-    if (!overdue) return;
-
-    const pull = () => {
-      void apiFetch(`/game/session/${encodeURIComponent(sessionId)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data: { session?: SessionState | null } | null) => {
-          if (data?.session) {
-            useAppStore.setState({ session: data.session, sessionError: undefined });
-          }
-        })
-        .catch(() => undefined);
-    };
-
-    pull();
-    const id = setInterval(pull, 1200);
-    return () => clearInterval(id);
-  }, [session?.street, session?.handCompletedAt, session?.handNumber, sessionId, apiFetch]);
-
-  useEffect(() => {
-    if (!session || !sessionId) return;
-
-    const street = session.street;
-    if (street !== 'BIDDING' && street !== 'TRICKS') {
-      botStuckSince.current = null;
-      lastActiveKey.current = null;
-      hasNudged.current = false;
-      return;
-    }
-
-    const activeId = session.players[session.activePlayerIndex];
-    if (!activeId || !isBotUserId(activeId)) {
-      botStuckSince.current = null;
-      lastActiveKey.current = null;
-      hasNudged.current = false;
-      return;
-    }
-
-    const activeKey = `${session.handNumber}:${session.activePlayerIndex}:${street}`;
-    if (lastActiveKey.current !== activeKey) {
-      lastActiveKey.current = activeKey;
-      botStuckSince.current = Date.now();
-      hasNudged.current = false;
-    }
-
-    if (hasNudged.current) return;
-
-    const stuckSince = botStuckSince.current;
-    if (!stuckSince) return;
-
-    const nudge = () => {
-      if (usesRealtimeSocket()) {
-        useAppStore.getState().socket?.emit('reconnectSession', { sessionId });
-        return;
+  const deps = useMemo(
+    () => ({
+      apiFetch,
+      usesRealtimeSocket,
+      reconnectSession: (sid: string) => {
+        if (usesRealtimeSocket()) {
+          useAppStore.getState().socket?.emit('reconnectSession', { sessionId: sid });
+          return;
+        }
+        void apiFetch(`/game/session/${encodeURIComponent(sid)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data: { session?: SessionState | null } | null) => {
+            if (data?.session) {
+              useAppStore.setState({ session: data.session, sessionError: undefined });
+            }
+          })
+          .catch(() => undefined);
+      },
+      setSession: (s: SessionState) => {
+        useAppStore.setState({ session: s, sessionError: undefined });
       }
-      void apiFetch(`/game/session/${encodeURIComponent(sessionId)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data: { session?: SessionState | null } | null) => {
-          if (data?.session) {
-            useAppStore.setState({ session: data.session, sessionError: undefined });
-          }
-        })
-        .catch(() => undefined);
-    };
+    }),
+    [apiFetch]
+  );
 
-    const delay = Math.max(0, BOT_STUCK_MS - (Date.now() - stuckSince));
-    const timeout = setTimeout(() => {
-      hasNudged.current = true;
-      nudge();
-    }, delay);
-
-    return () => clearTimeout(timeout);
-  }, [sessionId, session?.street, session?.handNumber, session?.activePlayerIndex, apiFetch]);
+  useTableSessionTickBase(session, sessionId, deps);
 }

@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { AppBackground, cn } from '@duopoker/ui-kit';
+import { useTableDockHeight } from '../../hooks/useTableDockHeight';
 
 export function GameTableShell({
   hud,
@@ -14,8 +15,15 @@ export function GameTableShell({
   overlay?: ReactNode;
   className?: string;
 }) {
+  const dockRef = useRef<HTMLDivElement>(null);
+  useTableDockHeight(dockRef);
+
   return (
-    <div className={cn('relative h-dvh w-full overflow-hidden overscroll-none touch-pan-y', className)}>
+    <div
+      data-testid="game-table-shell"
+      className={cn('relative h-dvh w-full overflow-hidden overscroll-none touch-pan-y', className)}
+      style={{ ['--table-dock-height' as string]: '7.5rem' }}
+    >
       <AppBackground />
       <div
         className="pointer-events-none absolute inset-0 z-[1]"
@@ -34,7 +42,11 @@ export function GameTableShell({
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         {hud}
         <div className="relative min-h-0 flex-1">{table}</div>
-        {dock}
+        {dock ? (
+          <div ref={dockRef} data-table-dock className="shrink-0">
+            {dock}
+          </div>
+        ) : null}
       </div>
       {overlay}
     </div>

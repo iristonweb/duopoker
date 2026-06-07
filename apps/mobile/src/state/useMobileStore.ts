@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { registerMobilePushToken } from '../notifications/register';
-import { loginRequest, type AuthUser } from '../lib/api';
+import { cleanupTableConnection } from '../lib/table-connection';
+import { API_BASE, loginRequest, registerTokenRefresh, type AuthUser } from '../lib/api';
 
 const LS_ACCESS = 'duopoker_mobile_access';
 const LS_REFRESH = 'duopoker_mobile_refresh';
@@ -18,6 +19,7 @@ type MobileStore = {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setTokens: (access: string, refresh: string, user: AuthUser) => Promise<void>;
+  refreshAccessToken: () => Promise<boolean>;
 };
 
 export const useMobileStore = create<MobileStore>((set, get) => ({
@@ -49,6 +51,25 @@ export const useMobileStore = create<MobileStore>((set, get) => ({
     });
     void registerMobilePushToken(access);
   },
+  refreshAccessToken: async () => {
+    const rt = get().refreshToken;
+    if (!rt) return false;
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: rt })
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as { accessToken: string; refreshToken: string };
+      const user = get().user;
+      if (!user) return false;
+      await get().setTokens(data.accessToken, data.refreshToken, user);
+      return true;
+    } catch {
+      return false;
+    }
+  },
   login: async (email, password) => {
     set({ authError: undefined });
     try {
@@ -61,9 +82,15 @@ export const useMobileStore = create<MobileStore>((set, get) => ({
     }
   },
   logout: async () => {
+    cleanupTableConnection();
     await SecureStore.deleteItemAsync(LS_ACCESS);
     await SecureStore.deleteItemAsync(LS_REFRESH);
     await SecureStore.deleteItemAsync(LS_USER);
     set({ accessToken: undefined, refreshToken: undefined, user: undefined, userId: '' });
   }
 }));
+
+registerTokenRefresh(async () => {
+  const ok = await useMobileStore.getState().refreshAccessToken();
+  return ok ? useMobileStore.getState().accessToken : undefined;
+});

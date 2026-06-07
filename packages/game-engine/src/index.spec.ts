@@ -29,6 +29,7 @@ describe('game engine', () => {
       dealerIndex: 0,
       handNumber: 1,
       lastAggressor: null,
+      lastRaiseSize: 2,
       buyIn: 100,
       smallBlind: 1,
       bigBlind: 2,

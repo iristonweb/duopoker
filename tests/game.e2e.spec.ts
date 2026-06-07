@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { io, type Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
-import { jokerLegalPlays, leadSuitFromTrick } from '@duopoker/shared-types/index';
+import {
+  isJokerCard,
+  isNominalTrumpBanned,
+  jokerLegalPlays,
+  leadSuitFromTrick
+} from '@duopoker/shared-types/index';
 
-const API = 'http://localhost:4000';
+const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:4000';
 
 const waitForState = (
   socket: Socket,
@@ -30,6 +35,89 @@ const connectClient = (): Socket =>
   io(API, {
     transports: ['websocket']
   });
+
+const pickJokerPlay = (state: SessionState, actor: string) => {
+  const hand = state.playerCards[actor] ?? [];
+  const trump = state.joker?.trumpSuit ?? null;
+  const lead = leadSuitFromTrick(state.joker?.currentTrick ?? []);
+  const legal = jokerLegalPlays(hand, lead, trump, state.jokerRules?.strictJoker);
+  const card = legal[0] ?? hand[0];
+  if (!card) throw new Error(`no legal card for ${actor}`);
+  if (isJokerCard(card)) {
+    const declaration = isNominalTrumpBanned(card, trump, state.joker?.voidTrumpDiscards)
+      ? 'senior'
+      : 'senior';
+    return { card, declaration };
+  }
+  return { card, declaration: undefined };
+};
+
+const playJokerActionsUntilComplete = async (
+  sessionId: string,
+  sockets: Socket[],
+  uids: string[],
+  startState: SessionState
+): Promise<SessionState> => {
+  const socketByUser = new Map(uids.map((uid, i) => [uid, sockets[i]!]));
+  let state = startState;
+
+  for (let guard = 0; guard < 120 && state.street !== 'COMPLETE'; guard += 1) {
+    const actor = state.players[state.activePlayerIndex]!;
+    const sock = socketByUser.get(actor)!;
+    const prevLen = state.actionLog.length;
+
+    if (state.street === 'BIDDING') {
+      sock.emit('playerAction', { sessionId, userId: actor, type: 'bid', amount: 0, at: Date.now() });
+    } else if (state.street === 'TRUMP_CHOICE') {
+      sock.emit('playerAction', {
+        sessionId,
+        userId: actor,
+        type: 'chooseTrump',
+        trumpSuit: 'H',
+        at: Date.now()
+      });
+    } else if (state.street === 'TRICKS') {
+      const { card, declaration } = pickJokerPlay(state, actor);
+      sock.emit('playerAction', {
+        sessionId,
+        userId: actor,
+        type: 'playCard',
+        card,
+        declaration,
+        at: Date.now()
+      });
+    } else {
+      break;
+    }
+
+    state = await waitForState(
+      sockets[0]!,
+      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE' || s.street !== state.street
+    );
+  }
+
+  expect(state.street).toBe('COMPLETE');
+  return state;
+};
+
+const readyAllJokerPlayers = async (
+  sessionId: string,
+  sockets: Socket[],
+  uids: string[],
+  state: SessionState
+): Promise<SessionState> => {
+  const handNum = state.handNumber;
+  for (const uid of uids) {
+    const sock = sockets[uids.indexOf(uid)]!;
+    sock.emit('readyNextHand', { sessionId, userId: uid });
+    await waitForState(sockets[0]!, (s) => (s.readyForNextHand ?? []).includes(uid));
+  }
+  return waitForState(
+    sockets[0]!,
+    (s) => s.handNumber === handNum + 1 && s.street !== 'COMPLETE',
+    20_000
+  );
+};
 
 async function playHoldemHandToComplete() {
   const sessionId = `e2e-HOLDEM-${Date.now()}`;
@@ -82,79 +170,93 @@ async function playHoldemHandToComplete() {
   p2.disconnect();
 }
 
-async function playJokerHandToComplete() {
+async function startJokerSession() {
   const sessionId = `e2e-JOKER-${Date.now()}`;
-  const uid1 = `e2e-j1-${Date.now()}`;
-  const uid2 = `e2e-j2-${Date.now()}`;
-  const p1 = connectClient();
-  const p2 = connectClient();
+  const uids = [1, 2, 3, 4].map((n) => `e2e-j${n}-${Date.now()}-${n}`);
+  const sockets = uids.map(() => connectClient());
 
-  await Promise.all([
-    new Promise<void>((res) => p1.once('connect', () => res())),
-    new Promise<void>((res) => p2.once('connect', () => res()))
-  ]);
+  await Promise.all(sockets.map((s) => new Promise<void>((res) => s.once('connect', () => res()))));
 
-  p1.emit('joinSession', { sessionId, userId: uid1, mode: 'JOKER', buyIn: 100 });
-  p2.emit('joinSession', { sessionId, userId: uid2, mode: 'JOKER', buyIn: 100 });
+  uids.forEach((uid, i) => {
+    sockets[i]!.emit('joinSession', { sessionId, userId: uid, mode: 'JOKER', buyIn: 100 });
+  });
 
-  let state = await waitForState(p1, (s) => s.street === 'BIDDING' && s.players.length === 2);
-
-  for (let guard = 0; guard < 60 && state.street !== 'COMPLETE'; guard += 1) {
-    const actor = state.players[state.activePlayerIndex]!;
-    const sock = actor === uid1 ? p1 : p2;
-    const prevLen = state.actionLog.length;
-
-    if (state.street === 'BIDDING') {
-      sock.emit('playerAction', { sessionId, userId: actor, type: 'bid', amount: 0, at: Date.now() });
-    } else if (state.street === 'TRICKS') {
-      const hand = state.playerCards[actor] ?? [];
-      const lead = leadSuitFromTrick(state.joker?.currentTrick ?? []);
-      const legal = jokerLegalPlays(hand, lead, state.joker?.trumpSuit ?? null);
-      const card = legal[0] ?? hand[0];
-      if (!card) throw new Error(`no legal card for ${actor}`);
-      sock.emit('playerAction', { sessionId, userId: actor, type: 'playCard', card, at: Date.now() });
-    } else {
-      break;
-    }
-
-    state = await waitForState(
-      p1,
-      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE' || s.street !== state.street
-    );
-  }
-
-  expect(state.street).toBe('COMPLETE');
-  expect(state.mode).toBe('JOKER');
-  expect(state.joker?.handPoints).toBeDefined();
-
-  p1.disconnect();
-  p2.disconnect();
+  const state = await waitForState(sockets[0]!, (s) => s.street === 'BIDDING' && s.players.length === 4);
+  return { sessionId, uids, sockets, state };
 }
 
-test('socket gameplay — Hold\'em hand through showdown and next hand', async ({ request }, testInfo) => {
+async function playJokerHandToComplete() {
+  const { sessionId, uids, sockets, state } = await startJokerSession();
+  const final = await playJokerActionsUntilComplete(sessionId, sockets, uids, state);
+
+  expect(final.mode).toBe('JOKER');
+  expect(final.players.length).toBe(4);
+  expect(final.joker?.handPoints).toBeDefined();
+
+  sockets.forEach((s) => s.disconnect());
+}
+
+async function playJokerHands(handCount: number) {
+  const { sessionId, uids, sockets, state } = await startJokerSession();
+  let current = state;
+
+  for (let h = 0; h < handCount; h += 1) {
+    current = await playJokerActionsUntilComplete(sessionId, sockets, uids, current);
+    expect(current.joker?.handPoints).toBeDefined();
+    if (h < handCount - 1) {
+      current = await readyAllJokerPlayers(sessionId, sockets, uids, current);
+      expect(current.street).not.toBe('COMPLETE');
+    }
+  }
+
+  sockets.forEach((s) => s.disconnect());
+  return current;
+}
+
+const skipWithoutBackend = async (
+  request: { get: (url: string) => Promise<{ ok: () => boolean }> },
+  testInfo: { skip: (condition: boolean, reason: string) => void }
+) => {
   const health = await request.get(`${API}/health`).catch(() => null);
   if (!health?.ok()) {
     testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
-    return;
+    return false;
   }
+  return true;
+};
+
+test('socket gameplay — Hold\'em hand through showdown and next hand', async ({ request }, testInfo) => {
+  if (!(await skipWithoutBackend(request, testInfo))) return;
   await playHoldemHandToComplete();
 });
 
 test('socket gameplay — Joker hand through bidding, tricks, and complete', async ({ request }, testInfo) => {
-  const health = await request.get(`${API}/health`).catch(() => null);
-  if (!health?.ok()) {
-    testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
-    return;
-  }
+  if (!(await skipWithoutBackend(request, testInfo))) return;
   await playJokerHandToComplete();
 });
 
-test('stateUpdate hides opponent hole cards', async ({ request }, testInfo) => {
-  const health = await request.get(`${API}/health`).catch(() => null);
-  if (!health?.ok()) {
-    testInfo.skip(true, 'Start backend on port 4000.');
+test('socket gameplay — Joker plays 3 consecutive hands with readyNextHand', async ({ request }, testInfo) => {
+  if (!(await skipWithoutBackend(request, testInfo))) return;
+  const final = await playJokerHands(3);
+  expect(final.handNumber).toBeGreaterThanOrEqual(3);
+  expect(final.joker?.matchHandIndex).toBeGreaterThanOrEqual(2);
+});
+
+test('socket gameplay — Joker full 24-hand match', async ({ request }, testInfo) => {
+  test.setTimeout(600_000);
+  test.slow();
+  if (process.env.E2E_FULL_JOKER_MATCH !== '1') {
+    testInfo.skip(true, 'Set E2E_FULL_JOKER_MATCH=1 to run the full 24-hand socket match.');
     return;
   }
+  if (!(await skipWithoutBackend(request, testInfo))) return;
+  const final = await playJokerHands(24);
+  expect(final.joker?.matchHandIndex).toBe(23);
+  expect(final.joker?.dealHistory?.length).toBe(24);
+});
+
+test('stateUpdate hides opponent hole cards', async ({ request }, testInfo) => {
+  if (!(await skipWithoutBackend(request, testInfo))) return;
 
   const sessionId = `e2e-hide-${Date.now()}`;
   const p1 = connectClient();

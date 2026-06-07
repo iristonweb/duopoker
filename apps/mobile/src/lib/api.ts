@@ -1,9 +1,18 @@
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001/api').replace(/\/$/, '');
 
+type TokenRefresh = () => Promise<string | undefined>;
+let tokenRefresh: TokenRefresh | undefined;
+
+/** Wired from useMobileStore on bootstrap — enables 401 retry. */
+export function registerTokenRefresh(fn: TokenRefresh) {
+  tokenRefresh = fn;
+}
+
 export async function apiFetch(
   path: string,
   init: RequestInit = {},
-  accessToken?: string
+  accessToken?: string,
+  retried = false
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   if (!headers.has('Content-Type') && init.body) {
@@ -12,7 +21,12 @@ export async function apiFetch(
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
-  return fetch(`${API_BASE}${path.startsWith('/') ? path : `/${path}`}`, { ...init, headers });
+  const res = await fetch(`${API_BASE}${path.startsWith('/') ? path : `/${path}`}`, { ...init, headers });
+  if (res.status === 401 && tokenRefresh && accessToken && !retried) {
+    const fresh = await tokenRefresh();
+    if (fresh) return apiFetch(path, init, fresh, true);
+  }
+  return res;
 }
 
 export type AuthUser = {

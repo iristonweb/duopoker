@@ -1,13 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, GlassPanel, cn } from '@duopoker/ui-kit';
-import type { GameStreet, JokerHandState } from '@duopoker/shared-types/index';
+import { motion } from 'framer-motion';
+import { Badge, Button, cn, DpClubMark } from '@duopoker/ui-kit';
+import type { GameMode, GameStreet, JokerHandState, JokerMatchRules } from '@duopoker/shared-types/index';
+import type { TableLeaderboardEntry } from '@duopoker/table-client';
 import { LanguageSwitch } from '../LanguageSwitch';
 import { PokerChipVisual } from '../cosmetics/PokerChipVisual';
 import { JokerTrumpBadge } from './JokerTrumpBadge';
+import { VoiceChatHudButton } from './VoiceChatPill';
+import { LeaderboardPodium, type LeaderboardProfile } from './LeaderboardPodium';
+import { TrophyIcon } from './TrophyIcon';
 
 const streetBadgeVariant = (street: GameStreet): 'gold' | 'emerald' | 'default' | 'rose' => {
-  if (street === 'PREFLOP' || street === 'FLOP' || street === 'BIDDING') return 'gold';
+  if (street === 'PREFLOP' || street === 'FLOP' || street === 'BIDDING' || street === 'TRUMP_CHOICE') return 'gold';
   if (street === 'TURN' || street === 'RIVER' || street === 'TRICKS') return 'emerald';
   if (street === 'SHOWDOWN' || street === 'COMPLETE') return 'rose';
   return 'default';
@@ -22,7 +27,7 @@ const streetGlowClass = (street: GameStreet): string => {
 };
 
 type Props = {
-  mode: 'HOLDEM' | 'JOKER';
+  mode: GameMode;
   pot: number;
   street?: GameStreet;
   seatCount: number;
@@ -33,8 +38,82 @@ type Props = {
   onLeaveTable?: () => void;
   leaving?: boolean;
   joker?: JokerHandState | null;
+  jokerRules?: JokerMatchRules;
+  leaderboardEntries?: TableLeaderboardEntry[];
+  leaderboardProfiles?: Record<string, LeaderboardProfile>;
+  heroId?: string;
+  onOpenLeaderboard?: () => void;
   className?: string;
 };
+
+function MetaChipGroup({
+  mode,
+  isJoker,
+  joker,
+  jokerRules,
+  smallBlind,
+  bigBlind,
+  seatCount,
+  street,
+  showStreet,
+  streetLabel,
+  t
+}: {
+  mode: GameMode;
+  isJoker: JokerHandState | null;
+  joker: JokerHandState | null | undefined;
+  jokerRules?: JokerMatchRules;
+  smallBlind: number;
+  bigBlind: number;
+  seatCount: number;
+  street?: GameStreet;
+  showStreet: boolean;
+  streetLabel: string | null;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}) {
+  const bidding = street === 'BIDDING';
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+      {isJoker && joker ? <JokerTrumpBadge joker={joker} showHint={bidding} size="sm" className="scale-90 sm:scale-100" /> : null}
+      {mode === 'HOLDEM' ? (
+        <Badge variant="gold" className="px-2 py-0.5 text-[9px] shadow-[0_0_14px_rgba(232,197,71,0.12)] sm:px-2.5 sm:py-1 sm:text-[10px]">
+          {t('table.blinds', { sb: smallBlind, bb: bigBlind })}
+        </Badge>
+      ) : isJoker && joker ? (
+        <>
+          <Badge variant="gold" className="px-2 py-0.5 text-[9px] sm:px-2.5 sm:py-1 sm:text-[10px]">
+            {t('table.jokerPool', { pool: joker.pool, hand: joker.matchHandIndex + 1 })}
+          </Badge>
+          {jokerRules?.strictJoker ? (
+            <Badge variant="emerald" className="hidden px-2 py-0.5 text-[9px] sm:inline-flex">
+              {t('lobby.jokerStrict')}
+            </Badge>
+          ) : null}
+          {jokerRules?.scoringMode === 'minus' ? (
+            <Badge variant="default" className="hidden px-2 py-0.5 text-[9px] sm:inline-flex">
+              {t('lobby.jokerMinusScoring')}
+            </Badge>
+          ) : null}
+        </>
+      ) : null}
+      {showStreet && street ? (
+        <Badge
+          variant={streetBadgeVariant(street)}
+          className={cn('px-2 py-0.5 text-[10px] normal-case sm:px-3 sm:py-1 sm:text-xs', streetGlowClass(street))}
+        >
+          {streetLabel}
+        </Badge>
+      ) : null}
+      <Badge
+        variant="default"
+        className="border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] backdrop-blur-sm sm:px-2 sm:text-[10px]"
+      >
+        {t('table.seats', { count: seatCount })}
+      </Badge>
+    </div>
+  );
+}
 
 export function TableTopHUD({
   mode,
@@ -48,33 +127,38 @@ export function TableTopHUD({
   onLeaveTable,
   leaving,
   joker,
+  jokerRules,
+  leaderboardEntries = [],
+  leaderboardProfiles = {},
+  heroId,
+  onOpenLeaderboard,
   className
 }: Props) {
   const { t } = useTranslation();
-  const isJoker = mode === 'JOKER' && joker;
+  const isJoker = mode === 'JOKER' && joker ? joker : null;
   const potLabel = isJoker ? t('table.jokerPoolLabel') : t('table.pot');
   const potValue = isJoker ? joker.pool : pot;
   const streetLabel = street ? t(`table.street.${street}`, { defaultValue: street }) : null;
-  const showStreet = street && street !== 'LOBBY' && streetLabel;
-  const bidding = street === 'BIDDING';
+  const showStreet = Boolean(street && street !== 'LOBBY' && streetLabel);
 
   return (
-    <GlassPanel
-      glow="gold"
+    <div
+      data-testid="table-top-hud"
       className={cn(
-        'relative z-30 shrink-0 rounded-none border-x-0 border-t-0 border-gold/30 bg-background/80 p-0 shadow-[0_8px_32px_rgba(0,0,0,0.45),0_0_40px_rgba(232,197,71,0.08)] backdrop-blur-xl',
+        'relative z-30 shrink-0 overflow-hidden border-b border-gold/20 bg-[linear-gradient(180deg,rgba(5,5,8,0.94)_0%,rgba(5,5,8,0.82)_100%)] shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_48px_rgba(232,197,71,0.06)] backdrop-blur-xl',
         className
       )}
     >
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gold/45 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-      <div className="mx-auto flex h-14 items-center justify-between gap-2 px-3 py-2 sm:h-16 sm:gap-3 sm:px-5 sm:py-2.5">
-        {/* Left: navigation + title */}
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+      {/* Tier 1: slim nav bar */}
+      <div className="mx-auto flex h-9 items-center justify-between gap-2 px-3 sm:h-10 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {onLeaveTable ? (
             <button
               type="button"
-              className="premium-link hidden shrink-0 text-[11px] font-semibold uppercase tracking-[0.28em] sm:inline sm:text-xs"
+              className="premium-link shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] sm:text-[11px]"
               disabled={leaving}
               onClick={onLeaveTable}
             >
@@ -83,117 +167,129 @@ export function TableTopHUD({
           ) : (
             <Link
               to="/lobby"
-              className="premium-link hidden shrink-0 text-[11px] font-semibold uppercase tracking-[0.28em] sm:inline sm:text-xs"
+              className="premium-link shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] sm:text-[11px]"
             >
               ← {t('nav.backLobby')}
             </Link>
           )}
+          <span className="hidden h-4 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent sm:block" aria-hidden />
+          <DpClubMark size="xs" className="hidden sm:block" />
+          <div className="min-w-0 sm:hidden">
+            <p className="truncate font-display text-xs font-semibold text-gradient-gold">
+              {mode === 'HOLDEM' ? t('table.holdem') : t('table.joker')}
+              {handNumber > 0 ? ` · #${handNumber}` : ''}
+            </p>
+          </div>
+        </div>
+
+        <div className="hidden items-center gap-2 sm:flex">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-gold/50">{t('table.liveTable')}</p>
+          <span className="h-3 w-px bg-white/10" aria-hidden />
+          <h1 className="font-display text-sm font-semibold text-gradient-gold">
+            {mode === 'HOLDEM' ? t('table.holdem') : t('table.joker')}
+          </h1>
+          {handNumber > 0 ? (
+            <span className="rounded-full border border-gold/25 bg-gold/[0.08] px-2 py-0.5 font-mono text-[10px] text-gold-light">
+              #{handNumber}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          {onOpenLeaderboard ? (
+            <button
+              type="button"
+              aria-label={t('table.openLeaderboard')}
+              title={t('table.openLeaderboard')}
+              onClick={onOpenLeaderboard}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-gold/25 bg-gold/[0.06] text-gold-light transition hover:border-gold/45 hover:bg-gold/10 hover:shadow-[0_0_16px_rgba(232,197,71,0.2)]"
+            >
+              <TrophyIcon className="h-4 w-4" />
+            </button>
+          ) : null}
+          <VoiceChatHudButton />
+          <LanguageSwitch />
           {onLeaveTable ? (
             <Button
               variant="ghost"
               size="sm"
-              className="shrink-0 border-rose/30 bg-rose/5 text-[10px] text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.12)] hover:border-rose/45 hover:bg-rose/10 hover:text-rose-200 sm:text-xs"
+              className="hidden border-rose/25 bg-rose/5 px-2 text-[10px] text-rose-300 hover:border-rose/40 hover:bg-rose/10 sm:inline-flex"
               disabled={leaving}
               onClick={onLeaveTable}
             >
               {leaving ? t('table.leaving') : t('table.leaveTable')}
             </Button>
           ) : null}
-          <span className="hidden h-5 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent sm:block" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-gold/55 sm:text-[10px]">
-              {t('table.liveTable')}
-            </p>
-            <div className="flex items-baseline gap-2">
-              <h1 className="text-gradient-gold truncate font-display text-base font-semibold sm:text-lg">
-                {mode === 'HOLDEM' ? t('table.holdem') : t('table.joker')}
-              </h1>
-              {handNumber > 0 ? (
-                <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[9px] text-subtle sm:text-[10px]">
-                  #{handNumber}
-                </span>
-              ) : null}
-            </div>
-          </div>
+        </div>
+      </div>
+
+      {/* Tier 2: stats strip */}
+      <div className="mx-auto flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-5 sm:py-2.5">
+        <div className="hidden min-w-0 flex-1 sm:block lg:max-w-[34%]">
+          <MetaChipGroup
+            mode={mode}
+            isJoker={isJoker}
+            joker={joker}
+            jokerRules={jokerRules}
+            smallBlind={smallBlind}
+            bigBlind={bigBlind}
+            seatCount={seatCount}
+            street={street}
+            showStreet={showStreet}
+            streetLabel={streetLabel}
+            t={t}
+          />
         </div>
 
-        {/* Center: pot + street (desktop) */}
-        <div className="hidden items-center gap-2 md:flex">
-          {isJoker ? <JokerTrumpBadge joker={joker} size="sm" /> : null}
-          {mode === 'HOLDEM' ? (
-            <Badge variant="gold" className="px-2.5 py-1 text-[10px] shadow-[0_0_14px_rgba(232,197,71,0.15)]">
-              {t('table.blinds', { sb: smallBlind, bb: bigBlind })}
-            </Badge>
-          ) : isJoker ? (
-            <Badge variant="gold" className="px-2.5 py-1 text-[10px] shadow-[0_0_14px_rgba(232,197,71,0.15)]">
-              {t('table.jokerPool', { pool: joker.pool, hand: joker.matchHandIndex + 1 })}
-            </Badge>
-          ) : null}
-          <div className="glass-shine flex items-center gap-2.5 rounded-full border border-gold/40 bg-gradient-to-br from-white/[0.07] to-white/[0.02] px-4 py-2 shadow-[0_0_32px_rgba(232,197,71,0.22)] backdrop-blur-glass">
-            <PokerChipVisual chipId={chipId} size="sm" />
-            <div className="flex flex-col leading-none">
-              <span className="text-[8px] font-semibold uppercase tracking-[0.3em] text-gold/75">
-                {potLabel}
-              </span>
-              <span className="text-gradient-gold font-mono text-sm font-bold">
-                {typeof potValue === 'number' ? potValue.toLocaleString() : potValue}
-              </span>
-            </div>
-          </div>
-          {showStreet ? (
-            <Badge
-              variant={streetBadgeVariant(street)}
-              className={cn('px-3 py-1 text-xs normal-case tracking-normal', streetGlowClass(street))}
-            >
-              {streetLabel}
-            </Badge>
-          ) : null}
-        </div>
-
-        {/* Mobile center: compact pot pill */}
-        <div className="glass-shine flex items-center gap-1.5 rounded-full border border-gold/35 bg-white/[0.05] px-2.5 py-1 shadow-[0_0_20px_rgba(232,197,71,0.16)] backdrop-blur-glass md:hidden">
-          <PokerChipVisual chipId={chipId} size="sm" className="scale-90" />
-          <div className="flex flex-col leading-none">
-            <span className="text-[7px] font-semibold uppercase tracking-[0.24em] text-gold/70">{potLabel}</span>
-            <span className="text-gradient-gold font-mono text-[11px] font-bold">
+        <motion.div
+          key={typeof potValue === 'number' ? potValue : String(potValue)}
+          initial={{ scale: 1 }}
+          animate={{ scale: [1, 1.04, 1] }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="glass-shine relative mx-auto flex items-center gap-2.5 rounded-2xl border border-gold/45 bg-gradient-to-br from-gold/[0.12] via-white/[0.06] to-transparent px-4 py-2 shadow-[0_0_40px_rgba(232,197,71,0.22),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-glass sm:gap-3 sm:px-5 sm:py-2.5"
+        >
+          <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-gold/20 ring-inset" />
+          <PokerChipVisual chipId={chipId} size="sm" className="relative z-[1] sm:scale-110" />
+          <div className="relative z-[1] flex flex-col leading-none">
+            <span className="text-[8px] font-semibold uppercase tracking-[0.34em] text-gold/75 sm:text-[9px]">
+              {potLabel}
+            </span>
+            <span className="text-gradient-gold font-mono text-base font-bold sm:text-xl">
               {typeof potValue === 'number' ? potValue.toLocaleString() : potValue}
             </span>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Right: seats + language */}
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Badge
-            variant="default"
-            className="hidden border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] backdrop-blur-sm sm:inline-flex"
-          >
-            {t('table.seats', { count: seatCount })}
-          </Badge>
-          <LanguageSwitch />
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:max-w-[34%]">
+          {leaderboardEntries.length > 0 ? (
+            <LeaderboardPodium
+              entries={leaderboardEntries}
+              mode={mode}
+              heroId={heroId}
+              profiles={leaderboardProfiles}
+              onClick={onOpenLeaderboard}
+              compact
+            />
+          ) : null}
         </div>
       </div>
 
-      {/* Mobile meta row: blinds, street, trump */}
-      <div className="flex flex-wrap items-center justify-center gap-2 border-t border-white/[0.06] px-3 py-1.5 md:hidden">
-        {isJoker ? (
-          <JokerTrumpBadge joker={joker} showHint={bidding} size="sm" className="scale-90" />
-        ) : null}
-        {showStreet ? (
-          <Badge
-            variant={streetBadgeVariant(street)}
-            className={cn('px-2 py-0.5 text-[10px] normal-case', streetGlowClass(street))}
-          >
-            {streetLabel}
-          </Badge>
-        ) : null}
-        <span className="font-mono text-[10px] text-subtle">
-          {mode === 'HOLDEM'
-            ? t('table.blinds', { sb: smallBlind, bb: bigBlind })
-            : isJoker
-              ? t('table.jokerPool', { pool: joker.pool, hand: joker.matchHandIndex + 1 })
-              : ''}
-        </span>
+      {/* Mobile meta row */}
+      <div className="border-t border-white/[0.05] px-3 py-1.5 sm:hidden">
+        <MetaChipGroup
+          mode={mode}
+          isJoker={isJoker}
+          joker={joker}
+          jokerRules={jokerRules}
+          smallBlind={smallBlind}
+          bigBlind={bigBlind}
+          seatCount={seatCount}
+          street={street}
+          showStreet={showStreet}
+          streetLabel={streetLabel}
+          t={t}
+        />
       </div>
-    </GlassPanel>
+    </div>
   );
 }

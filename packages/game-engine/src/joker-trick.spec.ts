@@ -35,16 +35,94 @@ describe('trickWinnerIndex', () => {
     expect(order[idx]).toBe('b');
   });
 
-  it('last joker wins the trick', () => {
+  it('senior joker declaration beats high lead card', () => {
     const idx = trickWinnerIndex(
       [
-        { userId: 'a', card: '6S' },
-        { userId: 'b', card: '6C' }
+        { userId: 'a', card: 'AH' },
+        { userId: 'b', card: '6S', declaration: 'senior' }
+      ],
+      order,
+      null
+    );
+    expect(order[idx]).toBe('b');
+  });
+
+  it('last taking joker wins when both declare senior sequentially', () => {
+    const idx = trickWinnerIndex(
+      [
+        { userId: 'a', card: '6S', declaration: 'senior' },
+        { userId: 'b', card: '6C', declaration: 'senior' }
       ],
       order,
       'H'
     );
     expect(order[idx]).toBe('b');
+  });
+
+  it('first taking joker wins when both declare senior non-sequentially', () => {
+    const four = ['n', 'e', 's', 'w'];
+    const idx = trickWinnerIndex(
+      [
+        { userId: 'n', card: '6S', declaration: 'senior' },
+        { userId: 'e', card: 'KH' },
+        { userId: 's', card: '6C', declaration: 'senior' },
+        { userId: 'w', card: 'AH' }
+      ],
+      four,
+      null
+    );
+    expect(four[idx]).toBe('n');
+  });
+
+  it('senior joker beats minor joker', () => {
+    const idx = trickWinnerIndex(
+      [
+        { userId: 'a', card: '6S', declaration: 'minor' },
+        { userId: 'b', card: '6C', declaration: 'senior' }
+      ],
+      order,
+      null
+    );
+    expect(order[idx]).toBe('b');
+  });
+
+  it('minor joker does not take trick — regular card wins', () => {
+    const idx = trickWinnerIndex(
+      [
+        { userId: 'a', card: '6S', declaration: 'minor' },
+        { userId: 'b', card: 'AH' }
+      ],
+      order,
+      null
+    );
+    expect(order[idx]).toBe('b');
+  });
+
+  it('lead suit low joker does not take trick', () => {
+    const idx = trickWinnerIndex(
+      [
+        { userId: 'a', card: '6S', declaration: { suit: 'H', rankMode: 'minor' } },
+        { userId: 'b', card: '7H' }
+      ],
+      order,
+      null
+    );
+    expect(order[idx]).toBe('b');
+  });
+
+  it('last taking joker wins when three taking jokers appear (rule extension)', () => {
+    const order = ['a', 'b', 'c', 'd'];
+    const idx = trickWinnerIndex(
+      [
+        { userId: 'a', card: '6S', declaration: 'senior' },
+        { userId: 'b', card: '6C', declaration: 'senior' },
+        { userId: 'c', card: '6S', declaration: 'senior' },
+        { userId: 'd', card: 'AH' }
+      ],
+      order,
+      null
+    );
+    expect(order[idx]).toBe('c');
   });
 
   it('highest lead suit card wins without trump', () => {

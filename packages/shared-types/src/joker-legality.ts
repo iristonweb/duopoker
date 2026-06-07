@@ -23,11 +23,7 @@ export const leadSuitFromTrick = (trick: readonly { card: Card }[]): Suit | null
  * - Must follow lead suit when possible (jokers do not count as holding the suit).
  * - When void in lead suit, must play trump if any (including jokers).
  */
-export const jokerLegalPlays = (
-  hand: Card[],
-  leadSuit: Suit | null,
-  trumpSuit: Suit | null
-): Card[] => {
+const baseLegalPlays = (hand: Card[], leadSuit: Suit | null, trumpSuit: Suit | null): Card[] => {
   if (!hand.length) return [];
   const jokers = hand.filter(isJokerCard);
   if (!leadSuit) return [...hand];
@@ -43,6 +39,34 @@ export const jokerLegalPlays = (
 
   return [...hand];
 };
+
+export const jokerLegalPlays = (
+  hand: Card[],
+  leadSuit: Suit | null,
+  trumpSuit: Suit | null,
+  strictJoker = false
+): Card[] => {
+  let legal = baseLegalPlays(hand, leadSuit, trumpSuit);
+  if (!strictJoker || leadSuit !== null) return legal;
+  const hasNonJoker = hand.some((c) => !isJokerCard(c));
+  if (hasNonJoker) {
+    legal = legal.filter((c) => !isJokerCard(c));
+  }
+  return legal;
+};
+
+/** After void-suit dumps with no trump, nominal 6♠/6♣ as trump suit is forbidden. */
+export const isNominalTrumpBanned = (
+  card: Card,
+  trumpSuit: Suit | null,
+  voidTrumpDiscards?: boolean
+): boolean =>
+  Boolean(
+    voidTrumpDiscards &&
+      trumpSuit &&
+      isJokerCard(card) &&
+      cardSuit(card) === trumpSuit
+  );
 
 export const normalizeJokerCard = (raw: string): Card | null => {
   const c = raw.trim().toUpperCase();

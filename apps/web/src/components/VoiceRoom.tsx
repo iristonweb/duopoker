@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Room, RoomEvent } from 'livekit-client';
 import { Button } from '@duopoker/ui-kit';
+import { useVoiceEligibility } from '../hooks/useVoiceEligibility';
 import { useAppStore } from '../store/useAppStore';
 
-type VoiceStatus = 'idle' | 'checking' | 'connecting' | 'live' | 'error' | 'unavailable';
+type VoiceStatus = 'idle' | 'connecting' | 'live' | 'error';
+
+const isMicPermissionError = (err: unknown): boolean => {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /notallowed|permission|denied|NotFoundError|microphone/i.test(msg);
+};
 
 export function VoiceRoom() {
   const { t } = useTranslation();
+  const eligibility = useVoiceEligibility();
   const { session, userId, displayName, apiFetch } = useAppStore();
   const roomRef = useRef<Room | null>(null);
   const [status, setStatus] = useState<VoiceStatus>('idle');
@@ -30,29 +38,20 @@ export function VoiceRoom() {
     setStatus('idle');
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const check = async () => {
-      setStatus('checking');
-      try {
-        const res = await apiFetch('/voice/status');
-        if (cancelled) return;
-        if (!res.ok) {
-          setStatus('unavailable');
-          return;
-        }
-        const data = (await res.json()) as { livekit?: string };
-        setStatus(data.livekit === 'configured' ? 'idle' : 'unavailable');
-      } catch {
-        if (!cancelled) setStatus('unavailable');
-      }
-    };
-    void check();
-    return () => {
-      cancelled = true;
+  useEffect(
+    () => () => {
       void leaveVoice();
-    };
-  }, [apiFetch, leaveVoice, session?.sessionId]);
+    },
+    [leaveVoice]
+  );
+
+  const mapTokenError = async (res: Response): Promise<string> => {
+    const err = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+    if (res.status === 401) return t('voice.signInRequired');
+    if (err.code === 'TIER_REQUIRED') return t('voice.tierRequired');
+    if (err.code === 'NOT_ASSIGNED') return t('voice.notInSession');
+    return typeof err.error === 'string' ? err.error : t('voice.tokenFailed');
+  };
 
   const joinVoice = async () => {
     if (!session?.sessionId) return;
@@ -68,8 +67,7 @@ export function VoiceRoom() {
         })
       });
       if (!res.ok) {
-        const err = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(typeof err.error === 'string' ? err.error : t('voice.tokenFailed'));
+        throw new Error(await mapTokenError(res));
       }
       const { token, url } = (await res.json()) as { token: string; url: string };
 
@@ -88,8 +86,15 @@ export function VoiceRoom() {
       });
 
       await room.connect(url, token);
-      await room.localParticipant.setMicrophoneEnabled(true);
-      setMicOn(true);
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true);
+        setMicOn(true);
+      } catch (micErr) {
+        setMicOn(false);
+        setErrorMsg(
+          isMicPermissionError(micErr) ? t('voice.micPermissionDenied') : t('voice.micEnableFailed')
+        );
+      }
       refreshCount(room);
       setStatus('live');
     } catch (e) {
@@ -98,11 +103,10 @@ export function VoiceRoom() {
         /invalid api key|could not establish signal|permission denied|unauthorized/i.test(raw);
       if (invalidKey) {
         setErrorMsg(t('voice.invalidCredentials'));
-        setStatus('unavailable');
       } else {
         setErrorMsg(raw || t('voice.connectionFailed'));
-        setStatus('error');
       }
+      setStatus('error');
       await leaveVoice();
     }
   };
@@ -111,20 +115,47 @@ export function VoiceRoom() {
     const room = roomRef.current;
     if (!room) return;
     const next = !micOn;
-    await room.localParticipant.setMicrophoneEnabled(next);
-    setMicOn(next);
+    try {
+      await room.localParticipant.setMicrophoneEnabled(next);
+      setMicOn(next);
+      if (next) setErrorMsg(null);
+    } catch (e) {
+      setErrorMsg(isMicPermissionError(e) ? t('voice.micPermissionDenied') : t('voice.micEnableFailed'));
+    }
   };
 
   if (!session?.sessionId) {
     return <p className="text-xs text-subtle">{t('voice.joinTableFirst')}</p>;
   }
 
-  if (status === 'checking') {
+  if (eligibility === 'checking') {
     return <p className="text-xs text-subtle">{t('voice.checking')}</p>;
   }
 
-  if (status === 'unavailable') {
+  if (eligibility === 'unavailable') {
     return <p className="text-[11px] leading-relaxed text-subtle">{t('voice.unavailable')}</p>;
+  }
+
+  if (eligibility === 'sign_in_required') {
+    return (
+      <div className="space-y-2">
+        <p className="text-[11px] leading-relaxed text-subtle">{t('voice.signInRequired')}</p>
+        <Link to="/login" className="text-xs font-semibold text-gold hover:text-gold-light">
+          {t('voice.signInLink')}
+        </Link>
+      </div>
+    );
+  }
+
+  if (eligibility === 'tier_required') {
+    return (
+      <div className="space-y-2">
+        <p className="text-[11px] leading-relaxed text-subtle">{t('voice.tierRequired')}</p>
+        <Link to="/lobby#subscriptions" className="text-xs font-semibold text-gold hover:text-gold-light">
+          {t('voice.upgradeLink')}
+        </Link>
+      </div>
+    );
   }
 
   return (

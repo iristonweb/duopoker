@@ -1,6 +1,23 @@
+name: API Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "develop"]
+    paths:
+      - "packages/api/**"
+      - "packages/game-engine/**"
+      - "packages/shared-types/**"
+      - "packages/db-schema/**"
+      - ".github/workflows/ci-api-integration.yml"
+
+concurrency:
+  group: api-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
   api-integration:
     runs-on: ubuntu-latest
-    needs: validate
     timeout-minutes: 15
     env:
       HUSKY: "0"
