@@ -11,7 +11,7 @@ type Props = {
 };
 
 const sidePotAnchor = (potIndex: number, potCount: number): { x: number; y: number } => {
-  const center = { x: 50, y: 50 };
+  const center = { x: 50, y: 52 };
   if (potCount <= 1) return center;
   const offsets = [
     { x: -10, y: -6 },

@@ -11,6 +11,7 @@ export {
 export { rotatePlayersForHero, isBotUserId, botDisplayIndex } from './layout/rotate-players';
 export {
   seatCoordinates,
+  seatPositionStyle,
   bubbleOffset,
   seatLayoutTailwind,
   bubbleOffsetTailwind,

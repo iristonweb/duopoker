@@ -14,7 +14,8 @@ export default {
       lg: '1024px',
       xl: '1280px',
       '2xl': '1536px',
-      'table-compact': { raw: '(max-width: 639px), (max-height: 520px)' }
+      'table-compact': { raw: '(max-width: 639px), (max-height: 520px)' },
+      'max-table-compact': { raw: '(min-width: 640px) and (min-height: 521px)' }
     },
     extend: {
       colors: {

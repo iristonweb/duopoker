@@ -10,7 +10,7 @@ import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipStack, PokerChipVisual } from './cosmetics/PokerChipVisual';
-import { isBotUserId, bubbleOffset, seatLayout, feltPlayAreaClass } from '../lib/table-layout';
+import { isBotUserId, bubbleOffset, seatPositionStyle, feltPlayAreaClass } from '../lib/table-layout';
 import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 import { JokerTrickPile } from './table/JokerTrickPile';
 import { SeatActionBubble } from './table/SeatActionBubble';
@@ -118,14 +118,14 @@ export function PokerTable3D({
       <div className="pointer-events-none absolute inset-0 max-table-compact:hidden" aria-hidden>
         <div className="absolute inset-0 bg-[#030305]" />
         <div
-          className="absolute left-1/2 top-[42%] h-[52%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-[50%]"
+          className={cn('rounded-[50%]', feltPlayAreaClass)}
           style={{
             background: `radial-gradient(ellipse at center, ${felt.meshColor} 0%, #1a1208 70%)`,
             boxShadow: `0 0 48px ${felt.rimColor}55, inset 0 0 72px rgba(0,0,0,0.65)`
           }}
         />
         <div
-          className="absolute left-1/2 top-[42%] h-[56%] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-[3px]"
+          className={cn('rounded-[50%] border-[3px]', feltPlayAreaClass)}
           style={{ borderColor: `${felt.rimColor}99` }}
         />
       </div>
@@ -275,9 +275,9 @@ export function PokerTable3D({
           return (
             <div
               key={player.userId}
+              style={seatPositionStyle(index, players.length)}
               className={cn(
                 'absolute flex max-w-[5.5rem] flex-col items-center gap-0.5 transition-all duration-300 max-table-compact:max-w-none max-table-compact:gap-1',
-                seatLayout(index, players.length),
                 player.isActive && 'z-20 scale-[1.03] max-table-compact:scale-[1.05]',
                 player.isFolded && 'opacity-50 grayscale-[0.4]'
               )}
@@ -428,22 +428,17 @@ export function PokerTable3D({
           {jokerFlights.map((flight) => {
             const seatIdx = playerIndex.get(flight.userId);
             if (seatIdx === undefined) return null;
+            const from = seatPositionStyle(seatIdx, players.length);
             return (
               <motion.div
                 key={flight.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className={cn('absolute z-[18]', seatLayout(seatIdx, players.length))}
-                transition={{ duration: 0.55, ease: 'easeInOut' }}
+                initial={{ opacity: 0, scale: 0.75, left: from.left, top: from.top, x: '-50%', y: '-50%' }}
+                animate={{ opacity: 1, scale: 1, left: '50%', top: '38%', x: '-50%', y: '-50%' }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                className="absolute z-[18]"
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
               >
-                <motion.div
-                  initial={{ y: 0, x: 0 }}
-                  animate={{ y: '-18vh', x: '0vw' }}
-                  transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <PlayingCard card={flight.card} faceUp size="sm" deckId={heroDeckId} />
-                </motion.div>
+                <PlayingCard card={flight.card} faceUp size="sm" deckId={heroDeckId} />
               </motion.div>
             );
           })}

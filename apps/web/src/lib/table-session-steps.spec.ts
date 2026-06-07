@@ -4,6 +4,23 @@ import { buildTableSessionSteps, sessionSnap } from './table-session-steps';
 
 const formatAction = (a: PlayerAction) => `${a.userId}:${a.type}`;
 
+describe('buildTableSessionSteps — initial join', () => {
+  it('emits dealHole steps when prev is null', () => {
+    const session = {
+      handNumber: 2,
+      street: 'BIDDING',
+      mode: 'JOKER',
+      players: ['a', 'b', 'c', 'd'],
+      playerCards: { a: ['AS', 'AH'], b: ['KS', 'KH'], c: ['QS', 'QH'], d: ['JS', 'JH'] },
+      actionLog: [] as PlayerAction[]
+    } as SessionState;
+
+    const steps = buildTableSessionSteps(null, session, formatAction);
+    expect(steps.every((s) => s.kind === 'dealHole')).toBe(true);
+    expect(steps.length).toBe(8);
+  });
+});
+
 describe('buildTableSessionSteps — bet chip pot routing', () => {
   it('tags raise actions with side-pot index when contributions diverge', () => {
     const prev = {

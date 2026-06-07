@@ -42,7 +42,18 @@ export const buildTableSessionSteps = (
   formatAction: (action: PlayerAction) => string,
   formatBlind?: (type: 'SB' | 'BB', amount: number) => string
 ): TableSessionStep[] => {
-  if (!prev) return [];
+  if (!prev) {
+    const steps: TableSessionStep[] = [];
+    for (const uid of session.players) {
+      const count =
+        (session.playerCards[uid] ?? []).length ||
+        (session.mode === 'JOKER' ? (session.joker?.cardsThisDeal ?? 2) : 2);
+      for (let i = 0; i < count; i++) {
+        steps.push({ kind: 'dealHole', userId: uid, cardIndex: i });
+      }
+    }
+    return steps;
+  }
 
   const steps: TableSessionStep[] = [];
   const snap = sessionSnap(session);
@@ -96,10 +107,6 @@ export const buildTableSessionSteps = (
     }
 
     for (const action of newActions) {
-      if (action.type === 'playCard' && action.card && session.mode === 'JOKER') {
-        steps.push({ kind: 'jokerPlay', userId: action.userId, card: action.card });
-      }
-
       let potIndex: number | undefined;
       if (
         session.mode === 'HOLDEM' &&
@@ -226,6 +233,29 @@ export const applyDisplayStep = (
           ...next.playerCards,
           [step.userId]: Array.from({ length: dealt.length }, (_, i) => `__${step.userId}_${i}` as const)
         };
+      }
+      const allDealt = target.players.every((uid) => {
+        const expected = (target.playerCards[uid] ?? []).length;
+        if (expected <= 0) return true;
+        if (uid === heroId) {
+          return (next.playerCards[heroId] ?? []).length >= expected;
+        }
+        const hidden = (next.playerCards[uid] ?? []).filter((c) => String(c).startsWith('__')).length;
+        return hidden >= expected;
+      });
+      if (allDealt && next.street !== target.street) {
+        next.street = target.street;
+        next.activePlayerIndex = target.activePlayerIndex;
+        if (target.joker && next.joker) {
+          next.joker = {
+            ...next.joker,
+            trumpSuit: target.joker.trumpSuit,
+            matchHandIndex: target.joker.matchHandIndex,
+            pool: target.joker.pool,
+            cardsThisDeal: target.joker.cardsThisDeal,
+            tricksWon: { ...target.joker.tricksWon }
+          };
+        }
       }
       break;
     }

@@ -3,6 +3,7 @@ export {
   isBotUserId,
   botDisplayIndex,
   seatLayoutTailwind as seatLayout,
+  seatPositionStyle,
   bubbleOffsetTailwind as bubbleOffset
 } from '@duopoker/table-client';
 

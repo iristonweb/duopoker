@@ -12,6 +12,19 @@ export type BubbleOffset = {
   anchor: 'above' | 'below' | 'left' | 'right';
 };
 
+/** Inline style for absolute seat placement (matches chip-flight anchors). */
+export function seatPositionStyle(
+  index: number,
+  total: number
+): { left: string; top: string; transform: string } {
+  const pos = seatCoordinates(index, total);
+  return {
+    left: `${pos.left}%`,
+    top: `${pos.top}%`,
+    transform: 'translate(-50%, -50%)'
+  };
+}
+
 /** Percent-based seat positions within the felt ellipse (hero rotated to bottom). */
 export function seatCoordinates(index: number, total: number): SeatPosition {
   if (total <= 2) {

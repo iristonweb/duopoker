@@ -136,6 +136,9 @@ export function useTableAnimationQueue(
           setCheckRippleUsers((prev) => [...prev, step.userId]);
           setTimeout(() => setCheckRippleUsers((prev) => prev.filter((u) => u !== step.userId)), 600);
         }
+        if (step.action.type === 'bid') {
+          haptic?.(step.userId === heroId ? 'light' : 'light');
+        }
 
         if (['bet', 'call', 'raise'].includes(step.action.type) && (step.action.amount ?? 0) > 0) {
           pushChipFlight(

@@ -236,7 +236,9 @@ export const Table = () => {
     if (!viewSession || !session) return [];
     const dealerUid = viewSession.players[viewSession.dealerIndex];
     const visualActiveId =
-      session.players.length > 0 ? session.players[session.activePlayerIndex] : undefined;
+      viewSession.players.length > 0
+        ? viewSession.players[viewSession.activePlayerIndex]
+        : undefined;
     const atShowdown = viewSession.street === 'SHOWDOWN' || viewSession.street === 'COMPLETE';
     const inHandStreet = viewSession.street && viewSession.street !== 'LOBBY';
     const visuals = viewSession.players.map((uid) => {
@@ -651,7 +653,11 @@ export const Table = () => {
               className="h-full"
             />
             <HandResultOverlay
-              visible={tableView.street === 'COMPLETE' && !showBustedOverlay}
+              visible={
+                tableView.street === 'COMPLETE' &&
+                session.street === 'COMPLETE' &&
+                !showBustedOverlay
+              }
               winners={isJoker || holdemPayoutSummary ? undefined : winnerNames}
               summaryText={
                 isJoker && jokerHandSummary

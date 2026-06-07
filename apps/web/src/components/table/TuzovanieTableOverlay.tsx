@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Card, SessionState } from '@duopoker/shared-types/index';
 import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from '../cosmetics/PlayingCard';
-import { rotatePlayersForHero, seatLayout, feltPlayAreaClass } from '../../lib/table-layout';
+import { rotatePlayersForHero, seatPositionStyle, feltPlayAreaClass } from '../../lib/table-layout';
 import { formatCardLabel } from '../../lib/joker-labels';
 
 const STAGGER_MS = 450;
@@ -74,7 +74,8 @@ export function TuzovanieTableOverlay({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.28 }}
-              className={cn('absolute flex flex-col items-center gap-1', seatLayout(idx, session.players.length))}
+              className="absolute flex flex-col items-center gap-1"
+              style={seatPositionStyle(idx, session.players.length)}
             >
               <PlayingCard card={entry.card as Card} deckId={deckId} size="sm" />
               <span className="rounded-full bg-black/70 px-2 py-0.5 text-[9px] text-gold-light backdrop-blur-sm">
