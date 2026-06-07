@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from 'react';
 import { AppBackground, cn } from '@duopoker/ui-kit';
 import { useTableDockHeight } from '../../hooks/useTableDockHeight';
+import { useViewportHeight } from '../../hooks/useViewportHeight';
 
 export function GameTableShell({
   hud,
@@ -17,11 +18,15 @@ export function GameTableShell({
 }) {
   const dockRef = useRef<HTMLDivElement>(null);
   useTableDockHeight(dockRef);
+  useViewportHeight();
 
   return (
     <div
       data-testid="game-table-shell"
-      className={cn('relative h-dvh w-full overflow-hidden overscroll-none touch-pan-y', className)}
+      className={cn(
+        'relative min-h-[100svh] h-[calc(var(--app-vh,1vh)*100)] w-full overflow-hidden overscroll-none touch-pan-y',
+        className
+      )}
       style={{ ['--table-dock-height' as string]: '7.5rem' }}
     >
       <AppBackground />

@@ -114,8 +114,8 @@ export function PokerTable3D({
         style={{ background: `radial-gradient(ellipse at center, ${felt.ambientGlow} 0%, transparent 65%)` }}
       />
 
-      {/* Static table rim on mobile — no WebGL */}
-      <div className="pointer-events-none absolute inset-0 sm:hidden" aria-hidden>
+      {/* Static table rim on compact viewports — no WebGL */}
+      <div className="pointer-events-none absolute inset-0 max-table-compact:hidden" aria-hidden>
         <div className="absolute inset-0 bg-[#030305]" />
         <div
           className="absolute left-1/2 top-[42%] h-[52%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-[50%]"
@@ -134,7 +134,7 @@ export function PokerTable3D({
         camera={{ position: [0, 7.2, 8.6], fov: 32 }}
         dpr={[1, 1.5]}
         shadows
-        className="!absolute inset-0 hidden sm:block"
+        className="!absolute inset-0 hidden max-table-compact:block"
       >
         <color attach="background" args={['#030305']} />
         <ambientLight intensity={0.28} />
@@ -161,7 +161,7 @@ export function PokerTable3D({
 
       <div
         className={cn(
-          'pointer-events-none absolute left-1/2 top-[8%] h-[74%] w-[94%] max-w-[52rem] -translate-x-1/2 overflow-hidden rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)] max-sm:landscape:top-[6%] max-sm:landscape:h-[78%] max-sm:landscape:w-[72%] sm:top-[12%] sm:h-[68%] sm:w-[88%]',
+          'pointer-events-none absolute left-1/2 top-[8%] h-[74%] w-[94%] max-w-[52rem] -translate-x-1/2 overflow-hidden rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)] table-compact:top-[5%] table-compact:h-[80%] table-compact:w-[78%] max-table-compact:top-[12%] max-table-compact:h-[68%] max-table-compact:w-[88%]',
           felt.className,
           heroTableFeltId === 'table_void'
             ? 'border-violet-500/50 shadow-[inset_0_0_100px_rgba(88,28,135,0.45),0_0_56px_rgba(139,92,246,0.25)]'
@@ -197,7 +197,7 @@ export function PokerTable3D({
           chipId={potChipId}
         />
 
-        <div className="absolute left-1/2 top-[32%] flex -translate-x-1/2 gap-0.5 max-sm:landscape:top-[30%] sm:top-[36%] sm:gap-2.5">
+        <div className="absolute left-1/2 top-[32%] flex -translate-x-1/2 gap-0.5 table-compact:top-[34%] max-table-compact:top-[36%] max-table-compact:gap-2.5">
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
@@ -219,7 +219,7 @@ export function PokerTable3D({
                     size="xs"
                     deckId={heroDeckId}
                     className={cn(
-                      'shadow-[0_8px_20px_rgba(0,0,0,0.5)] sm:h-[4.5rem] sm:rounded-[0.45rem] md:scale-110',
+                      'shadow-[0_8px_20px_rgba(0,0,0,0.5)] max-table-compact:h-[4.5rem] max-table-compact:rounded-[0.45rem] md:scale-110',
                       showGhostBoard && 'ring-1 ring-violet-400/40 saturate-[0.85]'
                     )}
                   />
@@ -233,7 +233,7 @@ export function PokerTable3D({
                 faceUp={false}
                 size="xs"
                 deckId={heroDeckId}
-                className="border border-gold/15 opacity-50 sm:h-[4.5rem] sm:rounded-[0.45rem] md:scale-110"
+                className="border border-gold/15 opacity-50 max-table-compact:h-[4.5rem] max-table-compact:rounded-[0.45rem] md:scale-110"
               />
             ))
           ) : null}
@@ -275,16 +275,16 @@ export function PokerTable3D({
             <div
               key={player.userId}
               className={cn(
-                'absolute flex flex-col items-center gap-0.5 transition-all duration-300 sm:gap-1',
+                'absolute flex flex-col items-center gap-0.5 transition-all duration-300 max-table-compact:gap-1',
                 seatLayout(index, players.length),
-                player.isActive && 'z-20 scale-[1.03] sm:scale-[1.06]',
+                player.isActive && 'z-20 scale-[1.03] max-table-compact:scale-[1.06]',
                 player.isFolded && 'opacity-50 grayscale-[0.4]'
               )}
             >
               {player.isActive ? (
                 <>
-                  <span className="absolute -inset-4 animate-pulse-glow rounded-3xl border-2 border-emerald/55 bg-emerald/[0.08] shadow-[0_0_32px_rgba(74,222,128,0.4)] sm:-inset-5" />
-                  <span className="absolute -inset-2 rounded-3xl border border-gold/25 sm:-inset-3" />
+                  <span className="absolute -inset-2 animate-pulse-glow rounded-3xl border-2 border-emerald/55 bg-emerald/[0.08] shadow-[0_0_32px_rgba(74,222,128,0.4)] max-table-compact:-inset-5" />
+                  <span className="absolute -inset-1 rounded-3xl border border-gold/25 max-table-compact:-inset-3" />
                 </>
               ) : null}
               {hasCheckRipple ? (
@@ -292,7 +292,7 @@ export function PokerTable3D({
                   initial={{ opacity: 0.7, scale: 0.85 }}
                   animate={{ opacity: 0, scale: 1.35 }}
                   transition={{ duration: 0.55, ease: 'easeOut' }}
-                  className="absolute -inset-3 rounded-3xl border-2 border-emerald/60 sm:-inset-4"
+                  className="absolute -inset-2 rounded-3xl border-2 border-emerald/60 max-table-compact:-inset-4"
                 />
               ) : null}
               {isHeroSeat ? (
@@ -342,8 +342,9 @@ export function PokerTable3D({
                 isBot={isBotUserId(player.userId)}
                 size={isHeroSeat ? 'md' : 'sm'}
                 className={cn(
-                  isHeroSeat && 'sm:scale-110',
-                  !isHeroSeat && 'max-sm:[&_.seat-name]:hidden max-sm:[&_.seat-status]:hidden max-sm:[&_img[alt=""]]:mt-0'
+                  isHeroSeat && 'max-table-compact:scale-110',
+                  !isHeroSeat &&
+                    'table-compact:[&_.seat-name]:hidden table-compact:[&_.seat-status]:hidden table-compact:[&_img[alt=""]]:mt-0'
                 )}
                 titleId={equipped.title}
                 showTier={tier === 'BLACK' || tier === 'DIAMOND' || tier === 'PLATINUM'}
@@ -369,8 +370,8 @@ export function PokerTable3D({
 
               {cards.length || hiddenCount > 0 ? (
                 <>
-                  {!isHeroSeat && players.length > 4 && !cards.length && hiddenCount > 0 ? (
-                    <div className="relative z-[1] flex sm:hidden">
+                  {!isHeroSeat && !cards.length && hiddenCount > 0 ? (
+                    <div className="relative z-[1] hidden table-compact:flex">
                       <span className="rounded-full border border-white/15 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold text-gold-light backdrop-blur-sm">
                         {t('table.hiddenCards', { count: hiddenCount })}
                       </span>
@@ -378,13 +379,9 @@ export function PokerTable3D({
                   ) : null}
                   <div
                     className={cn(
-                      'relative z-[1] flex gap-0.5 sm:gap-1',
-                      isHeroSeat && 'max-sm:hidden',
-                      !isHeroSeat &&
-                        players.length > 4 &&
-                        !cards.length &&
-                        hiddenCount > 0 &&
-                        'hidden sm:flex'
+                      'relative z-[1] flex gap-0.5 max-table-compact:gap-1',
+                      isHeroSeat && 'max-table-compact:hidden',
+                      !isHeroSeat && !cards.length && hiddenCount > 0 && 'hidden max-table-compact:flex'
                     )}
                   >
                   <AnimatePresence mode="popLayout">
@@ -414,7 +411,7 @@ export function PokerTable3D({
                           faceUp={Boolean(player.revealCards && typeof c === 'object' && c)}
                           deckId={deckId}
                           size="sm"
-                          className="scale-[0.85] shadow-[0_8px_24px_rgba(0,0,0,0.5)] sm:scale-100"
+                          className="scale-[0.85] shadow-[0_8px_24px_rgba(0,0,0,0.5)] max-table-compact:scale-100"
                         />
                       </motion.div>
                     ))}
@@ -460,7 +457,7 @@ export function PokerTable3D({
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[11] h-16 bg-gradient-to-t from-[#050508]/90 via-[#050508]/40 to-transparent sm:h-12 sm:opacity-60"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[11] h-10 bg-gradient-to-t from-[#050508]/90 via-[#050508]/40 to-transparent table-compact:h-8 max-table-compact:h-12 max-table-compact:opacity-60"
         aria-hidden
       />
     </div>

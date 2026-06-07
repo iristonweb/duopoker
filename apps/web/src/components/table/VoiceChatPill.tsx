@@ -61,7 +61,7 @@ export function VoiceChatHudButton({ className }: { className?: string }) {
   const { open, setOpen, blocked, checking, handleToggle } = useVoiceChatState();
 
   return (
-    <div className={cn('relative sm:hidden', className)}>
+    <div className={cn('relative max-table-compact:hidden', className)}>
       <AnimatePresence>
         {open && !blocked ? (
           <div className="absolute right-0 top-full z-50 mt-2">
@@ -95,7 +95,7 @@ export function VoiceChatPill({ className }: { className?: string }) {
 
   return (
     <div
-      className={cn('fixed z-50 hidden sm:block', className)}
+      className={cn('fixed z-50 hidden max-table-compact:block', className)}
       style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))', right: 'max(1rem, env(safe-area-inset-right))' }}
     >
       <AnimatePresence>

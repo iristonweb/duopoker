@@ -82,7 +82,7 @@ export function TableActionDock({
       {showActions ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
       ) : null}
-      <div className="mx-auto max-w-6xl px-3 py-2.5 max-sm:landscape:py-1.5 sm:px-5 sm:py-4">
+      <div className="mx-auto max-w-6xl px-3 py-2.5 table-compact:py-1.5 max-table-compact:px-5 max-table-compact:py-4">
         {sessionError ? (
           <p className="mb-2 rounded-lg border border-rose/30 bg-rose/10 px-3 py-1.5 text-xs text-rose">
             {formatTableError(sessionError, t)}
@@ -169,14 +169,14 @@ export function TableActionDock({
           <div className="flex flex-col gap-2 sm:gap-3">
             <div
               className={cn(
-                'table-action-segment w-full max-sm:grid max-sm:grid-cols-3 sm:w-auto sm:inline-flex',
+                'table-action-segment w-full table-compact:grid table-compact:grid-cols-3 max-table-compact:w-auto max-table-compact:inline-flex',
                 showActions && 'table-action-segment-active'
               )}
             >
               <Button
                 variant="ghost"
                 size="lg"
-                className="min-h-11 min-w-0 rounded-xl border-0 border-r border-rose/20 bg-rose/[0.08] text-rose shadow-[0_0_12px_rgba(244,63,94,0.1)] hover:bg-rose/15 max-sm:px-2 max-sm:text-xs sm:min-h-12 sm:min-w-[4.75rem]"
+                className="min-h-11 min-w-0 rounded-xl border-0 border-r border-rose/20 bg-rose/[0.08] text-rose shadow-[0_0_12px_rgba(244,63,94,0.1)] hover:bg-rose/15 table-compact:px-2 table-compact:text-xs max-table-compact:min-h-12 max-table-compact:min-w-[4.75rem]"
                 onClick={() => {
                   tableHaptic('light');
                   onFold();
@@ -185,15 +185,15 @@ export function TableActionDock({
                 {t('table.fold')}
               </Button>
 
-              <div className="relative max-sm:min-w-0">
+              <div className="relative table-compact:min-w-0">
                 {secondsLeft !== null ? (
-                  <TurnTimer secondsLeft={secondsLeft} size={40} className="absolute -left-1 -top-1 sm:hidden" />
+                  <TurnTimer secondsLeft={secondsLeft} size={40} className="absolute -left-1 -top-1 max-table-compact:hidden" />
                 ) : null}
                 {need === 0 ? (
                   <Button
                     variant="secondary"
                     size="lg"
-                    className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] shadow-[0_0_14px_rgba(74,222,128,0.12)] max-sm:px-2 max-sm:text-xs sm:min-h-12 sm:min-w-[5.5rem]"
+                    className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] shadow-[0_0_14px_rgba(74,222,128,0.12)] table-compact:px-2 table-compact:text-xs max-table-compact:min-h-12 max-table-compact:min-w-[5.5rem]"
                     onClick={() => {
                       tableHaptic('medium');
                       onCheck();
@@ -205,7 +205,7 @@ export function TableActionDock({
                   <Button
                     variant="secondary"
                     size="lg"
-                    className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] px-2 shadow-[0_0_14px_rgba(74,222,128,0.12)] max-sm:text-xs sm:min-h-12 sm:min-w-[5.5rem] sm:px-4"
+                    className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] px-2 shadow-[0_0_14px_rgba(74,222,128,0.12)] table-compact:text-xs max-table-compact:min-h-12 max-table-compact:min-w-[5.5rem] max-table-compact:px-4"
                     onClick={() => {
                       tableHaptic('medium');
                       onCall();
@@ -220,7 +220,7 @@ export function TableActionDock({
                 <Button
                   variant="primary"
                   size="lg"
-                  className="min-h-11 min-w-0 rounded-xl border-0 shadow-glow-gold max-sm:px-2 max-sm:text-xs sm:hidden"
+                  className="min-h-11 min-w-0 rounded-xl border-0 shadow-glow-gold table-compact:px-2 table-compact:text-xs max-table-compact:hidden"
                   onClick={() => {
                     tableHaptic('heavy');
                     onRaise();
@@ -229,12 +229,12 @@ export function TableActionDock({
                   {currentBet > 0 ? t('table.raise') : t('table.bet')}
                 </Button>
               ) : (
-                <div className="hidden min-h-12 min-w-[5.5rem] sm:block" aria-hidden />
+                <div className="hidden min-h-12 min-w-[5.5rem] max-table-compact:block" aria-hidden />
               )}
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
-              {secondsLeft !== null ? <TurnTimer secondsLeft={secondsLeft} className="hidden sm:flex" /> : null}
+              {secondsLeft !== null ? <TurnTimer secondsLeft={secondsLeft} className="hidden max-table-compact:flex" /> : null}
 
             <Button
               variant="ghost"
@@ -297,7 +297,7 @@ export function TableActionDock({
             ) : null}
 
             {canRaise ? (
-              <div className="w-full sm:hidden">
+              <div className="w-full table-compact:block max-table-compact:hidden">
                 <button
                   type="button"
                   onClick={() => setMoreOpen((v) => !v)}

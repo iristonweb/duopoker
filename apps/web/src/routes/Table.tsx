@@ -29,6 +29,7 @@ import { formatJokerPlayLine } from '../lib/joker-declaration-label';
 import { holdemShowdownHandLines } from '../lib/holdem-hand-rank';
 import { holdemSidePotAmounts, holdemSidePotSummary } from '../lib/holdem-side-pots';
 import { PwaInstallHint } from '../components/PwaInstallHint';
+import { TableOrientationGate } from '../components/table/TableOrientationGate';
 import { TuzovanieTableOverlay } from '../components/table/TuzovanieTableOverlay';
 import { TableLeaderboardPanel } from '../components/table/TableLeaderboardPanel';
 import { buildTableLeaderboard, leaderboardLeaders } from '@duopoker/table-client';
@@ -53,6 +54,8 @@ export const Table = () => {
   const pollSession = useAppStore((s) => s.pollSession);
   const stopPolling = useAppStore((s) => s.stopPolling);
   const leaveTable = useAppStore((s) => s.leaveTable);
+  const minimizeTable = useAppStore((s) => s.minimizeTable);
+  const resumeTable = useAppStore((s) => s.resumeTable);
   const clearTableSession = useAppStore((s) => s.clearTableSession);
   const tableVoluntaryLeave = useAppStore((s) => s.tableVoluntaryLeave);
   const mode = useAppStore((s) => s.mode);
@@ -309,6 +312,7 @@ export const Table = () => {
 
   useEffect(() => {
     if (!routeSessionId || tableVoluntaryLeave) return;
+    resumeTable();
     if (usesRealtimeSocket()) {
       joinSession(routeSessionId, mode);
       socket?.emit('reconnectSession', { sessionId: routeSessionId });
@@ -316,8 +320,10 @@ export const Table = () => {
     }
     void joinSession(routeSessionId, mode);
     pollSession(routeSessionId);
-    return () => stopPolling();
-  }, [routeSessionId, tableVoluntaryLeave, joinSession, pollSession, stopPolling, mode, socket]);
+    return () => {
+      if (!useAppStore.getState().tableMinimized) stopPolling();
+    };
+  }, [routeSessionId, tableVoluntaryLeave, joinSession, pollSession, stopPolling, mode, socket, resumeTable]);
 
   const raiseBounds = useMemo(() => {
     if (!session || session.mode === 'JOKER' || !userId) {
@@ -365,6 +371,11 @@ export const Table = () => {
     if (!tableVoluntaryLeave) return;
     navigate('/lobby', { replace: true });
   }, [tableVoluntaryLeave, navigate]);
+
+  const handleMinimizeTable = () => {
+    minimizeTable();
+    navigate('/lobby');
+  };
 
   const handleLeaveTable = () => {
     const id = session?.sessionId ?? routeSessionId;
@@ -579,6 +590,7 @@ export const Table = () => {
   };
 
   return (
+    <>
     <GameTableShell
       overlay={<PwaInstallHint />}
       hud={
@@ -594,6 +606,7 @@ export const Table = () => {
           joker={tableView.mode === 'JOKER' ? tableView.joker : null}
           jokerRules={session.jokerRules}
           onLeaveTable={() => void handleLeaveTable()}
+          onMinimizeTable={handleMinimizeTable}
           leaving={leaving}
           leaderboardEntries={leaderboardEntries}
           leaderboardProfiles={leaderboardProfiles}
@@ -811,5 +824,7 @@ export const Table = () => {
         )
       }
     />
+    <TableOrientationGate />
+    </>
   );
 };

@@ -70,6 +70,22 @@ test.describe('mobile table layout', () => {
     await expect(hint).not.toBeVisible();
   });
 
+  test('portrait table shows rotate overlay', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE}/table/smoke-test-session`);
+    await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Поверните телефон|Rotate your phone/i)).toBeVisible();
+  });
+
+  test('landscape table route has no horizontal overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.goto(`${BASE}/table/smoke-test-session`);
+    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+  });
+
   test('live session renders game table shell on mobile', async ({ page, request }, testInfo) => {
     const health = await request.get(`${API}/health`).catch(() => null);
     if (!health?.ok()) {
@@ -100,7 +116,7 @@ test.describe('mobile table layout', () => {
     p1.disconnect();
     p2.disconnect();
 
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.setViewportSize({ width: 667, height: 375 });
     await page.addInitScript((uid) => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
@@ -109,5 +125,54 @@ test.describe('mobile table layout', () => {
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
     await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('table-top-hud')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
+  });
+
+  test('minimize table shows return banner in lobby', async ({ page, request }, testInfo) => {
+    const health = await request.get(`${API}/health`).catch(() => null);
+    if (!health?.ok()) {
+      testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
+      return;
+    }
+
+    const sessionId = `e2e-minimize-${Date.now()}`;
+    const userId = `e2e-minimize-${Date.now()}`;
+    const userId2 = `e2e-minimize-p2-${Date.now()}`;
+
+    const p1 = io(API, { transports: ['websocket'] });
+    const p2 = io(API, { transports: ['websocket'] });
+    await Promise.all([
+      new Promise<void>((res) => p1.once('connect', () => res())),
+      new Promise<void>((res) => p2.once('connect', () => res()))
+    ]);
+    p1.emit('joinSession', { sessionId, userId, mode: 'HOLDEM', buyIn: 100 });
+    p2.emit('joinSession', { sessionId, userId: userId2, mode: 'HOLDEM', buyIn: 100 });
+    try {
+      await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2, 12_000);
+    } catch {
+      p1.disconnect();
+      p2.disconnect();
+      testInfo.skip(true, 'Backend socket unavailable — start full backend on port 4000.');
+      return;
+    }
+    p1.disconnect();
+    p2.disconnect();
+
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.addInitScript((uid) => {
+      localStorage.setItem('duopoker_user_id', uid);
+      localStorage.setItem('duopoker_guest_id', uid);
+    }, userId);
+
+    await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole('button', { name: /Свернуть|Minimize/i }).click();
+    await expect(page).toHaveURL(/\/lobby/);
+    await expect(page.getByTestId('table-background-banner')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('button', { name: /Вернуться|Return/i }).click();
+    await expect(page).toHaveURL(new RegExp(`/table/${sessionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
   });
 });

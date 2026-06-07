@@ -8,6 +8,14 @@ export default {
     '../../packages/ui-kit/src/**/*.{ts,tsx}'
   ],
   theme: {
+    screens: {
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+      'table-compact': { raw: '(max-width: 639px), (max-height: 520px)' }
+    },
     extend: {
       colors: {
         background: colors.background,

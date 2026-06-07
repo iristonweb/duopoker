@@ -36,6 +36,7 @@ type Props = {
   handNumber: number;
   chipId?: string;
   onLeaveTable?: () => void;
+  onMinimizeTable?: () => void;
   leaving?: boolean;
   joker?: JokerHandState | null;
   jokerRules?: JokerMatchRules;
@@ -125,6 +126,7 @@ export function TableTopHUD({
   handNumber,
   chipId = 'chip_classic',
   onLeaveTable,
+  onMinimizeTable,
   leaving,
   joker,
   jokerRules,
@@ -155,10 +157,19 @@ export function TableTopHUD({
       {/* Tier 1: slim nav bar */}
       <div className="mx-auto flex h-9 items-center justify-between gap-2 px-3 sm:h-10 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          {onMinimizeTable ? (
+            <button
+              type="button"
+              className="premium-link shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] table-compact:inline-flex max-table-compact:hidden"
+              onClick={onMinimizeTable}
+            >
+              ↓ {t('table.minimizeTable')}
+            </button>
+          ) : null}
           {onLeaveTable ? (
             <button
               type="button"
-              className="premium-link shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] sm:text-[11px]"
+              className="premium-link shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] max-table-compact:inline-flex table-compact:hidden sm:text-[11px]"
               disabled={leaving}
               onClick={onLeaveTable}
             >
@@ -167,14 +178,24 @@ export function TableTopHUD({
           ) : (
             <Link
               to="/lobby"
-              className="premium-link shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] sm:text-[11px]"
+              className="premium-link shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] max-table-compact:inline-flex table-compact:hidden sm:text-[11px]"
             >
               ← {t('nav.backLobby')}
             </Link>
           )}
+          {onLeaveTable ? (
+            <button
+              type="button"
+              className="shrink-0 rounded-full border border-rose/30 bg-rose/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-rose-300 transition hover:border-rose/45 table-compact:inline-flex max-table-compact:hidden"
+              disabled={leaving}
+              onClick={onLeaveTable}
+            >
+              {leaving ? t('table.leaving') : t('table.leaveShort')}
+            </button>
+          ) : null}
           <span className="hidden h-4 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent sm:block" aria-hidden />
-          <DpClubMark size="xs" className="hidden sm:block" />
-          <div className="min-w-0 sm:hidden">
+          <DpClubMark size="xs" className="hidden max-table-compact:block" />
+          <div className="min-w-0 table-compact:block max-table-compact:hidden">
             <p className="truncate font-display text-xs font-semibold text-gradient-gold">
               {mode === 'HOLDEM' ? t('table.holdem') : t('table.joker')}
               {handNumber > 0 ? ` · #${handNumber}` : ''}
@@ -182,7 +203,7 @@ export function TableTopHUD({
           </div>
         </div>
 
-        <div className="hidden items-center gap-2 sm:flex">
+        <div className="hidden items-center gap-2 max-table-compact:flex">
           <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-gold/50">{t('table.liveTable')}</p>
           <span className="h-3 w-px bg-white/10" aria-hidden />
           <h1 className="font-display text-sm font-semibold text-gradient-gold">
@@ -225,7 +246,7 @@ export function TableTopHUD({
 
       {/* Tier 2: stats strip */}
       <div className="mx-auto flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-5 sm:py-2.5">
-        <div className="hidden min-w-0 flex-1 sm:block lg:max-w-[34%]">
+        <div className="hidden min-w-0 flex-1 max-table-compact:block lg:max-w-[34%]">
           <MetaChipGroup
             mode={mode}
             isJoker={isJoker}
@@ -274,8 +295,8 @@ export function TableTopHUD({
         </div>
       </div>
 
-      {/* Mobile meta row */}
-      <div className="border-t border-white/[0.05] px-3 py-1.5 sm:hidden">
+      {/* Compact meta row (portrait + landscape phones) */}
+      <div className="border-t border-white/[0.05] px-3 py-1 table-compact:block max-table-compact:hidden">
         <MetaChipGroup
           mode={mode}
           isJoker={isJoker}

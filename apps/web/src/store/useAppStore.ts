@@ -47,6 +47,8 @@ type AppStore = {
   session?: SessionState;
   /** User left the table intentionally — block auto-rejoin until a new match starts. */
   tableVoluntaryLeave: boolean;
+  /** Table minimized to lobby — keep session alive in background. */
+  tableMinimized: boolean;
   socket?: Socket;
   authError?: string;
   authNotice?: string;
@@ -86,6 +88,8 @@ type AppStore = {
   }) => Promise<void>;
   readyNextHand: () => Promise<void>;
   leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
+  minimizeTable: () => void;
+  resumeTable: () => void;
   clearTableSession: () => void;
   resetTableJoin: () => void;
   register: (
@@ -228,6 +232,7 @@ export const useAppStore = create<AppStore>((set, get) => {
     refreshToken: initial.refresh,
     mode: 'HOLDEM',
     tableVoluntaryLeave: false,
+    tableMinimized: false,
     opponentType: 'BOT',
     botPlayerCount: 2,
     jokerStrict: false,
@@ -309,7 +314,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       const shouldAcceptTableState = () => {
         if (get().tableVoluntaryLeave) return false;
         if (typeof window === 'undefined') return true;
-        return window.location.pathname.startsWith('/table/');
+        return window.location.pathname.startsWith('/table/') || get().tableMinimized;
       };
       socket.on('stateUpdate', (session: SessionState) => {
         if (!shouldAcceptTableState()) return;
@@ -328,7 +333,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       socket.on('leftTable', () => {
         get().stopPolling();
-        set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
+        set({ tableVoluntaryLeave: true, tableMinimized: false, session: undefined, sessionError: undefined });
         if (typeof window !== 'undefined' && window.location.pathname.startsWith('/table/')) {
           window.location.replace('/lobby');
         }
@@ -341,6 +346,7 @@ export const useAppStore = create<AppStore>((set, get) => {
           get().stopPolling();
           set({
             tableVoluntaryLeave: true,
+            tableMinimized: false,
             session: undefined,
             sessionError: 'table_closed',
             tableLiveSessions: get().tableLiveSessions.filter(
@@ -356,7 +362,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       socket.on('connect', () => {
         const sid = get().session?.sessionId;
         if (!sid) return;
-        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/table/')) return;
+        if (
+          typeof window !== 'undefined' &&
+          !window.location.pathname.startsWith('/table/') &&
+          !get().tableMinimized
+        )
+          return;
         socket.emit('reconnectSession', { sessionId: sid });
       });
       set({ socket });
@@ -472,7 +483,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!get().accessToken) return;
       await get().apiFetch('/game/queue', { method: 'DELETE' });
     },
-    resetTableJoin: () => set({ tableVoluntaryLeave: false }),
+    resetTableJoin: () => set({ tableVoluntaryLeave: false, tableMinimized: false }),
     joinSession: async (sessionId, mode, buyIn = 100) => {
       if (get().tableVoluntaryLeave) return;
       if (usesRealtimeSocket()) {
@@ -589,13 +600,23 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     clearTableSession: () => {
       get().stopPolling();
-      set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
+      set({ tableVoluntaryLeave: true, tableMinimized: false, session: undefined, sessionError: undefined });
+    },
+    minimizeTable: () => {
+      const sid = get().session?.sessionId;
+      set({ tableMinimized: true });
+      if (!usesRealtimeSocket() && sid) {
+        get().pollSession(sid);
+      }
+    },
+    resumeTable: () => {
+      set({ tableMinimized: false });
     },
     leaveTable: async (sessionId) => {
       get().stopPolling();
-      set({ tableVoluntaryLeave: true });
+      set({ tableVoluntaryLeave: true, tableMinimized: false });
       const clearLocal = () =>
-        set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
+        set({ tableVoluntaryLeave: true, tableMinimized: false, session: undefined, sessionError: undefined });
       if (usesRealtimeSocket()) {
         get().connect();
         get().socket?.emit('leaveTable', { sessionId, userId: get().userId });

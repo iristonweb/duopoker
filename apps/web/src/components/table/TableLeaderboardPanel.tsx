@@ -178,7 +178,7 @@ export function TableLeaderboardPanel({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[110] flex items-end justify-center sm:hidden"
+                className="fixed inset-0 z-[110] flex items-end justify-center max-table-compact:hidden"
               >
                 <button
                   type="button"
@@ -245,7 +245,7 @@ export function TableLeaderboardPanel({
             'transition hover:border-gold/55 hover:bg-gold/10 hover:shadow-glow-gold',
             open && 'border-gold/60 bg-gold/15 shadow-glow-gold ring-2 ring-gold/25',
             tableFabBottomClass,
-            'max-sm:bottom-[calc(var(--table-dock-height,7.5rem)+4.5rem+env(safe-area-inset-bottom))]',
+            'table-compact:bottom-[calc(var(--table-dock-height,7.5rem)+4.5rem+env(safe-area-inset-bottom))]',
             className
           )}
         >
@@ -262,7 +262,7 @@ export function TableLeaderboardPanel({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               aria-label={t('table.leaderboardClose')}
-              className="absolute inset-0 z-20 hidden bg-black/20 backdrop-blur-[1px] sm:block"
+              className="absolute inset-0 z-20 hidden bg-black/20 backdrop-blur-[1px] max-table-compact:block"
               onClick={() => onOpenChange(false)}
             />
             <motion.div
@@ -271,7 +271,7 @@ export function TableLeaderboardPanel({
               exit={{ opacity: 0, scale: 0.97, y: 4 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                'absolute right-3 z-30 hidden w-[min(22rem,calc(100%-1.5rem))] sm:block',
+                'absolute right-3 z-30 hidden w-[min(22rem,calc(100%-1.5rem))] max-table-compact:block',
                 tableFabBottomClass,
                 className
               )}

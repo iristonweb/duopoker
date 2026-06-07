@@ -158,7 +158,7 @@ export function JokerActionDock({
       {showActions ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
       ) : null}
-      <div className="mx-auto max-w-6xl px-3 py-2.5 max-sm:landscape:py-1.5 sm:px-5 sm:py-4">
+      <div className="mx-auto max-w-6xl px-3 py-2.5 table-compact:py-1.5 max-table-compact:px-5 max-table-compact:py-4">
         {sessionError ? (
           <p className="mb-2 rounded-lg border border-rose/30 bg-rose/10 px-3 py-1.5 text-xs text-rose">
             {formatTableError(sessionError, t)}
@@ -176,11 +176,11 @@ export function JokerActionDock({
             </span>
           ) : null}
         </div>
-        <div className="mb-2 flex justify-center md:hidden max-sm:landscape:mb-1">
+        <div className="mb-2 flex justify-center md:hidden table-compact:mb-1">
           <JokerTrumpBadge joker={joker} showHint={bidding && trump.noTrump} size="sm" />
         </div>
 
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 max-sm:landscape:mb-1">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 table-compact:mb-1">
           <div className="min-w-0">
             {showActions ? (
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold/85 sm:text-sm">
@@ -215,10 +215,10 @@ export function JokerActionDock({
             )}
           </div>
           {secondsLeft !== null && showActions ? (
-            <TurnTimer secondsLeft={secondsLeft} size={40} className="sm:hidden" />
+            <TurnTimer secondsLeft={secondsLeft} size={40} className="max-table-compact:hidden" />
           ) : null}
           {secondsLeft !== null && showActions ? (
-            <TurnTimer secondsLeft={secondsLeft} size={48} className="hidden sm:flex" />
+            <TurnTimer secondsLeft={secondsLeft} size={48} className="hidden max-table-compact:flex" />
           ) : null}
         </div>
 

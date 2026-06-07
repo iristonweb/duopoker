@@ -200,7 +200,7 @@ export function GameStoryPanel({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-[110] flex items-end justify-center sm:hidden"
+                className="fixed inset-0 z-[110] flex items-end justify-center max-table-compact:hidden"
               >
                 <button
                   type="button"
@@ -246,7 +246,7 @@ export function GameStoryPanel({
       {/* Desktop layout */}
       <div
         className={cn(
-          'pointer-events-auto hidden w-[min(18rem,calc(100vw-1.5rem))] flex-col gap-2 sm:absolute sm:left-4 sm:top-[4.5rem] sm:z-20 sm:flex',
+          'pointer-events-auto hidden w-[min(18rem,calc(100vw-1.5rem))] flex-col gap-2 max-table-compact:absolute max-table-compact:left-4 max-table-compact:top-[4.5rem] max-table-compact:z-20 max-table-compact:flex',
           className
         )}
       >
@@ -325,7 +325,7 @@ export function GameStoryPanel({
       {/* Mobile toolbar above dock */}
       <div
         data-testid="table-mobile-toolbar"
-        className={cn('pointer-events-auto fixed left-3 right-14 z-30 sm:hidden', tableFabBottomClass)}
+        className={cn('pointer-events-auto fixed left-3 right-14 z-30 table-compact:block max-table-compact:hidden', tableFabBottomClass)}
       >
         {latest && !open ? (
           <div

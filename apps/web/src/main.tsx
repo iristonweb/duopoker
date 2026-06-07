@@ -19,6 +19,7 @@ import { ClubDashboard } from './routes/ClubDashboard';
 import { TableManager } from './routes/TableManager';
 import { InviteAccept } from './routes/InviteAccept';
 import { ServiceWorkerNavigationBridge } from './components/ServiceWorkerNavigationBridge';
+import { TableBackgroundBanner } from './components/table/TableBackgroundBanner';
 
 const Table = lazy(() => import('./routes/Table').then((m) => ({ default: m.Table })));
 const AdminPage = lazy(() => import('./routes/AdminPage').then((m) => ({ default: m.AdminPage })));
@@ -42,6 +43,7 @@ const App = () => (
     <ServiceWorkerNavigationBridge />
     <MatchRedirect />
     <AppBrandBar />
+    <TableBackgroundBanner />
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/lobby" element={<Lobby />} />
