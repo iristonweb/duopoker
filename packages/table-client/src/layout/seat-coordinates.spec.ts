@@ -7,10 +7,11 @@ describe('seatCoordinates', () => {
     expect(seatCoordinates(1, 2)).toMatchObject({ left: 50, top: 92, anchor: 'bottom' });
   });
 
-  it('returns six positions for full ring', () => {
-    const positions = Array.from({ length: 6 }, (_, i) => seatCoordinates(i, 6));
-    expect(positions).toHaveLength(6);
-    expect(new Set(positions.map((p) => `${p.left},${p.top}`)).size).toBeGreaterThan(3);
+  it('places four players in a cross ring', () => {
+    expect(seatCoordinates(0, 4)).toMatchObject({ left: 50, top: 8 });
+    expect(seatCoordinates(1, 4)).toMatchObject({ left: 92, top: 48 });
+    expect(seatCoordinates(2, 4)).toMatchObject({ left: 8, top: 48 });
+    expect(seatCoordinates(3, 4)).toMatchObject({ left: 50, top: 92, anchor: 'bottom' });
   });
 });
 

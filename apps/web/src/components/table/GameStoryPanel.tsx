@@ -243,10 +243,10 @@ export function GameStoryPanel({
 
   return (
     <>
-      {/* Desktop layout */}
+      {/* Desktop / landscape — bottom-right feed chip, avoids covering seats */}
       <div
         className={cn(
-          'pointer-events-auto hidden w-[min(18rem,calc(100vw-1.5rem))] flex-col gap-2 max-table-compact:absolute max-table-compact:left-4 max-table-compact:top-[4.5rem] max-table-compact:z-20 max-table-compact:flex',
+          'pointer-events-auto hidden w-[min(16rem,calc(100vw-1.5rem))] flex-col gap-2 max-table-compact:absolute max-table-compact:bottom-24 max-table-compact:right-3 max-table-compact:z-20 max-table-compact:flex',
           className
         )}
       >

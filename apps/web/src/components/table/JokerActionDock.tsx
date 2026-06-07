@@ -9,11 +9,10 @@ import {
   jokerLegalPlays,
   leadSuitFromTrick
 } from '@duopoker/shared-types/index';
-import { formatCardLabel, jokerTrumpDisplay, suitLabel } from '../../lib/joker-labels';
+import { formatCardLabel, suitLabel } from '../../lib/joker-labels';
 import { formatTableError } from '../../lib/table-errors';
 import { tableHaptic } from '../../lib/table-haptics';
 import { PlayingCard } from '../cosmetics/PlayingCard';
-import { JokerTrumpBadge } from './JokerTrumpBadge';
 import { TurnTimer } from './TurnTimer';
 
 const PENDING_ACTION_TIMEOUT_MS = 3000;
@@ -75,7 +74,6 @@ export function JokerActionDock({
   const bidding = street === 'BIDDING';
   const trumpChoice = street === 'TRUMP_CHOICE';
   const showHand = street === 'BIDDING' || street === 'TRICKS' || trumpChoice;
-  const trump = jokerTrumpDisplay(joker, t);
   const clampedBid = Math.min(maxBid, Math.max(0, bidAmount));
   const isDealer = userId === dealerId;
   const othersBidSum = playerIds
@@ -165,23 +163,8 @@ export function JokerActionDock({
           </p>
         ) : null}
 
-        <div className="mb-2 hidden flex-wrap items-center justify-between gap-2 text-xs text-muted sm:flex sm:text-sm">
-          <span>
-            {t('table.jokerPool', { pool: joker.pool, hand: joker.matchHandIndex + 1 })}
-          </span>
-          <span>{trump.line}</span>
-          {joker.currentTrick.length > 0 ? (
-            <span className="text-gold-light/90">
-              {t('table.jokerTrick', { n: joker.trickNumber + 1 })}
-            </span>
-          ) : null}
-        </div>
-        <div className="mb-2 flex justify-center md:hidden table-compact:mb-1">
-          <JokerTrumpBadge joker={joker} showHint={bidding && trump.noTrump} size="sm" />
-        </div>
-
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2 table-compact:mb-1">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             {showActions ? (
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold/85 sm:text-sm">
                 {trumpChoice
@@ -215,10 +198,7 @@ export function JokerActionDock({
             )}
           </div>
           {secondsLeft !== null && showActions ? (
-            <TurnTimer secondsLeft={secondsLeft} size={40} className="max-table-compact:hidden" />
-          ) : null}
-          {secondsLeft !== null && showActions ? (
-            <TurnTimer secondsLeft={secondsLeft} size={48} className="hidden max-table-compact:flex" />
+            <TurnTimer secondsLeft={secondsLeft} size={44} />
           ) : null}
         </div>
 

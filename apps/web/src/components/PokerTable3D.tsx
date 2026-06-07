@@ -10,7 +10,7 @@ import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipStack, PokerChipVisual } from './cosmetics/PokerChipVisual';
-import { isBotUserId, bubbleOffset, seatLayout } from '../lib/table-layout';
+import { isBotUserId, bubbleOffset, seatLayout, feltPlayAreaClass } from '../lib/table-layout';
 import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 import { JokerTrickPile } from './table/JokerTrickPile';
 import { SeatActionBubble } from './table/SeatActionBubble';
@@ -161,7 +161,8 @@ export function PokerTable3D({
 
       <div
         className={cn(
-          'pointer-events-none absolute left-1/2 top-[8%] h-[74%] w-[94%] max-w-[52rem] -translate-x-1/2 overflow-hidden rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)] table-compact:top-[5%] table-compact:h-[80%] table-compact:w-[78%] max-table-compact:top-[12%] max-table-compact:h-[68%] max-table-compact:w-[88%]',
+          'pointer-events-none overflow-visible rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)]',
+          feltPlayAreaClass,
           felt.className,
           heroTableFeltId === 'table_void'
             ? 'border-violet-500/50 shadow-[inset_0_0_100px_rgba(88,28,135,0.45),0_0_56px_rgba(139,92,246,0.25)]'
@@ -189,7 +190,7 @@ export function PokerTable3D({
         <PlayingCard faceUp={false} size="sm" deckId={heroDeckId} />
       </motion.div>
 
-      <div className="pointer-events-none absolute inset-0 z-10">
+      <div className={cn('pointer-events-none z-10', feltPlayAreaClass)}>
         <ChipFlightLayer
           flights={chipFlights}
           playerIndex={playerIndex}
@@ -197,7 +198,7 @@ export function PokerTable3D({
           chipId={potChipId}
         />
 
-        <div className="absolute left-1/2 top-[32%] flex -translate-x-1/2 gap-0.5 table-compact:top-[34%] max-table-compact:top-[36%] max-table-compact:gap-2.5">
+        <div className="absolute left-1/2 top-[38%] flex -translate-x-1/2 gap-0.5 max-table-compact:top-[40%] max-table-compact:gap-2">
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
@@ -239,7 +240,7 @@ export function PokerTable3D({
           ) : null}
         </div>
 
-        <div className="absolute left-1/2 top-[50%] hidden -translate-x-1/2 md:block">
+        <div className="absolute left-1/2 top-[52%] hidden -translate-x-1/2 md:block">
           <AnimatedPotDisplay
             pot={pot}
             chipId={potChipId}
@@ -275,9 +276,9 @@ export function PokerTable3D({
             <div
               key={player.userId}
               className={cn(
-                'absolute flex flex-col items-center gap-0.5 transition-all duration-300 max-table-compact:gap-1',
+                'absolute flex max-w-[5.5rem] flex-col items-center gap-0.5 transition-all duration-300 max-table-compact:max-w-none max-table-compact:gap-1',
                 seatLayout(index, players.length),
-                player.isActive && 'z-20 scale-[1.03] max-table-compact:scale-[1.06]',
+                player.isActive && 'z-20 scale-[1.03] max-table-compact:scale-[1.05]',
                 player.isFolded && 'opacity-50 grayscale-[0.4]'
               )}
             >

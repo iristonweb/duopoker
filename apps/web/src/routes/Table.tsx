@@ -519,9 +519,7 @@ export const Table = () => {
       ? (tableView.communityCards ?? [])
       : tableView.street === 'TRICKS' && tableView.joker
         ? tableView.joker.currentTrick.map((p) => p.card)
-        : tableView.street === 'BIDDING'
-          ? (tableView.communityCards ?? [])
-          : [];
+        : [];
   const jokerBoardKeys =
     tableView.mode === 'JOKER' && tableView.street === 'TRICKS' && tableView.joker
       ? tableView.joker.currentTrick.map(

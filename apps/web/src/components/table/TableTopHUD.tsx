@@ -186,7 +186,7 @@ export function TableTopHUD({
           {onLeaveTable ? (
             <button
               type="button"
-              className="shrink-0 rounded-full border border-rose/30 bg-rose/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-rose-300 transition hover:border-rose/45 table-compact:inline-flex max-table-compact:hidden"
+              className="inline-flex shrink-0 rounded-full border border-rose/30 bg-rose/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-rose-300 transition hover:border-rose/45 sm:hidden"
               disabled={leaving}
               onClick={onLeaveTable}
             >

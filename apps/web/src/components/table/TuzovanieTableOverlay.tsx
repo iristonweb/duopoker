@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Card, SessionState } from '@duopoker/shared-types/index';
 import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from '../cosmetics/PlayingCard';
-import { rotatePlayersForHero, seatLayout } from '../../lib/table-layout';
+import { rotatePlayersForHero, seatLayout, feltPlayAreaClass } from '../../lib/table-layout';
 import { formatCardLabel } from '../../lib/joker-labels';
 
 const STAGGER_MS = 450;
@@ -31,7 +31,7 @@ export function TuzovanieTableOverlay({
     session.handNumber === 1 &&
     log &&
     log.length > 0 &&
-    (session.street === 'BIDDING' || session.street === 'TRUMP_CHOICE' || session.street === 'LOBBY');
+    session.street === 'LOBBY';
 
   const [revealed, setRevealed] = useState(0);
 
@@ -63,7 +63,7 @@ export function TuzovanieTableOverlay({
   const last = visible[visible.length - 1];
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[18]">
+    <div className={cn('pointer-events-none z-[18]', feltPlayAreaClass)}>
       <AnimatePresence>
         {visible.map((entry, i) => {
           const idx = seatIndex.get(entry.userId) ?? 0;

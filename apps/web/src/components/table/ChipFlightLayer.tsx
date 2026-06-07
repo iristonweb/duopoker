@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { seatCoordinates } from '@duopoker/table-client';
 import { PokerChipVisual } from '../cosmetics/PokerChipVisual';
 import type { ChipFlight } from '../../hooks/useTableAnimationQueue';
 
@@ -25,18 +26,8 @@ const sidePotAnchor = (potIndex: number, potCount: number): { x: number; y: numb
 };
 
 const seatAnchor = (index: number, total: number): { x: number; y: number } => {
-  if (total <= 2) {
-    return index === 0 ? { x: 50, y: 8 } : { x: 50, y: 92 };
-  }
-  const anchors = [
-    { x: 50, y: 6 },
-    { x: 92, y: 24 },
-    { x: 90, y: 72 },
-    { x: 50, y: 94 },
-    { x: 10, y: 72 },
-    { x: 10, y: 24 }
-  ];
-  return anchors[index % anchors.length] ?? anchors[0];
+  const pos = seatCoordinates(index, total);
+  return { x: pos.left, y: pos.top };
 };
 
 export function ChipFlightLayer({ flights, playerIndex, playerCount, chipId }: Props) {
