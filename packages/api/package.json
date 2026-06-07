@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/dev-server.ts",
     "lint": "eslint src",
-    "test": "vitest run --config vitest.config.ts"
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@duopoker/db-schema": "workspace:*",

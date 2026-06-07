@@ -23,10 +23,10 @@ jobs:
           node-version: 24
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @duopoker/db-schema build && pnpm --filter @duopoker/shared-types build
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm --filter @duopoker/game-engine test
-      - run: pnpm --filter @duopoker/db-schema build && pnpm --filter @duopoker/shared-types build
       - run: pnpm --filter @duopoker/game-engine build
       - run: node scripts/bundle-vercel-api.mjs
       - run: pnpm --filter @duopoker/backend build
@@ -68,7 +68,7 @@ jobs:
       - run: pnpm --filter @duopoker/db-schema exec prisma migrate deploy --schema prisma/schema.prisma
       - run: pnpm --filter @duopoker/shared-types build
       - run: pnpm --filter @duopoker/game-engine build
-      - run: pnpm --filter @duopoker/api test
+      - run: pnpm --filter @duopoker/api test:integration
 
   e2e:
     runs-on: ubuntu-latest
