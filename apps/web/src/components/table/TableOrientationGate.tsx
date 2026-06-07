@@ -4,20 +4,29 @@ import { motion } from 'framer-motion';
 
 const PORTRAIT_MOBILE = '(max-width: 767px) and (orientation: portrait)';
 
+function isPortraitMobileViewport(): boolean {
+  if (typeof window === 'undefined') return false;
+  const { innerWidth: w, innerHeight: h } = window;
+  if (w > 767) return false;
+  // Headless Playwright/CI often ignores orientation media queries — use aspect ratio too.
+  if (h > w) return true;
+  return window.matchMedia(PORTRAIT_MOBILE).matches;
+}
+
 function usePortraitMobile() {
-  const [portrait, setPortrait] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(PORTRAIT_MOBILE).matches : false
-  );
+  const [portrait, setPortrait] = useState(isPortraitMobileViewport);
 
   useEffect(() => {
     const mq = window.matchMedia(PORTRAIT_MOBILE);
-    const sync = () => setPortrait(mq.matches);
+    const sync = () => setPortrait(isPortraitMobileViewport());
     sync();
     mq.addEventListener('change', sync);
     window.addEventListener('orientationchange', sync);
+    window.addEventListener('resize', sync);
     return () => {
       mq.removeEventListener('change', sync);
       window.removeEventListener('orientationchange', sync);
+      window.removeEventListener('resize', sync);
     };
   }, []);
 
