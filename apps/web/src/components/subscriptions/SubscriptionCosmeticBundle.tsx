@@ -5,20 +5,20 @@ import {
   type CosmeticDefinition
 } from '@duopoker/shared-types';
 
-const SLOTS = ['deck', 'chip', 'frame', 'title'] as const;
+type CosmeticSlotLabel = 'deck' | 'chip' | 'frame' | 'title';
 
 function CosmeticPreview({
   item,
   labels
 }: {
   item: CosmeticDefinition;
-  labels: Record<(typeof SLOTS)[number], string>;
+  labels: Record<CosmeticSlotLabel, string>;
 }) {
   const src = catalogPreviewUrl(item.id) ?? item.imageUrl;
   return (
     <div className="flex flex-col items-center rounded-xl border border-white/[0.06] bg-black/30 p-2.5 text-center">
       <span className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-gold/70">
-        {labels[item.slot as (typeof SLOTS)[number]]}
+        {labels[item.slot as CosmeticSlotLabel]}
       </span>
       <div
         className={
@@ -61,7 +61,7 @@ export function SubscriptionCosmeticBundle({
   cumulativeNote
 }: {
   tier: PaidSubscriptionTier;
-  labels: Record<(typeof SLOTS)[number], string>;
+  labels: Record<CosmeticSlotLabel, string>;
   /** Shown under the grid — e.g. that lower tiers stay unlocked too. */
   cumulativeNote?: string;
 }) {
