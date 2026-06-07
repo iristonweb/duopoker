@@ -65,7 +65,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @duopoker/db-schema build
-      - run: pnpm --filter @duopoker/db-schema exec prisma db push --schema prisma/schema.prisma --accept-data-loss --skip-generate
+      - run: pnpm --filter @duopoker/db-schema exec prisma migrate deploy --schema prisma/schema.prisma
       - run: pnpm --filter @duopoker/shared-types build
       - run: pnpm --filter @duopoker/game-engine build
       - run: pnpm --filter @duopoker/api test:integration

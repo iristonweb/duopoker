@@ -280,6 +280,7 @@
     "subscriptionModalClose": "Закрыть",
     "subscriptionModalPerks": "Привилегии",
     "subscriptionModalCosmetics": "Косметика в подписке",
+    "subscriptionModalCosmeticsCumulative": "Также остаются доступны все наборы более низких тарифов и бесплатная базовая косметика.",
     "enablePush": "Включить уведомления о приглашениях"
   },
   "tableInvite": {

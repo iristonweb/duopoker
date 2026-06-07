@@ -22,6 +22,7 @@ export {
   PAID_SUBSCRIPTION_TIERS,
   perksUnlockedAtTier,
   subscriptionCosmeticsUpToTier,
+  subscriptionCosmeticsForPaidTier,
   paidCosmeticSetsUpToTier,
   SUBSCRIPTION_PERK_MIN_TIER,
   tierHasPerk,

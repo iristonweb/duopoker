@@ -1,9 +1,7 @@
 import type { PaidSubscriptionTier } from '@duopoker/shared-types';
 import {
-  PAID_SUBSCRIPTION_TIERS,
   catalogPreviewUrl,
-  subscriptionCosmetics,
-  tierLabel,
+  subscriptionCosmeticsForPaidTier,
   type CosmeticDefinition
 } from '@duopoker/shared-types';
 
@@ -59,45 +57,24 @@ function CosmeticPreview({
 
 export function SubscriptionCosmeticBundle({
   tier,
-  labels
+  labels,
+  cumulativeNote
 }: {
   tier: PaidSubscriptionTier;
   labels: Record<(typeof SLOTS)[number], string>;
+  /** Shown under the grid — e.g. that lower tiers stay unlocked too. */
+  cumulativeNote?: string;
 }) {
-  const tierIndex = PAID_SUBSCRIPTION_TIERS.indexOf(tier);
-  const includedPaidTiers = PAID_SUBSCRIPTION_TIERS.slice(0, tierIndex + 1);
-  const freeItems = subscriptionCosmetics.filter((c) => c.requiredTier === 'FREE');
+  const items = subscriptionCosmeticsForPaidTier(tier);
 
   return (
-    <div className="space-y-5">
-      {freeItems.length ? (
-        <section>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">FREE</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {freeItems.map((item) => (
-              <CosmeticPreview key={item.id} item={item} labels={labels} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-      {includedPaidTiers.map((paidTier) => {
-        const key = paidTier.toLowerCase();
-        const items = SLOTS.map((slot) =>
-          subscriptionCosmetics.find((c) => c.id === `${slot}_${key}`)
-        ).filter((c): c is CosmeticDefinition => Boolean(c));
-        return (
-          <section key={paidTier}>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/80">
-              {tierLabel[paidTier]}
-            </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {items.map((item) => (
-                <CosmeticPreview key={item.id} item={item} labels={labels} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {items.map((item) => (
+          <CosmeticPreview key={item.id} item={item} labels={labels} />
+        ))}
+      </div>
+      {cumulativeNote ? <p className="text-center text-[11px] leading-relaxed text-subtle">{cumulativeNote}</p> : null}
     </div>
   );
 }

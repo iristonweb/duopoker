@@ -280,6 +280,7 @@
     "subscriptionModalClose": "Close",
     "subscriptionModalPerks": "Perks",
     "subscriptionModalCosmetics": "Included cosmetics",
+    "subscriptionModalCosmeticsCumulative": "Lower-tier and free base cosmetics stay unlocked too.",
     "enablePush": "Enable invite notifications"
   },
   "tableInvite": {

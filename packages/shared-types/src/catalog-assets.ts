@@ -61,12 +61,12 @@ export const catalogGameModes: CatalogGameMode[] = [
 ];
 
 export const subscriptionBannerImages: Record<CatalogSubscription['tier'], string> = {
-  BRONZE: '/assets/subscriptions/bronze.svg',
-  SILVER: '/assets/subscriptions/silver.svg',
-  GOLD: '/assets/subscriptions/gold.svg',
-  PLATINUM: '/assets/subscriptions/platinum.svg',
-  DIAMOND: '/assets/subscriptions/diamond.svg',
-  BLACK: '/assets/subscriptions/black.svg'
+  BRONZE: '/assets/subscriptions/bronze.png',
+  SILVER: '/assets/subscriptions/silver.png',
+  GOLD: '/assets/subscriptions/gold.png',
+  PLATINUM: '/assets/subscriptions/platinum.png',
+  DIAMOND: '/assets/subscriptions/diamond.png',
+  BLACK: '/assets/subscriptions/black.png'
 };
 
 export const organizerPlanBanners: Record<OrganizerPlanTier, string> = {

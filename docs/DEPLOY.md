@@ -35,13 +35,15 @@
 1. [neon.tech](https://neon.tech) → Create project.
 2. Скопируй **Connection string** (Pooled, `postgresql://…`).
 
-Локально один раз создай таблицы:
+Локально один раз создай таблицы (или синхронизируй существующую Neon):
 
 ```powershell
 cd C:\Users\gtx\Desktop\Projectss\DuoPoker
 $env:DATABASE_URL="postgresql://USER:PASS@ep-xxx.neon.tech/neondb?sslmode=require"
-pnpm db:push
+pnpm sync:prod-db
 ```
+
+`sync:prod-db` применяет squashed-миграцию `20260401000000_init`, помечает её applied если схема уже была через `db:push`, и выдаёт недостающую косметику подписчикам.
 
 ### 2. Vercel — Environment Variables
 

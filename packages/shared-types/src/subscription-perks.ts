@@ -41,6 +41,14 @@ export const perksUnlockedAtTier = (tier: SubscriptionTier): SubscriptionPerkId[
 export const subscriptionCosmeticsUpToTier = (tier: SubscriptionTier) =>
   subscriptionCosmetics.filter((c) => tierMeetsRequirement(tier, c.requiredTier));
 
+/** The four subscription cosmetics unlocked at a paid tier (deck/chip/frame/title). */
+export const subscriptionCosmeticsForPaidTier = (tier: PaidSubscriptionTier) => {
+  const key = tier.toLowerCase();
+  return (['deck', 'chip', 'frame', 'title'] as const)
+    .map((slot) => subscriptionCosmetics.find((c) => c.id === `${slot}_${key}`))
+    .filter((c): c is (typeof subscriptionCosmetics)[number] => Boolean(c));
+};
+
 export const paidCosmeticSetsUpToTier = (tier: PaidSubscriptionTier): number => {
   const idx = PAID_SUBSCRIPTION_TIERS.indexOf(tier);
   return idx + 1;

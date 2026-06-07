@@ -1,6 +1,8 @@
 /**
  * Mark existing migrations as applied when DB was created via db:push (P3005).
- * Run once, then: pnpm db:migrate
+ * Usage: node packages/db-schema/scripts/baseline-migrations.mjs [skipMigrationName]
+ * Example (legacy): pnpm db:baseline
+ * Prefer: pnpm sync:prod-db (resolves init + backfills cosmetics automatically)
  */
 import { execSync } from 'child_process';
 import { readdirSync } from 'fs';

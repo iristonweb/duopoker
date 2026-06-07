@@ -117,7 +117,11 @@ export function SubscriptionDetailModal({
           {t('lobby.subscriptionModalCosmetics')}
         </p>
         <div className="mt-3 rounded-2xl border border-white/[0.06] bg-black/20 p-4">
-          <SubscriptionCosmeticBundle tier={tier} labels={cosmeticSlotLabels} />
+          <SubscriptionCosmeticBundle
+            tier={tier}
+            labels={cosmeticSlotLabels}
+            cumulativeNote={t('lobby.subscriptionModalCosmeticsCumulative')}
+          />
         </div>
       </section>
     </GlassModal>
