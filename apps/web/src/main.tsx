@@ -20,6 +20,7 @@ import { TableManager } from './routes/TableManager';
 import { InviteAccept } from './routes/InviteAccept';
 import { ServiceWorkerNavigationBridge } from './components/ServiceWorkerNavigationBridge';
 import { TableBackgroundBanner } from './components/table/TableBackgroundBanner';
+import { TableRouteOrientationGate } from './components/table/TableRouteOrientationGate';
 
 const Table = lazy(() => import('./routes/Table').then((m) => ({ default: m.Table })));
 const AdminPage = lazy(() => import('./routes/AdminPage').then((m) => ({ default: m.AdminPage })));
@@ -44,6 +45,7 @@ const App = () => (
     <MatchRedirect />
     <AppBrandBar />
     <TableBackgroundBanner />
+    <TableRouteOrientationGate />
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/lobby" element={<Lobby />} />

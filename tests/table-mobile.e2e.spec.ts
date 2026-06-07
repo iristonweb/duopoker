@@ -72,6 +72,7 @@ test.describe('mobile table layout', () => {
 
   test('portrait table shows rotate overlay', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
+    await page.emulateMedia({ orientation: 'portrait' });
     await page.goto(`${BASE}/table/smoke-test-session`);
     await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/Поверните телефон|Rotate your phone/i)).toBeVisible();
@@ -79,6 +80,7 @@ test.describe('mobile table layout', () => {
 
   test('landscape table route has no horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 667, height: 375 });
+    await page.emulateMedia({ orientation: 'landscape' });
     await page.goto(`${BASE}/table/smoke-test-session`);
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);

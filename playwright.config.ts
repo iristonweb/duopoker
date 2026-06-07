@@ -20,7 +20,11 @@ const webServer = process.env.CI
         command: 'pnpm --filter @duopoker/web exec vite --host 127.0.0.1 --port 5180',
         url: 'http://127.0.0.1:5180/lobby',
         reuseExistingServer: false,
-        timeout: 120_000
+        timeout: 120_000,
+        env: {
+          VITE_API_URL: 'http://127.0.0.1:4000',
+          VITE_API_PROXY: 'http://127.0.0.1:4000'
+        }
       }
     ]
   : {
