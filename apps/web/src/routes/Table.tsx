@@ -427,25 +427,28 @@ export const Table = () => {
 
   if (!matchRoute || !session) {
     return (
-      <PageShell
-        maxWidth="lg"
-        back={
-          <button type="button" className="premium-link text-sm" onClick={() => exitToLobby()}>
-            {t('nav.backLobby')}
-          </button>
-        }
-        eyebrow={t('table.connecting')}
-        title={t('table.joiningTitle')}
-      >
-        <GlassPanel glow="gold" className="border-gold/15 p-6">
-          <LoadingSkeleton lines={2} className="mb-4" />
-          <p className="text-sm text-muted">{t('table.connectingTo', { id: routeSessionId })}</p>
-          <p className="mt-2 text-xs text-subtle">{t('table.connectingHint')}</p>
-          <Button variant="secondary" size="sm" className="mt-4" onClick={() => exitToLobby()}>
-            {t('table.backToLobby')}
-          </Button>
-        </GlassPanel>
-      </PageShell>
+      <>
+        <TableOrientationGate />
+        <PageShell
+          maxWidth="lg"
+          back={
+            <button type="button" className="premium-link text-sm" onClick={() => exitToLobby()}>
+              {t('nav.backLobby')}
+            </button>
+          }
+          eyebrow={t('table.connecting')}
+          title={t('table.joiningTitle')}
+        >
+          <GlassPanel glow="gold" className="border-gold/15 p-6">
+            <LoadingSkeleton lines={2} className="mb-4" />
+            <p className="text-sm text-muted">{t('table.connectingTo', { id: routeSessionId })}</p>
+            <p className="mt-2 text-xs text-subtle">{t('table.connectingHint')}</p>
+            <Button variant="secondary" size="sm" className="mt-4" onClick={() => exitToLobby()}>
+              {t('table.backToLobby')}
+            </Button>
+          </GlassPanel>
+        </PageShell>
+      </>
     );
   }
 
