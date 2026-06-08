@@ -82,6 +82,16 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 ### 3. Git push → Redeploy
 
+Перед push, если менялась Prisma-схема, один раз примени миграции на Neon:
+
+```powershell
+$env:DATABASE_URL="postgresql://...pooler...neon.tech/neondb?sslmode=require"
+$env:DIRECT_DATABASE_URL="postgresql://...direct...neon.tech/neondb?sslmode=require"
+pnpm sync:prod-db
+```
+
+Vercel build **не** запускает `prisma migrate deploy` (избегаем advisory lock на Neon pooler).
+
 ```powershell
 git add -A
 git commit -m "Vercel API, LiveKit voice, Neon-ready"
