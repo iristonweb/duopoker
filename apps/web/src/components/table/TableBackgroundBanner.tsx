@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, cn } from '@duopoker/ui-kit';
 import { useAppStore } from '../../store/useAppStore';
 
 export function TableBackgroundBanner() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const tableMinimized = useAppStore((s) => s.tableMinimized);
   const session = useAppStore((s) => s.session);
@@ -33,6 +34,7 @@ export function TableBackgroundBanner() {
       : null;
 
   if (!tableMinimized || !session?.sessionId) return null;
+  if (pathname.startsWith('/table/')) return null;
 
   const pot =
     session.pot +

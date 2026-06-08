@@ -1,0 +1,43 @@
+import { useCallback, useEffect, useState } from 'react';
+import { loadTableImmersivePref } from '../lib/table-layout-prefs';
+
+export type TableLayoutKind = 'desktop' | 'tablet' | 'mobile-immersive' | 'mobile-classic';
+
+const DESKTOP_MIN = 1280;
+const TABLET_MIN = 768;
+
+export function resolveTableLayoutKind(width: number, immersivePref: boolean): TableLayoutKind {
+  if (width >= DESKTOP_MIN) return 'desktop';
+  if (width >= TABLET_MIN) return 'tablet';
+  return immersivePref ? 'mobile-immersive' : 'mobile-classic';
+}
+
+export function useTableLayoutMode(): TableLayoutKind {
+  const [mode, setMode] = useState<TableLayoutKind>(() =>
+    typeof window === 'undefined'
+      ? 'desktop'
+      : resolveTableLayoutKind(window.innerWidth, loadTableImmersivePref())
+  );
+
+  const sync = useCallback(() => {
+    setMode(resolveTableLayoutKind(window.innerWidth, loadTableImmersivePref()));
+  }, []);
+
+  useEffect(() => {
+    sync();
+    window.addEventListener('resize', sync);
+    window.addEventListener('storage', sync);
+    window.addEventListener('duopoker:table-layout-pref', sync);
+    return () => {
+      window.removeEventListener('resize', sync);
+      window.removeEventListener('storage', sync);
+      window.removeEventListener('duopoker:table-layout-pref', sync);
+    };
+  }, [sync]);
+
+  return mode;
+}
+
+export function notifyTableLayoutPrefChange() {
+  window.dispatchEvent(new Event('duopoker:table-layout-pref'));
+}

@@ -32,16 +32,40 @@ export function PlayerAvatar({
   tier?: SubscriptionTier;
   active?: boolean;
   folded?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'mobile' | 'mobile-premium';
   showTier?: boolean;
   isBot?: boolean;
   hideName?: boolean;
   className?: string;
 }) {
-  const outer = size === 'sm' ? 'h-12 w-12' : size === 'lg' ? 'h-20 w-20' : 'h-16 w-16';
-  const inner = size === 'sm' ? 'h-9 w-9 text-xs' : size === 'lg' ? 'h-14 w-14 text-lg' : 'h-12 w-12 text-sm';
+  const outer =
+    size === 'sm'
+      ? 'h-12 w-12'
+      : size === 'lg'
+        ? 'h-20 w-20'
+        : size === 'mobile'
+          ? 'h-16 w-16'
+          : size === 'mobile-premium'
+            ? 'h-[4.5rem] w-[4.5rem]'
+            : 'h-16 w-16';
+  const inner =
+    size === 'sm'
+      ? 'h-9 w-9 text-xs'
+      : size === 'lg'
+        ? 'h-14 w-14 text-lg'
+        : size === 'mobile'
+          ? 'h-14 w-14 text-sm'
+          : size === 'mobile-premium'
+            ? 'h-16 w-16 text-base'
+            : 'h-12 w-12 text-sm';
   const nameMax =
-    size === 'sm' ? 'max-w-[5.5rem]' : size === 'lg' ? 'max-w-[9rem]' : 'max-w-[7rem]';
+    size === 'sm'
+      ? 'max-w-[5.5rem]'
+      : size === 'lg'
+        ? 'max-w-[9rem]'
+        : size === 'mobile' || size === 'mobile-premium'
+          ? 'max-w-[5rem]'
+          : 'max-w-[7rem]';
   const titleSrc = titleId ? titleImageUrl(titleId) : undefined;
   const titleText = titleId ? titleDisplayLabel(titleId) : undefined;
 

@@ -283,3 +283,5 @@ export interface MatchmakingTicket {
   buyIn: number;
   createdAt: number;
 }
+
+export type { TableChatMessage } from './table-chat';

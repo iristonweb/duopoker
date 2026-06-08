@@ -27,6 +27,9 @@ type Props = {
   liveLabel: string;
   modeLabel: string;
   className?: string;
+  hideFab?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 const formatPts = (pts: number) => (pts > 0 ? `+${pts}` : String(pts));
@@ -445,9 +448,14 @@ export function JokerNotebookPanel({
   poolPremiumLabel,
   liveLabel,
   modeLabel,
-  className
+  className,
+  hideFab = false,
+  open: controlledOpen,
+  onOpenChange
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const live = Boolean(joker.bids && Object.values(joker.bids).some((b) => b !== undefined));
   const rows = buildRows(joker, live);
 
@@ -510,9 +518,10 @@ export function JokerNotebookPanel({
         className
       )}
     >
+      {!hideFab ? (
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!open)}
         className={cn(
           'pointer-events-auto flex h-10 w-10 items-center justify-center rounded-md border shadow-lg backdrop-blur-md transition-all',
           open
@@ -524,6 +533,7 @@ export function JokerNotebookPanel({
       >
         <NotebookIcon open={open} modeLabel={modeLabel} />
       </button>
+      ) : null}
 
       {typeof document !== 'undefined'
         ? createPortal(

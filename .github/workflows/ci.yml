@@ -102,4 +102,4 @@ jobs:
         run: pnpm exec playwright install-deps chrome
 
       - name: Playwright E2E
-        run: pnpm exec playwright test tests/web.e2e.spec.ts tests/table-mobile.e2e.spec.ts tests/table-leaderboard.e2e.spec.ts tests/game.e2e.spec.ts
+        run: pnpm exec playwright test tests/web.e2e.spec.ts tests/table-mobile.e2e.spec.ts tests/table-leaderboard.e2e.spec.ts tests/game.e2e.spec.ts tests/table-chat.e2e.spec.ts

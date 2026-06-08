@@ -12,7 +12,14 @@ const sizeMap = {
   xs: { height: 'h-[3.25rem]', radius: 'rounded-[0.35rem]', pip: 'text-sm', corner: 'text-[0.5rem]', face: 'text-base' },
   sm: { height: 'h-[4.5rem]', radius: 'rounded-[0.45rem]', pip: 'text-lg', corner: 'text-[0.62rem]', face: 'text-xl' },
   md: { height: 'h-[5.75rem]', radius: 'rounded-[0.55rem]', pip: 'text-2xl', corner: 'text-[0.72rem]', face: 'text-2xl' },
-  lg: { height: 'h-[7.5rem]', radius: 'rounded-[0.65rem]', pip: 'text-3xl', corner: 'text-sm', face: 'text-3xl' }
+  lg: { height: 'h-[7.5rem]', radius: 'rounded-[0.65rem]', pip: 'text-3xl', corner: 'text-sm', face: 'text-3xl' },
+  mobile: {
+    height: 'h-[7rem]',
+    radius: 'rounded-[0.5rem]',
+    pip: 'text-xl',
+    corner: 'text-[0.65rem]',
+    face: 'text-2xl'
+  }
 } as const;
 
 const cardShell = (size: keyof typeof sizeMap, className?: string) =>
@@ -93,7 +100,7 @@ export function PlayingCard({
   faceUp?: boolean;
   deckId?: string;
   className?: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'mobile';
 }) {
   if (!faceUp || !card) {
     const effectClass = deckBackEffectClass(deckId);

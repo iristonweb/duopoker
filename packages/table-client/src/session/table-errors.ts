@@ -1,5 +1,16 @@
 type Translate = (key: string, opts?: Record<string, unknown>) => string;
 
+export const CHAT_ERROR_CODES = [
+  'CHAT_RATE_LIMIT',
+  'INVALID_CHAT_PAYLOAD',
+  'NOT_IN_SESSION'
+] as const;
+
+export type ChatErrorCode = (typeof CHAT_ERROR_CODES)[number];
+
+export const isChatErrorCode = (code: string): code is ChatErrorCode =>
+  (CHAT_ERROR_CODES as readonly string[]).includes(code);
+
 const ERROR_KEY_MAP: Record<string, string> = {
   WRONG_TURN: 'table.errors.wrongTurn',
   INVALID_ACTION: 'table.errors.invalidAction',
@@ -16,7 +27,10 @@ const ERROR_KEY_MAP: Record<string, string> = {
   SESSION_NOT_FOUND: 'table.errors.sessionNotFound',
   AUTH_REQUIRED: 'table.errors.authRequired',
   connection_lost: 'table.errors.connectionLost',
-  table_closed: 'table.errors.tableClosed'
+  table_closed: 'table.errors.tableClosed',
+  CHAT_RATE_LIMIT: 'table.errors.chatRateLimit',
+  INVALID_CHAT_PAYLOAD: 'table.errors.invalidChatPayload',
+  NOT_IN_SESSION: 'table.errors.notInSession'
 };
 
 export const formatTableError = (code: string, t: Translate): string => {

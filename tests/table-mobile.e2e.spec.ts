@@ -70,9 +70,22 @@ test.describe('mobile table layout', () => {
     await expect(hint).not.toBeVisible();
   });
 
-  test('portrait table shows rotate overlay', async ({ page }) => {
+  test('portrait table hides orientation gate when immersive on', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.emulateMedia({ orientation: 'portrait' });
+    await page.addInitScript(() => {
+      localStorage.setItem('duopoker_mobile_immersive_table', '1');
+    });
+    await page.goto(`${BASE}/table/smoke-test-session`);
+    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible({ timeout: 10_000 });
+  });
+
+  test('portrait table shows rotate overlay when immersive off', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.emulateMedia({ orientation: 'portrait' });
+    await page.addInitScript(() => {
+      localStorage.setItem('duopoker_mobile_immersive_table', '0');
+    });
     await page.goto(`${BASE}/table/smoke-test-session`);
     await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/Поверните телефон|Rotate your phone/i)).toBeVisible();
@@ -118,15 +131,16 @@ test.describe('mobile table layout', () => {
     p1.disconnect();
     p2.disconnect();
 
-    await page.setViewportSize({ width: 667, height: 375 });
+    await page.setViewportSize({ width: 375, height: 667 });
     await page.addInitScript((uid) => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
+      localStorage.setItem('duopoker_mobile_immersive_table', '1');
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
-    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('table-top-hud')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-table-top-bar')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
   });
 

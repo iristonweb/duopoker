@@ -1,20 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
 import type { EquippedCosmetics, PlayerAction, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
-import { GHOST_BOARD_MIN_TIER, JOKER_TOTAL_HANDS, NEXT_HAND_DELAY_MS, defaultEquipped, gameChipId, tierMeetsRequirement } from '@duopoker/shared-types';
-import { PokerTable3D, type TablePlayerVisual } from '../components/PokerTable3D';
-import { GameTableShell } from '../components/table/GameTableShell';
-import { TableTopHUD } from '../components/table/TableTopHUD';
-import { TableActionDock } from '../components/table/TableActionDock';
-import { JokerActionDock } from '../components/table/JokerActionDock';
-import { HandResultOverlay } from '../components/table/HandResultOverlay';
-import { VoiceChatPill } from '../components/table/VoiceChatPill';
-import { GameStoryPanel } from '../components/table/GameStoryPanel';
-import { JokerNotebookPanel } from '../components/table/JokerNotebookPanel';
-import { BustedPlayerOverlay } from '../components/table/BustedPlayerOverlay';
+import { GHOST_BOARD_MIN_TIER, JOKER_TOTAL_HANDS, NEXT_HAND_DELAY_MS, defaultEquipped, tierMeetsRequirement } from '@duopoker/shared-types';
+import type { TablePlayerVisual } from '../components/PokerTable3D';
+import { TableLayoutRouter } from '../components/table/layouts/TableLayoutRouter';
+import { TableChatDrawer } from '../components/table/chat/TableChatDrawer';
 import { useCommunityCardSounds, useTableGameFeed } from '../hooks/useTableGameFeed';
 import { useTableAnimationQueue } from '../hooks/useTableAnimationQueue';
 import { useTableDisplayState } from '../hooks/useTableDisplayState';
@@ -29,9 +22,13 @@ import { formatJokerPlayLine } from '../lib/joker-declaration-label';
 import { holdemShowdownHandLines } from '../lib/holdem-hand-rank';
 import { holdemSidePotAmounts, holdemSidePotSummary } from '../lib/holdem-side-pots';
 import { PwaInstallHint } from '../components/PwaInstallHint';
-import { TuzovanieTableOverlay } from '../components/table/TuzovanieTableOverlay';
-import { TableLeaderboardPanel } from '../components/table/TableLeaderboardPanel';
-import { buildTableLeaderboard, leaderboardLeaders } from '@duopoker/table-client';
+import {
+  buildTableLeaderboard,
+  formatTableError,
+  leaderboardLeaders,
+  useTableChat
+} from '@duopoker/table-client';
+import { useTableLayoutMode } from '../hooks/useTableLayoutMode';
 
 const maxRoundBet = (s: SessionState) =>
   s.players.reduce((m, p) => Math.max(m, s.playerRoundBet[p] ?? 0), 0);
@@ -143,6 +140,9 @@ export const Table = () => {
   const [bustedDismissed, setBustedDismissed] = useState(false);
   const [ghostBoardVisible, setGhostBoardVisible] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+
+  const layoutMode = useTableLayoutMode();
+  const chat = useTableChat(routeSessionId, socket);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
@@ -588,245 +588,124 @@ export const Table = () => {
     });
   };
 
+  const showDesktopChat = layoutMode !== 'mobile-immersive';
+
   return (
     <>
-    <GameTableShell
-      overlay={<PwaInstallHint />}
-      hud={
-        <TableTopHUD
-          mode={tableView.mode}
-          pot={viewKettle}
-          street={tableView.street}
-          seatCount={tableView.players.length}
-          smallBlind={tableView.smallBlind}
-          bigBlind={tableView.bigBlind}
-          handNumber={tableView.handNumber}
-          chipId={gameChipId(equipped.chip)}
-          joker={tableView.mode === 'JOKER' ? tableView.joker : null}
-          jokerRules={session.jokerRules}
-          onLeaveTable={() => void handleLeaveTable()}
-          onMinimizeTable={handleMinimizeTable}
-          leaving={leaving}
-          leaderboardEntries={leaderboardEntries}
-          leaderboardProfiles={leaderboardProfiles}
+      <TableLayoutRouter
+        mode={layoutMode}
+        overlay={layoutMode === 'mobile-immersive' ? undefined : <PwaInstallHint />}
+        onChatOpen={showDesktopChat ? chat.openDrawer : undefined}
+        chatUnread={chat.unread}
+        session={session}
+        tableView={tableView}
+        userId={userId}
+        sessionError={sessionError}
+        leaving={leaving}
+        soundOn={soundOn}
+        musicOn={musicOn}
+        onSoundToggle={() =>
+          setSoundOn((v) => {
+            saveTableSfxPref(!v);
+            return !v;
+          })
+        }
+        onMusicToggle={() =>
+          setMusicOn((v) => {
+            saveTableMusicPref(!v);
+            return !v;
+          })
+        }
+        onLeaveTable={() => void handleLeaveTable()}
+        onMinimizeTable={handleMinimizeTable}
+        leaderboardOpen={leaderboardOpen}
+        onLeaderboardOpenChange={setLeaderboardOpen}
+        leaderboardEntries={leaderboardEntries}
+        leaderboardProfiles={leaderboardProfiles}
+        tablePlayers={tablePlayers}
+        seatBubbles={seatBubbles}
+        chipFlights={chipFlights}
+        jokerFlights={jokerFlights}
+        potPulseKey={potPulseKey}
+        foldingUsers={foldingUsers}
+        checkRippleUsers={checkRippleUsers}
+        feedEvents={feedEvents}
+        feedPulseKey={feedPulseKey}
+        reduceMotion={reduceMotion ?? false}
+        label={label}
+        t={t}
+        equipped={equipped}
+        subscriptionTier={subscriptionTier}
+        playerProfiles={playerProfiles}
+        viewKettle={viewKettle}
+        holdemSidePotList={holdemSidePotList}
+        jokerBoardCards={jokerBoardCards}
+        jokerBoardKeys={jokerBoardKeys}
+        ghostBoardVisible={ghostBoardVisible}
+        canPeekGhostBoard={canPeekGhostBoard}
+        showGhostUpsell={showGhostUpsell}
+        onToggleGhostBoard={() => setGhostBoardVisible((v) => !v)}
+        showBustedOverlay={showBustedOverlay}
+        onBustedWatch={() => setBustedDismissed(true)}
+        waitingForPlayers={waitingForPlayers}
+        isJoker={isJoker}
+        gameOver={gameOver}
+        jokerMatchOver={jokerMatchOver}
+        matchLeaderNames={matchLeaderNames}
+        winnerNames={winnerNames}
+        holdemPayoutSummary={holdemPayoutSummary}
+        jokerHandSummary={jokerHandSummary}
+        holdemHandRankLine={holdemHandRankLine}
+        holdemSidePotLine={holdemSidePotLine}
+        nextHandSeconds={nextHandSeconds}
+        myTurn={myTurn}
+        need={need}
+        secondsLeft={secondsLeft}
+        activeLabel={activeLabel}
+        lastActionText={lastActionText}
+        heroSpectating={heroSpectating}
+        holeCards={holeCards}
+        raiseAmount={raiseAmount}
+        onRaiseAmountChange={setRaiseAmount}
+        minTotal={minTotal}
+        maxTotal={maxTotal}
+        canRaise={canRaise}
+        halfPotRaise={Math.min(maxTotal, halfPotRaise)}
+        potRaise={Math.min(maxTotal, potRaise)}
+        kettle={kettle}
+        onFold={() => playerAction({ sessionId: sid, type: 'fold' })}
+        onCheck={() => playerAction({ sessionId: sid, type: 'check' })}
+        onCall={() => playerAction({ sessionId: sid, type: 'call' })}
+        onRaise={handleRaise}
+        jokerBid={jokerBid}
+        onJokerBidChange={setJokerBid}
+        onJokerBid={() => {
+          const max = Math.min(9, session.joker!.cardsThisDeal);
+          const bid = Math.min(max, Math.max(0, jokerBid));
+          playerAction({ sessionId: sid, type: 'bid', amount: bid });
+        }}
+        onJokerPlayCard={(card, declaration) =>
+          playerAction({ sessionId: sid, type: 'playCard', card, declaration })
+        }
+        onJokerChooseTrump={(trumpSuit) =>
+          playerAction({ sessionId: sid, type: 'chooseTrump', trumpSuit })
+        }
+        sessionId={sid}
+      />
+      {showDesktopChat ? (
+        <TableChatDrawer
+          open={chat.drawerOpen}
+          onClose={chat.closeDrawer}
+          messages={chat.messages}
+          onSend={chat.sendMessage}
+          title={t('table.mobile.chat')}
+          closeLabel={t('table.feedCloseHistory')}
+          placeholder={t('table.mobile.chatPlaceholder')}
+          sendLabel={t('table.mobile.chatSend')}
           heroId={userId}
-          onOpenLeaderboard={() => setLeaderboardOpen(true)}
+          error={chat.chatError ? formatTableError(chat.chatError, t) : null}
         />
-      }
-      table={
-        session.street ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35 }}
-            className="relative h-full min-h-0"
-          >
-            <TuzovanieTableOverlay
-              session={tableView}
-              heroId={userId}
-              deckId={equipped.deck}
-              label={label}
-              t={t}
-              reduceMotion={reduceMotion ?? false}
-            />
-            <PokerTable3D
-              communityCards={jokerBoardCards}
-              boardCardKeys={jokerBoardKeys}
-              handNumber={tableView.handNumber}
-              showBoardSlots={tableView.mode !== 'JOKER'}
-              ghostCommunityCards={
-                ghostBoardVisible && canPeekGhostBoard ? (tableView.ghostCommunityCards ?? []) : []
-              }
-              pot={viewKettle}
-              street={tableView.street === 'LOBBY' ? 'COMPLETE' : tableView.street}
-              players={tablePlayers}
-              heroDeckId={equipped.deck}
-              heroChipId={equipped.chip}
-              heroTableFeltId={equipped.table}
-              seatBubbles={seatBubbles}
-              chipFlights={chipFlights}
-              jokerFlights={jokerFlights}
-              potPulseKey={potPulseKey}
-              sidePots={holdemSidePotList}
-              foldingUsers={foldingUsers}
-              checkRippleUsers={checkRippleUsers}
-              className="h-full"
-            />
-            <HandResultOverlay
-              visible={
-                tableView.street === 'COMPLETE' &&
-                session.street === 'COMPLETE' &&
-                !showBustedOverlay
-              }
-              winners={isJoker || holdemPayoutSummary ? undefined : winnerNames}
-              summaryText={
-                isJoker && jokerHandSummary
-                  ? t('table.jokerHandSummary', { summary: jokerHandSummary })
-                  : holdemPayoutSummary ?? undefined
-              }
-              handRankLine={holdemHandRankLine}
-              sidePotLine={holdemSidePotLine}
-              gameOver={gameOver}
-              gameOverMessage={
-                jokerMatchOver
-                  ? t('table.jokerMatchLeader', { names: matchLeaderNames || '—' })
-                  : gameOver
-                    ? t('table.holdemLeader', { names: matchLeaderNames || winnerNames || '—' })
-                    : undefined
-              }
-              nextHandSeconds={jokerMatchOver ? null : nextHandSeconds}
-              canPeekGhostBoard={canPeekGhostBoard}
-              ghostBoardVisible={ghostBoardVisible}
-              onToggleGhostBoard={() => setGhostBoardVisible((v) => !v)}
-              showGhostUpsell={showGhostUpsell}
-              leaderboardEntries={gameOver ? leaderboardEntries : undefined}
-              leaderboardProfiles={gameOver ? leaderboardProfiles : undefined}
-              heroId={userId}
-              mode={tableView.mode}
-              buyIn={session.buyIn}
-            />
-            <TableLeaderboardPanel
-              entries={leaderboardEntries}
-              mode={tableView.mode}
-              heroId={userId}
-              profiles={leaderboardProfiles}
-              open={leaderboardOpen}
-              onOpenChange={setLeaderboardOpen}
-              buyIn={session.buyIn}
-            />
-            <BustedPlayerOverlay
-              visible={showBustedOverlay}
-              leaving={leaving}
-              onWatch={() => setBustedDismissed(true)}
-              onLeave={() => void handleLeaveTable()}
-            />
-            <GameStoryPanel
-              events={feedEvents}
-              pulseKey={feedPulseKey}
-              soundOn={soundOn}
-              musicOn={musicOn}
-              onSoundToggle={() =>
-                setSoundOn((v) => {
-                  saveTableSfxPref(!v);
-                  return !v;
-                })
-              }
-              onMusicToggle={() =>
-                setMusicOn((v) => {
-                  saveTableMusicPref(!v);
-                  return !v;
-                })
-              }
-              soundOnLabel={t('table.soundOn')}
-              soundOffLabel={t('table.soundOff')}
-              musicOnLabel={t('table.musicOn')}
-              musicOffLabel={t('table.musicOff')}
-              title={t('table.feedTitle')}
-              openLabel={t('table.feedOpenHistory')}
-              closeLabel={t('table.feedCloseHistory')}
-              emptyLabel={t('table.feedEmpty')}
-            />
-            {session.mode === 'JOKER' && session.joker ? (
-              <JokerNotebookPanel
-                joker={session.joker}
-                players={session.players}
-                label={label}
-                title={t('table.notebookTitle')}
-                openLabel={t('table.notebookOpen')}
-                closeLabel={t('table.notebookClose')}
-                dealLabel={t('table.notebookDeal')}
-                bidLabel={t('table.notebookBid')}
-                tricksLabel={t('table.notebookTricks')}
-                pointsLabel={t('table.notebookPoints')}
-                totalLabel={t('table.notebookTotal')}
-                poolPremiumLabel={t('table.notebookPoolPremium')}
-                liveLabel={t('table.notebookLive')}
-                modeLabel={t('table.joker')}
-              />
-            ) : null}
-            <VoiceChatPill />
-            {waitingForPlayers ? (
-              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/50 px-6 backdrop-blur-sm">
-                <GlassPanel glow="emerald" className="pointer-events-auto max-w-md border-emerald/20 p-8 text-center shadow-[0_0_48px_rgba(74,222,128,0.15)]">
-                  <motion.div
-                    animate={{ scale: [1, 1.06, 1] }}
-                    transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-                    className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-emerald/40 bg-emerald/10 text-xl"
-                  >
-                    ♠
-                  </motion.div>
-                  <p className="font-display text-xl text-gradient-gold">
-                    {isJoker ? t('table.waitingForPlayersJoker') : t('table.waitingOpponent')}
-                  </p>
-                </GlassPanel>
-              </div>
-            ) : null}
-          </motion.div>
-        ) : null
-      }
-      dock={
-        session.mode === 'JOKER' && session.joker ? (
-          <JokerActionDock
-            myTurn={myTurn}
-            street={session.street}
-            holeCards={holeCards}
-            deckId={equipped.deck}
-            joker={session.joker}
-            bidAmount={jokerBid}
-            maxBid={Math.min(9, session.joker.cardsThisDeal)}
-            userId={userId}
-            dealerId={session.players[session.dealerIndex]!}
-            playerIds={session.players}
-            onBidAmountChange={setJokerBid}
-            secondsLeft={secondsLeft}
-            activeLabel={activeLabel}
-            isHeroActive={activeId === userId}
-            lastActionText={lastActionText}
-            sessionError={sessionError}
-            actionLogLen={session.actionLog?.length ?? 0}
-            strictJoker={session.jokerRules?.strictJoker}
-            onBid={() => {
-              const max = Math.min(9, session.joker!.cardsThisDeal);
-              const bid = Math.min(max, Math.max(0, jokerBid));
-              playerAction({ sessionId: sid, type: 'bid', amount: bid });
-            }}
-            onPlayCard={(card, declaration) =>
-              playerAction({ sessionId: sid, type: 'playCard', card, declaration })
-            }
-            onChooseTrump={(trumpSuit) =>
-              playerAction({ sessionId: sid, type: 'chooseTrump', trumpSuit })
-            }
-          />
-        ) : (
-          <TableActionDock
-            myTurn={myTurn}
-            need={need}
-            currentBet={session.currentBet}
-            minTotal={minTotal}
-            maxTotal={maxTotal}
-            canRaise={canRaise}
-            raiseAmount={raiseAmount}
-            onRaiseAmountChange={setRaiseAmount}
-            halfPotRaise={Math.min(maxTotal, halfPotRaise)}
-            potRaise={Math.min(maxTotal, potRaise)}
-            kettle={kettle}
-            secondsLeft={secondsLeft}
-            holeCards={holeCards}
-            deckId={equipped.deck}
-            activeLabel={activeLabel}
-            isHeroActive={activeId === userId}
-            lastActionText={lastActionText}
-            heroSpectating={heroSpectating}
-            street={session.street}
-            sessionError={sessionError}
-            onFold={() => playerAction({ sessionId: sid, type: 'fold' })}
-            onCheck={() => playerAction({ sessionId: sid, type: 'check' })}
-            onCall={() => playerAction({ sessionId: sid, type: 'call' })}
-            onRaise={handleRaise}
-          />
-        )
-      }
-    />
+      ) : null}
     </>
   );
 };
