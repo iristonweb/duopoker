@@ -77,6 +77,9 @@ test.describe('mobile table layout', () => {
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
     });
     await page.goto(`${BASE}/table/smoke-test-session`);
+    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-immersive', {
+      timeout: 10_000
+    });
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible({ timeout: 10_000 });
   });
 
@@ -101,7 +104,7 @@ test.describe('mobile table layout', () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
   });
 
-  test('phone landscape uses classic horizontal table when width exceeds tablet breakpoint', async ({ page }) => {
+  test('phone landscape picks classic layout when width exceeds tablet breakpoint', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.emulateMedia({ orientation: 'landscape' });
     await page.addInitScript(() => {
@@ -109,7 +112,9 @@ test.describe('mobile table layout', () => {
       sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     });
     await page.goto(`${BASE}/table/smoke-test-session`);
-    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-classic', {
+      timeout: 10_000
+    });
     await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
   });

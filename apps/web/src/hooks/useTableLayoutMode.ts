@@ -58,6 +58,13 @@ export function useTableLayoutMode(): TableLayoutKind {
     };
   }, [sync]);
 
+  useEffect(() => {
+    document.body.dataset.tableLayoutMode = mode;
+    return () => {
+      delete document.body.dataset.tableLayoutMode;
+    };
+  }, [mode]);
+
   return mode;
 }
 
