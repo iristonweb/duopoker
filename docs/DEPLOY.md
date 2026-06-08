@@ -51,7 +51,8 @@ Project → **Settings → Environment Variables** (Production + Preview):
 
 | Переменная | Значение |
 |------------|----------|
-| `DATABASE_URL` | строка из Neon |
+| `DATABASE_URL` | строка из Neon (Pooled / pooler) |
+| `DIRECT_DATABASE_URL` | прямая строка Neon (без `-pooler` в хосте); если не задана — `vercel-build.mjs` выведет из `DATABASE_URL` |
 | `JWT_SECRET` | случайная длинная строка (64+ символов) |
 | `JWT_REFRESH_SECRET` | другая случайная строка |
 | `PUBLIC_WEB_URL` | `https://duopoker.ru` |

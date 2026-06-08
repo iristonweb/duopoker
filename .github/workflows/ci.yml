@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 20
     env:
       HUSKY: "0"
+      DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
+      DIRECT_DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -40,6 +42,7 @@ jobs:
     env:
       HUSKY: "0"
       DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
+      DIRECT_DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
     services:
       postgres:
         image: postgres:16
@@ -73,6 +76,7 @@ jobs:
     env:
       HUSKY: "0"
       DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
+      DIRECT_DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
       JWT_SECRET: ci-jwt-secret-minimum-32-characters-long
       JWT_REFRESH_SECRET: ci-jwt-refresh-secret-min-32-chars-long
       ALLOW_SOLO_QUEUE: "true"
@@ -110,6 +114,8 @@ jobs:
     timeout-minutes: 20
     env:
       HUSKY: "0"
+      DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
+      DIRECT_DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       ALLOW_OPEN_JOIN: "true"
       ALLOW_SOLO_QUEUE: "true"
