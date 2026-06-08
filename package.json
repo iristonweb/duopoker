@@ -32,6 +32,7 @@
     "db:generate": "pnpm --filter @duopoker/db-schema build",
     "grant:founder": "pnpm --filter @duopoker/shared-types build && pnpm --filter @duopoker/db-schema build && node scripts/grant-founder.mjs",
     "backfill:cosmetics": "pnpm --filter @duopoker/shared-types build && pnpm exec prisma generate --schema packages/db-schema/prisma/schema.prisma && node scripts/backfill-subscription-cosmetics.mjs",
+    "build:vercel": "node scripts/vercel-build.mjs",
     "build:vercel-api": "node scripts/bundle-vercel-api.mjs",
     "crop:decks": "node scripts/crop-deck-backs.mjs",
     "fix:game-alpha": "node scripts/fix-game-asset-alpha.mjs"
