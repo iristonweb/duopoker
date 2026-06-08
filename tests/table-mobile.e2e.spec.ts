@@ -101,7 +101,7 @@ test.describe('mobile table layout', () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
   });
 
-  test('phone landscape uses mobile immersive layout when width exceeds tablet breakpoint', async ({ page }) => {
+  test('phone landscape uses classic horizontal table when width exceeds tablet breakpoint', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.emulateMedia({ orientation: 'landscape' });
     await page.addInitScript(() => {
@@ -109,8 +109,8 @@ test.describe('mobile table layout', () => {
       sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     });
     await page.goto(`${BASE}/table/smoke-test-session`);
-    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('game-table-shell')).not.toBeVisible();
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
   });
 
@@ -196,15 +196,14 @@ test.describe('mobile table layout', () => {
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
-    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole('button', { name: /Меню|Menu/i }).click();
     await page.getByRole('button', { name: /Свернуть|Minimize/i }).click();
     await expect(page).toHaveURL(/\/lobby/);
     await expect(page.getByTestId('table-background-banner')).toBeVisible({ timeout: 10_000 });
 
     await page.getByRole('button', { name: /Вернуться|Return/i }).click();
     await expect(page).toHaveURL(new RegExp(`/table/${sessionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
   });
 });

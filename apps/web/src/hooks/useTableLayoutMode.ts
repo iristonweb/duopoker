@@ -12,8 +12,13 @@ export function resolveTableLayoutKind(
   immersivePref: boolean
 ): TableLayoutKind {
   const shortSide = Math.min(width, height);
+  const isPhone = shortSide <= 767;
+  const isLandscape = width > height;
+
   if (width >= DESKTOP_MIN) return 'desktop';
-  if (shortSide <= 767) return immersivePref ? 'mobile-immersive' : 'mobile-classic';
+  // Phone landscape: ring table (PokerTable3D compact) — immersive UI is portrait-only.
+  if (isPhone && isLandscape) return 'mobile-classic';
+  if (isPhone) return immersivePref ? 'mobile-immersive' : 'mobile-classic';
   if (width >= TABLET_MIN) return 'tablet';
   return immersivePref ? 'mobile-immersive' : 'mobile-classic';
 }
@@ -42,10 +47,12 @@ export function useTableLayoutMode(): TableLayoutKind {
   useEffect(() => {
     sync();
     window.addEventListener('resize', sync);
+    window.addEventListener('orientationchange', sync);
     window.addEventListener('storage', sync);
     window.addEventListener('duopoker:table-layout-pref', sync);
     return () => {
       window.removeEventListener('resize', sync);
+      window.removeEventListener('orientationchange', sync);
       window.removeEventListener('storage', sync);
       window.removeEventListener('duopoker:table-layout-pref', sync);
     };

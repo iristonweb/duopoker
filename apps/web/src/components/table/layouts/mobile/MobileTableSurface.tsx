@@ -91,6 +91,7 @@ export function MobileTableSurface({
           playerIndex={playerIndex}
           playerCount={players.length}
           chipId={potChipId}
+          layout="mobile-arc"
         />
 
         <div className="absolute left-1/2 top-[32%] flex -translate-x-1/2 gap-1">

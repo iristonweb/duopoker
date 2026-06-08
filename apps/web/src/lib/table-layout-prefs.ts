@@ -5,7 +5,7 @@ export const loadTableImmersivePref = (): boolean => {
   const stored = localStorage.getItem(IMMERSIVE_KEY);
   if (stored === '0') return false;
   if (stored === '1') return true;
-  return window.innerWidth <= 767;
+  return Math.min(window.innerWidth, window.innerHeight) <= 767;
 };
 
 export const saveTableImmersivePref = (on: boolean) => {

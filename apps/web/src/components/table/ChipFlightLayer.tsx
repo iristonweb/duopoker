@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { seatCoordinates } from '@duopoker/table-client';
+import { mobileSeatCoordinates, seatCoordinates } from '@duopoker/table-client';
 import { PokerChipVisual } from '../cosmetics/PokerChipVisual';
 import type { ChipFlight } from '../../hooks/useTableAnimationQueue';
 
@@ -8,6 +8,8 @@ type Props = {
   playerIndex: Map<string, number>;
   playerCount: number;
   chipId: string;
+  /** `mobile-arc` matches portrait MobileTableSurface seat positions. */
+  layout?: 'ring' | 'mobile-arc';
 };
 
 const sidePotAnchor = (potIndex: number, potCount: number): { x: number; y: number } => {
@@ -25,12 +27,23 @@ const sidePotAnchor = (potIndex: number, potCount: number): { x: number; y: numb
   return { x: center.x + off.x, y: center.y + off.y };
 };
 
-const seatAnchor = (index: number, total: number): { x: number; y: number } => {
-  const pos = seatCoordinates(index, total);
+const seatAnchor = (
+  index: number,
+  total: number,
+  layout: 'ring' | 'mobile-arc'
+): { x: number; y: number } => {
+  const pos =
+    layout === 'mobile-arc' ? mobileSeatCoordinates(index, total) : seatCoordinates(index, total);
   return { x: pos.left, y: pos.top };
 };
 
-export function ChipFlightLayer({ flights, playerIndex, playerCount, chipId }: Props) {
+export function ChipFlightLayer({
+  flights,
+  playerIndex,
+  playerCount,
+  chipId,
+  layout = 'ring'
+}: Props) {
   const potCount = Math.max(1, ...flights.map((f) => (f.potIndex ?? 0) + 1));
 
   return (
@@ -39,7 +52,7 @@ export function ChipFlightLayer({ flights, playerIndex, playerCount, chipId }: P
         {flights.map((flight) => {
           const seatIdx = playerIndex.get(flight.userId);
           if (seatIdx === undefined) return null;
-          const from = seatAnchor(seatIdx, playerCount);
+          const from = seatAnchor(seatIdx, playerCount, layout);
           const pot = sidePotAnchor(flight.potIndex ?? 0, potCount);
           const toPot = flight.kind === 'toPot';
           const fromPt = toPot ? from : pot;

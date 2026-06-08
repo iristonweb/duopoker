@@ -20,9 +20,10 @@ describe('resolveTableLayoutKind', () => {
     expect(resolveTableLayoutKind(320, 568, false)).toBe('mobile-classic');
   });
 
-  it('keeps phone landscape on mobile layout when width exceeds tablet breakpoint', () => {
-    expect(resolveTableLayoutKind(844, 390, true)).toBe('mobile-immersive');
+  it('uses classic horizontal table on phone landscape even when immersive is on', () => {
+    expect(resolveTableLayoutKind(844, 390, true)).toBe('mobile-classic');
     expect(resolveTableLayoutKind(844, 390, false)).toBe('mobile-classic');
-    expect(resolveTableLayoutKind(667, 375, true)).toBe('mobile-immersive');
+    expect(resolveTableLayoutKind(667, 375, true)).toBe('mobile-classic');
+    expect(resolveTableLayoutKind(667, 375, false)).toBe('mobile-classic');
   });
 });
