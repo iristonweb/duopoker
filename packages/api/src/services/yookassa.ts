@@ -1,8 +1,9 @@
 import { config, allowDevMockCheckout } from '../config.js';
 import { ORGANIZER_PLAN_PRICES_RUB } from './club-plans.js';
 import { activateSubscription, type PaidSubscriptionTier } from './monetization.js';
-import { SUBSCRIPTION_PRICES_RUB } from '@duopoker/shared-types';
+import { ORGANIZER_SKU_IDS, SUBSCRIPTION_PRICES_RUB } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
+import { claimWebhookEvent } from './webhook-dedup.js';
 
 type OrganizerTier = 'PRO' | 'NETWORK';
 
@@ -153,6 +154,7 @@ export const createOrganizerPayment = async (opts: {
         clubId: opts.clubId,
         ownerId: opts.ownerId,
         tier: opts.tier,
+        sku: ORGANIZER_SKU_IDS[opts.tier],
         product: 'organizer_plan'
       }
     })
@@ -205,6 +207,7 @@ export const activateOrganizerPlan = async (opts: {
         ownerId: opts.ownerId,
         tier: opts.tier,
         status: 'ACTIVE',
+        billingStatus: 'ACTIVE',
         billingProvider: 'YOOKASSA',
         providerPaymentId: opts.paymentId,
         expiresAt
@@ -212,6 +215,7 @@ export const activateOrganizerPlan = async (opts: {
       update: {
         tier: opts.tier,
         status: 'ACTIVE',
+        billingStatus: 'ACTIVE',
         billingProvider: 'YOOKASSA',
         providerPaymentId: opts.paymentId,
         expiresAt
@@ -257,7 +261,17 @@ export const handleYooKassaWebhook = async (payload: {
 }) => {
   if (payload.event !== 'payment.succeeded') return { handled: false as const };
 
-  const verified = await fetchPaymentFromYooKassa(payload.object.id);
+  const paymentId = payload.object.id;
+  const claimUserId =
+    payload.object.metadata?.userId ??
+    payload.object.metadata?.ownerId ??
+    'yookassa-webhook';
+
+  if (!(await claimWebhookEvent('YOOKASSA', paymentId, claimUserId, { event: payload.event }))) {
+    return { handled: true as const, duplicate: true };
+  }
+
+  const verified = await fetchPaymentFromYooKassa(paymentId);
   if (!verified || verified.status !== 'succeeded') {
     return { handled: false as const, reason: 'PAYMENT_NOT_VERIFIED' };
   }

@@ -211,4 +211,57 @@ test.describe('mobile table layout', () => {
     await expect(page).toHaveURL(new RegExp(`/table/${sessionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
     await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
   });
+
+  test('live session renders classic shell and dock in phone landscape', async ({ page, request }, testInfo) => {
+    const health = await request.get(`${API}/health`).catch(() => null);
+    if (!health?.ok()) {
+      testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
+      return;
+    }
+
+    const sessionId = `e2e-landscape-ui-${Date.now()}`;
+    const userId = `e2e-landscape-${Date.now()}`;
+    const userId2 = `e2e-landscape-p2-${Date.now()}`;
+
+    const p1 = io(API, { transports: ['websocket'] });
+    const p2 = io(API, { transports: ['websocket'] });
+    await Promise.all([
+      new Promise<void>((res) => p1.once('connect', () => res())),
+      new Promise<void>((res) => p2.once('connect', () => res()))
+    ]);
+    p1.emit('joinSession', { sessionId, userId, mode: 'HOLDEM', buyIn: 100 });
+    p2.emit('joinSession', { sessionId, userId: userId2, mode: 'HOLDEM', buyIn: 100 });
+    try {
+      await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2, 12_000);
+    } catch {
+      p1.disconnect();
+      p2.disconnect();
+      testInfo.skip(true, 'Backend socket unavailable — start full backend on port 4000.');
+      return;
+    }
+    p1.disconnect();
+    p2.disconnect();
+
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.emulateMedia({ orientation: 'landscape' });
+    await page.addInitScript((uid) => {
+      localStorage.setItem('duopoker_user_id', uid);
+      localStorage.setItem('duopoker_guest_id', uid);
+      localStorage.setItem('duopoker_mobile_immersive_table', '1');
+      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
+    }, userId);
+
+    await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
+    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-classic', {
+      timeout: 15_000
+    });
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('table-action-dock')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
+    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
+
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+  });
 });

@@ -32,20 +32,32 @@ export function LegalTerms() {
     >
       <LegalArticle title="Terms of use">
         <p>
-          DuoPoker provides entertainment-only poker with virtual chips. No real-money gambling is
-          offered. Virtual currency cannot be withdrawn, exchanged for fiat, or transferred for
-          value except as permitted in-app for cosmetics and subscriptions. You must meet the
-          minimum age required in your jurisdiction to use the service.
+          DuoPoker provides entertainment-only poker with virtual chips. No real-money gambling,
+          rake, or cash prizes are offered. Virtual currency cannot be withdrawn, exchanged for
+          fiat, or transferred for value except as permitted in-app for cosmetics and subscriptions.
         </p>
         <p>
-          We may update these terms; continued use constitutes acceptance. For support, contact
-          your deployment administrator.
+          You must be at least 18 years old (or the minimum age in your jurisdiction) to use the
+          service. These terms are governed by the laws of the Russian Federation unless mandatory
+          local law requires otherwise.
         </p>
-        <LegalSection title="Organizer policy">
+        <p>
+          We may update these terms; continued use constitutes acceptance. Support: [support@TBD].
+        </p>
+        <LegalSection title="Play-money only">
           <p>
-            Private club subscriptions unlock organizer tools (member limits, moderation, scheduling).
-            They do not purchase game outcomes, odds, or cash prizes. No rake, cashout, or peer-to-peer
-            money transfers are supported.
+            All table play uses virtual chips with no monetary value. DuoPoker does not operate as a
+            gambling operator, bookmaker, or payment intermediary for player funds.
+          </p>
+        </LegalSection>
+        <LegalSection title="Organizer subscriptions">
+          <p>
+            Private club fees purchase access to organizer tools (member limits, moderation,
+            scheduling). See the{' '}
+            <Link to="/legal/organizer" className="premium-link">
+              Organizer policy
+            </Link>{' '}
+            for details. No rake, cashout, or peer-to-peer money transfers are supported.
           </p>
         </LegalSection>
       </LegalArticle>

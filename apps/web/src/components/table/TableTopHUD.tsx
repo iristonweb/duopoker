@@ -248,7 +248,7 @@ export function TableTopHUD({
       </div>
 
       {/* Tier 2: stats strip */}
-      <div className="mx-auto flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-5 sm:py-2.5">
+      <div className="mx-auto flex flex-wrap items-center justify-between gap-2 px-3 py-2 table-compact:gap-1 table-compact:py-1 sm:px-5 sm:py-2.5">
         <div className="hidden min-w-0 flex-1 max-table-compact:block lg:max-w-[34%]">
           <MetaChipGroup
             mode={mode}
@@ -270,7 +270,7 @@ export function TableTopHUD({
           initial={{ scale: 1 }}
           animate={{ scale: [1, 1.04, 1] }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="glass-shine relative mx-auto flex items-center gap-2.5 rounded-2xl border border-gold/45 bg-gradient-to-br from-gold/[0.12] via-white/[0.06] to-transparent px-4 py-2 shadow-[0_0_40px_rgba(232,197,71,0.22),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-glass sm:gap-3 sm:px-5 sm:py-2.5"
+          className="glass-shine relative mx-auto flex items-center gap-2.5 rounded-2xl border border-gold/45 bg-gradient-to-br from-gold/[0.12] via-white/[0.06] to-transparent px-4 py-2 shadow-[0_0_40px_rgba(232,197,71,0.22),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-glass table-compact:gap-1.5 table-compact:px-2.5 table-compact:py-1 sm:gap-3 sm:px-5 sm:py-2.5"
         >
           <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-gold/20 ring-inset" />
           <PokerChipVisual chipId={chipId} size="sm" className="relative z-[1] sm:scale-110" />
@@ -299,7 +299,7 @@ export function TableTopHUD({
       </div>
 
       {/* Compact meta row (portrait + landscape phones) */}
-      <div className="border-t border-white/[0.05] px-3 py-1 table-compact:block max-table-compact:hidden">
+      <div className="border-t border-white/[0.05] px-3 py-1 table-compact:py-0.5 table-compact:block max-table-compact:hidden">
         <MetaChipGroup
           mode={mode}
           isJoker={isJoker}

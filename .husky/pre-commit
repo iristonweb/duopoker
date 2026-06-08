@@ -1,1 +1,10 @@
+#!/usr/bin/env sh
+if command -v bash >/dev/null 2>&1; then
+  bash scripts/check-secrets.sh
+elif command -v sh >/dev/null 2>&1; then
+  sh scripts/check-secrets.sh
+else
+  echo "check-secrets: bash or sh required (install Git for Windows)"
+  exit 1
+fi
 pnpm lint

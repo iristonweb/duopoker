@@ -76,9 +76,12 @@ export {
   SUBSCRIPTION_PRICES_RUB,
   CHIP_PACK_PRICES_RUB,
   ORGANIZER_PLAN_PRICES_RUB,
+  ORGANIZER_SKU_IDS,
+  organizerSkuForTier,
   formatRubMonthly,
   formatRubOnce,
-  type PaidSubscriptionTier
+  type PaidSubscriptionTier,
+  type OrganizerSkuId
 } from './pricing';
 
 export {

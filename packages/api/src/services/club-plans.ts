@@ -1,6 +1,13 @@
 import type { OrganizerPlanTier } from '@duopoker/shared-types';
 import { prisma } from '../lib/prisma.js';
 import { LIFETIME_EXPIRES } from './admin-grants.js';
+import {
+  getEffectiveOrganizerTier,
+  isPlanDowngraded,
+  type OrganizerPlanRow
+} from './billing-lifecycle.js';
+
+export { getEffectiveOrganizerTier, isPlanDowngraded, type OrganizerPlanRow };
 
 export const PLAN_LIMITS = {
   BASIC: { maxMembers: 30, maxActiveTables: 2 },
@@ -14,19 +21,6 @@ export const NON_GAMBLING_DISCLAIMER =
   'DuoPoker private clubs are play-money only. No cashout, no rake, no payout handling, and no peer-to-peer money transfers in product.';
 
 export const effectiveMaxPlayers = (maxPlayers: number) => Math.min(maxPlayers, 6);
-
-type OrganizerPlanRow = {
-  tier: OrganizerPlanTier;
-  status: string;
-  expiresAt: Date;
-} | null | undefined;
-
-export const getEffectiveOrganizerTier = (plan: OrganizerPlanRow): OrganizerPlanTier => {
-  if (!plan || plan.status !== 'ACTIVE' || plan.expiresAt <= new Date()) {
-    return 'BASIC';
-  }
-  return plan.tier;
-};
 
 export const grantOrganizerPlan = async (
   clubId: string,
@@ -50,6 +44,7 @@ export const grantOrganizerPlan = async (
       ownerId: club.ownerId,
       tier,
       status: 'ACTIVE',
+      billingStatus: 'ACTIVE',
       billingProvider: 'STRIPE',
       providerSubscriptionId: `admin-grant-${clubId}`,
       expiresAt
@@ -57,6 +52,7 @@ export const grantOrganizerPlan = async (
     update: {
       tier,
       status: 'ACTIVE',
+      billingStatus: 'ACTIVE',
       expiresAt
     }
   });

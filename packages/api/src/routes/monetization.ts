@@ -332,6 +332,29 @@ monetizationRoutes.post('/bonus', async (c) => {
   return c.json({ ok: true, amount: result.amount });
 });
 
+const cancelReasonSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+  clubId: z.string().optional()
+});
+
+monetizationRoutes.post('/cancel-reason', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = cancelReasonSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const userId = c.get('auth').userId;
+  await prisma.complianceEvent.create({
+    data: {
+      clubId: parsed.data.clubId ?? null,
+      actorUserId: userId,
+      type: 'subscription.cancel_reason',
+      severity: 'INFO',
+      details: { reason: parsed.data.reason }
+    }
+  });
+  return c.json({ ok: true }, 201);
+});
+
 monetizationRoutes.post('/purchase', async (c) => {
   if (!allowDevMockCheckout()) {
     return c.json({ error: 'Purchases must be confirmed via payment webhooks' }, 403);

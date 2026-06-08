@@ -33,6 +33,21 @@ import { playersWithChips } from '@duopoker/game-engine/index';
 
 export const BOT_PREFIX = 'duopoker-bot';
 
+const REAL_MONEY_FIELD_PATTERN = /cashout|rake|withdraw|fiat|payout/i;
+
+/** Reject session payloads that imply real-money gambling fields. */
+export const assertPlayMoneySession = (payload: Record<string, unknown>) => {
+  for (const key of Object.keys(payload)) {
+    if (REAL_MONEY_FIELD_PATTERN.test(key)) {
+      throw new Error('PLAY_MONEY_ONLY');
+    }
+    const val = payload[key];
+    if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+      assertPlayMoneySession(val as Record<string, unknown>);
+    }
+  }
+};
+
 const saveState = async (state: SessionState): Promise<SessionState> => {
   const enriched = enrichSessionMeta(state);
   await persistGameSnapshot(enriched);

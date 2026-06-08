@@ -36,3 +36,39 @@ export async function sendVerificationEmail(email: string, token: string): Promi
     throw new Error(`Failed to send verification email: ${body}`);
   }
 }
+
+export async function sendDunningEmail(
+  email: string,
+  opts: { clubName: string; status: 'GRACE' | 'PAST_DUE' }
+): Promise<void> {
+  const subject =
+    opts.status === 'GRACE'
+      ? `DuoPoker: renew your ${opts.clubName} club plan`
+      : `DuoPoker: ${opts.clubName} plan past due`;
+
+  const html =
+    opts.status === 'GRACE'
+      ? `<p>Your organizer plan for <strong>${opts.clubName}</strong> has entered a grace period.</p><p>Renew in the app to keep Pro/Network limits.</p>`
+      : `<p>Your organizer plan for <strong>${opts.clubName}</strong> is past due.</p><p>Your club is now on Basic limits until payment succeeds.</p>`;
+
+  if (!config.resendApiKey) {
+    if (!config.isProduction) {
+      console.info(`[dunning] ${opts.status} email for ${email}: ${subject}`);
+    }
+    return;
+  }
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.resendApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ from: config.emailFrom, to: [email], subject, html })
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Failed to send dunning email: ${body}`);
+  }
+}

@@ -4,6 +4,26 @@ import { config } from '../config.js';
 import { recordPurchase } from '../services/monetization.js';
 import { prisma } from '../services/prisma.js';
 
+const claimStripeEvent = async (eventId: string, userId: string) => {
+  try {
+    await prisma.paymentEvent.create({
+      data: {
+        userId,
+        provider: 'STRIPE',
+        providerEventId: `stripe:event:${eventId}`,
+        amount: 0,
+        status: 'SUCCEEDED',
+        metadata: { type: 'webhook_claim' }
+      }
+    });
+    return true;
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'P2002') return false;
+    throw err;
+  }
+};
+
 const stripe = config.stripeSecretKey ? new Stripe(config.stripeSecretKey) : null;
 
 const tierFromPrice = (
@@ -34,6 +54,15 @@ export const stripeWebhookHandler = async (req: Request, res: Response) => {
   }
 
   try {
+    const claimUserId =
+      (event.data.object as { client_reference_id?: string }).client_reference_id ??
+      (event.data.object as { metadata?: { userId?: string } }).metadata?.userId ??
+      'stripe-webhook';
+
+    if (!(await claimStripeEvent(event.id, claimUserId))) {
+      return res.json({ received: true, duplicate: true });
+    }
+
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.client_reference_id ?? (session.metadata?.userId as string | undefined);

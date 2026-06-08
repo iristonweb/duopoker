@@ -150,6 +150,23 @@ export const handleYooKassaWebhook = async (payload: {
   const payment = payload.object;
   if (payment.status !== 'succeeded') return { handled: false as const };
 
+  try {
+    await prisma.paymentEvent.create({
+      data: {
+        userId: payment.metadata?.ownerId ?? payment.metadata?.userId ?? 'yookassa-webhook',
+        provider: 'YOOKASSA',
+        providerEventId: payment.id,
+        amount: 0,
+        status: 'SUCCEEDED',
+        metadata: { type: 'webhook_claim' }
+      }
+    });
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'P2002') return { handled: true as const, duplicate: true };
+    throw err;
+  }
+
   const meta = payment.metadata ?? {};
   if (meta.product !== 'organizer_plan') return { handled: false as const };
 

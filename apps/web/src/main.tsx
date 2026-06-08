@@ -11,6 +11,8 @@ import { Lobby } from './routes/Lobby';
 import { LegalPrivacy } from './routes/LegalPrivacy';
 import { LegalCommunity } from './routes/LegalCommunity';
 import { LegalTerms } from './routes/LegalTerms';
+import { LegalOrganizer } from './routes/LegalOrganizer';
+import { ClubOnboarding } from './routes/ClubOnboarding';
 import { ProfilePage } from './routes/ProfilePage';
 import { VerifyEmail } from './routes/VerifyEmail';
 import { Clubs } from './routes/Clubs';
@@ -51,6 +53,7 @@ const App = () => (
         <Route path="/lobby" element={<Lobby />} />
         <Route path="/clubs" element={<Clubs />} />
         <Route path="/clubs/new" element={<ClubNew />} />
+        <Route path="/clubs/onboarding" element={<ClubOnboarding />} />
         <Route path="/clubs/:clubId" element={<ClubDashboard />} />
         <Route path="/clubs/:clubId/tables/:tableId" element={<TableManager />} />
         <Route path="/invite/:code" element={<InviteAccept />} />
@@ -59,6 +62,7 @@ const App = () => (
         <Route path="/legal/terms" element={<LegalTerms />} />
         <Route path="/legal/privacy" element={<LegalPrivacy />} />
         <Route path="/legal/community" element={<LegalCommunity />} />
+        <Route path="/legal/organizer" element={<LegalOrganizer />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/" element={<Navigate to="/lobby" replace />} />

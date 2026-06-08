@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { clubTableMaxPlayers, normalizeGameMode } from '@duopoker/shared-types/index';
 import { authGuard } from '../middleware/auth.js';
+import { requireClubAdmin, requireClubMember } from '../middleware/club-rbac.js';
+import { idempotencyGuard } from '../middleware/idempotency.js';
 import { prisma } from '../lib/prisma.js';
 import { normalizeNicknameInput } from '../lib/nickname.js';
 import { joinTable } from '../services/game-session.js';
@@ -11,8 +13,11 @@ import {
   ORGANIZER_PLAN_PRICES_RUB,
   PLAN_LIMITS,
   effectiveMaxPlayers,
-  getEffectiveOrganizerTier
+  getEffectiveOrganizerTier,
+  isPlanDowngraded
 } from '../services/club-plans.js';
+import { changeOrganizerPlan } from '../services/billing-lifecycle.js';
+import { ENTITLEMENT_MATRIX } from '../config/entitlements.js';
 import { createOrganizerPayment } from '../services/yookassa.js';
 import { config } from '../config.js';
 import { notifyTableInvite, notifyTableLive } from '../services/notifications/dispatch.js';
@@ -129,20 +134,47 @@ clubsRoutes.get('/invite/:inviteCode', async (c) => {
 
 clubsRoutes.use('*', authGuard);
 
-const requireClubAdmin = async (clubId: string, userId: string) => {
-  const membership = await prisma.clubMembership.findUnique({
-    where: { clubId_userId: { clubId, userId } },
-    select: { role: true }
-  });
-  if (!membership) return false;
-  return membership.role === 'OWNER' || membership.role === 'ADMIN';
+const inviteRateWindow = new Map<string, number[]>();
+const tableCreateWindow = new Map<string, number[]>();
+
+const checkInviteRateLimit = (userId: string, limit = 20, windowMs = 60 * 60 * 1000) => {
+  const now = Date.now();
+  const hits = (inviteRateWindow.get(userId) ?? []).filter((t) => now - t < windowMs);
+  if (hits.length >= limit) return false;
+  hits.push(now);
+  inviteRateWindow.set(userId, hits);
+  return true;
 };
 
-const requireClubMember = async (clubId: string, userId: string) => {
-  const membership = await prisma.clubMembership.findUnique({
-    where: { clubId_userId: { clubId, userId } }
+const checkClubTableRateLimit = (clubId: string, limit = 5, windowMs = 60 * 60 * 1000) => {
+  const now = Date.now();
+  const hits = (tableCreateWindow.get(clubId) ?? []).filter((t) => now - t < windowMs);
+  if (hits.length >= limit) return false;
+  hits.push(now);
+  tableCreateWindow.set(clubId, hits);
+  return true;
+};
+
+const recordAbuseIfNeeded = async (
+  clubId: string,
+  actorUserId: string,
+  count: number,
+  type: 'abuse.invite_burst' | 'abuse.table_spam'
+) => {
+  const threshold = type === 'abuse.table_spam' ? 5 : 10;
+  if (count <= threshold) return;
+  await prisma.complianceEvent.create({
+    data: {
+      clubId,
+      actorUserId,
+      type,
+      severity: 'HIGH',
+      details:
+        type === 'abuse.table_spam'
+          ? { tablesLastHour: count }
+          : { invitesLastMinute: count }
+    }
   });
-  return membership;
 };
 
 const resolveTargetUserId = async (data: { userId?: string; nickname?: string }) => {
@@ -183,6 +215,7 @@ clubsRoutes.post('/', async (c) => {
         ownerId,
         tier: 'BASIC',
         status: 'ACTIVE',
+        billingStatus: 'TRIAL',
         billingProvider: 'YOOKASSA',
         expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 31)
       }
@@ -212,7 +245,7 @@ clubsRoutes.get('/mine', async (c) => {
   const clubs = await prisma.club.findMany({
     where: { id: { in: memberships.map((m) => m.clubId) }, isArchived: false },
     include: {
-      organizerPlan: { select: { tier: true, status: true, expiresAt: true } },
+      organizerPlan: { select: { tier: true, status: true, billingStatus: true, expiresAt: true } },
       _count: { select: { members: true, privateTables: true } }
     },
     orderBy: { createdAt: 'desc' }
@@ -262,13 +295,16 @@ clubsRoutes.get('/:clubId', async (c) => {
       ...club,
       myRole: membership.role,
       limits: PLAN_LIMITS[tier],
-      usage: { members: club._count.members, activeTables }
+      entitlements: ENTITLEMENT_MATRIX[tier],
+      usage: { members: club._count.members, activeTables },
+      planDowngraded: isPlanDowngraded(club.organizerPlan),
+      effectiveTier: tier
     },
     disclaimer: NON_GAMBLING_DISCLAIMER
   });
 });
 
-clubsRoutes.post('/:clubId/checkout', async (c) => {
+clubsRoutes.post('/:clubId/checkout', idempotencyGuard, async (c) => {
   const clubId = c.req.param('clubId');
   const userId = c.get('auth').userId;
   if (!(await requireClubAdmin(clubId, userId))) {
@@ -325,7 +361,15 @@ clubsRoutes.post('/:clubId/members', async (c) => {
 
   const tier = getEffectiveOrganizerTier(club.organizerPlan);
   if (club._count.members >= PLAN_LIMITS[tier].maxMembers) {
-    return c.json({ error: `Member limit reached for ${tier} plan` }, 409);
+    return c.json(
+      {
+        error: `Member limit reached for ${tier} plan`,
+        code: 'PLAN_LIMIT_MEMBERS',
+        tier,
+        limit: PLAN_LIMITS[tier].maxMembers
+      },
+      402
+    );
   }
 
   const membership = await prisma.clubMembership.upsert({
@@ -354,6 +398,17 @@ clubsRoutes.post('/:clubId/private-tables', async (c) => {
     return c.json({ error: 'Admin role required' }, 403);
   }
 
+  if (!checkClubTableRateLimit(clubId)) {
+    return c.json(
+      { error: 'Table creation rate limit exceeded (5/hour per club)', code: 'TABLE_RATE_LIMIT' },
+      429
+    );
+  }
+  const tablesLastHour = (tableCreateWindow.get(clubId) ?? []).filter(
+    (t) => Date.now() - t < 60 * 60 * 1000
+  ).length;
+  void recordAbuseIfNeeded(clubId, actorId, tablesLastHour, 'abuse.table_spam');
+
   const club = await prisma.club.findUnique({
     where: { id: clubId },
     include: { organizerPlan: true }
@@ -365,7 +420,15 @@ clubsRoutes.post('/:clubId/private-tables', async (c) => {
     where: { clubId, status: { in: ['SCHEDULED', 'LIVE'] } }
   });
   if (activeTableCount >= PLAN_LIMITS[tier].maxActiveTables) {
-    return c.json({ error: `Table limit reached for ${tier} plan` }, 409);
+    return c.json(
+      {
+        error: `Table limit reached for ${tier} plan`,
+        code: 'PLAN_LIMIT_TABLES',
+        tier,
+        limit: PLAN_LIMITS[tier].maxActiveTables
+      },
+      402
+    );
   }
 
   const table = await prisma.privateTable.create({
@@ -451,6 +514,14 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/invite', async (c) => {
   if (!(await requireClubAdmin(clubId, actorId))) {
     return c.json({ error: 'Admin role required' }, 403);
   }
+
+  if (!checkInviteRateLimit(actorId)) {
+    return c.json({ error: 'Invite rate limit exceeded (20/hour)', code: 'INVITE_RATE_LIMIT' }, 429);
+  }
+  const recentMinute = (inviteRateWindow.get(actorId) ?? []).filter(
+    (t) => Date.now() - t < 60_000
+  ).length;
+  void recordAbuseIfNeeded(clubId, actorId, recentMinute, 'abuse.invite_burst');
 
   const body = await c.req.json().catch(() => null);
   const parsed = inviteSchema.safeParse(body);
@@ -675,6 +746,8 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/close', async (c) => {
       where: { id: closedSessionId },
       data: { status: 'FINISHED', finishedAt: new Date() }
     });
+    const { clearTableChatSession } = await import('../services/table-chat.js');
+    await clearTableChatSession(closedSessionId);
   }
 
   await prisma.complianceEvent.create({
@@ -687,6 +760,107 @@ clubsRoutes.post('/:clubId/private-tables/:tableId/close', async (c) => {
   });
 
   return c.json({ table, disclaimer: NON_GAMBLING_DISCLAIMER });
+});
+
+const planChangeSchema = z.object({
+  tier: z.enum(['BASIC', 'PRO', 'NETWORK'])
+});
+
+clubsRoutes.post('/:clubId/plan/change', idempotencyGuard, async (c) => {
+  const clubId = c.req.param('clubId');
+  const userId = c.get('auth').userId;
+  if (!(await requireClubAdmin(clubId, userId))) {
+    return c.json({ error: 'Admin role required' }, 403);
+  }
+  const body = await c.req.json().catch(() => null);
+  const parsed = planChangeSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const result = await changeOrganizerPlan({
+    clubId,
+    ownerId: userId,
+    targetTier: parsed.data.tier
+  });
+  if (!result.ok) return c.json({ error: result.error }, 403);
+  return c.json({ tier: result.tier, prorated: result.prorated });
+});
+
+clubsRoutes.get('/:clubId/invoices', async (c) => {
+  const clubId = c.req.param('clubId');
+  const userId = c.get('auth').userId;
+  if (!(await requireClubAdmin(clubId, userId))) {
+    return c.json({ error: 'Admin role required' }, 403);
+  }
+
+  const sub = await prisma.organizerSubscription.findUnique({ where: { clubId } });
+  if (!sub) return c.json({ invoices: [] });
+
+  const payments = await prisma.paymentEvent.findMany({
+    where: {
+      userId: sub.ownerId,
+      metadata: { path: ['clubId'], equals: clubId }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50
+  });
+
+  const invoices = payments.map((p) => ({
+    id: p.id,
+    amount: p.amount,
+    currency: p.currency,
+    status: p.status,
+    provider: p.provider,
+    createdAt: p.createdAt,
+    metadata: p.metadata
+  }));
+
+  return c.json({
+    subscription: {
+      tier: sub.tier,
+      billingStatus: sub.billingStatus,
+      expiresAt: sub.expiresAt
+    },
+    invoices
+  });
+});
+
+const memberRoleSchema = z.object({
+  role: z.enum(['ADMIN', 'MODERATOR', 'MEMBER']).optional(),
+  remove: z.boolean().optional()
+});
+
+clubsRoutes.patch('/:clubId/members/:memberUserId', async (c) => {
+  const clubId = c.req.param('clubId');
+  const memberUserId = c.req.param('memberUserId');
+  const actorId = c.get('auth').userId;
+  if (!(await requireClubAdmin(clubId, actorId))) {
+    return c.json({ error: 'Admin role required' }, 403);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = memberRoleSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const target = await prisma.clubMembership.findUnique({
+    where: { clubId_userId: { clubId, userId: memberUserId } }
+  });
+  if (!target) return c.json({ error: 'Member not found' }, 404);
+  if (target.role === 'OWNER') return c.json({ error: 'Cannot modify club owner' }, 403);
+
+  if (parsed.data.remove) {
+    await prisma.clubMembership.delete({ where: { id: target.id } });
+    return c.json({ removed: true });
+  }
+
+  if (parsed.data.role) {
+    const updated = await prisma.clubMembership.update({
+      where: { id: target.id },
+      data: { role: parsed.data.role }
+    });
+    return c.json({ membership: updated });
+  }
+
+  return c.json({ error: 'role or remove required' }, 400);
 });
 
 /** Accept invite by code (for /invite/:code page) */

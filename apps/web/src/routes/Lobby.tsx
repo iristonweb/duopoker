@@ -596,6 +596,9 @@ export const Lobby = () => {
                 <Link to="/legal/community" className="premium-link">
                   {t('nav.community')}
                 </Link>
+                <Link to="/legal/organizer" className="premium-link">
+                  {t('nav.organizer')}
+                </Link>
               </div>
             </div>
           </div>

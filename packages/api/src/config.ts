@@ -75,7 +75,8 @@ export const config = {
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY?.trim() ?? '',
   vapidSubject: process.env.VAPID_SUBJECT?.trim() || 'mailto:support@duopoker.app',
   backendInternalUrl: process.env.BACKEND_INTERNAL_URL?.trim() ?? (isProduction ? '' : 'http://localhost:4000'),
-  notifyInternalSecret: process.env.NOTIFY_INTERNAL_SECRET?.trim() ?? (isProduction ? '' : 'dev-notify-secret')
+  notifyInternalSecret: process.env.NOTIFY_INTERNAL_SECRET?.trim() ?? (isProduction ? '' : 'dev-notify-secret'),
+  pricingVariant: process.env.PRICING_VARIANT?.trim() || 'default'
 };
 
 export const allowDevMockCheckout = (): boolean =>

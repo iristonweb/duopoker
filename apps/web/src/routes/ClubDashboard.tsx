@@ -7,12 +7,18 @@ import {
   GlassPanel,
   Input,
   LoadingSkeleton,
+  LegalDisclaimer,
   OrganizerPlanCard,
   PageShell,
   SectionHeader
 } from '@duopoker/ui-kit';
 import { ORGANIZER_PLAN_PRICES_RUB, organizerPlanBanners } from '@duopoker/shared-types';
 import { useAppStore, type ClubDetail, type PrivateTableSummary } from '../store/useAppStore';
+
+type ClubWithMeta = ClubDetail['club'] & {
+  planDowngraded?: boolean;
+  effectiveTier?: string;
+};
 
 const formatPlanPrice = (rub: number) =>
   rub === 0 ? '0 ₽' : `${rub.toLocaleString('ru-RU')} ₽/мес`;
@@ -48,9 +54,17 @@ export const ClubDashboard = () => {
   useEffect(reload, [clubId, fetchClub]);
 
   if (!clubId) return null;
-  const club = data?.club;
-  const tier = club?.organizerPlan?.tier ?? 'BASIC';
+  const apiFetch = useAppStore((s) => s.apiFetch);
+  const club = data?.club as ClubWithMeta | undefined;
+  const tier = club?.effectiveTier ?? club?.organizerPlan?.tier ?? 'BASIC';
   const limits = club?.limits ?? { maxMembers: 30, maxActiveTables: 2 };
+  const memberPct = limits.maxMembers
+    ? Math.min(100, Math.round(((club?.usage?.members ?? 0) / limits.maxMembers) * 100))
+    : 0;
+  const tablePct = limits.maxActiveTables
+    ? Math.min(100, Math.round(((club?.usage?.activeTables ?? 0) / limits.maxActiveTables) * 100))
+    : 0;
+  const readOnly = Boolean(club?.planDowngraded);
 
   return (
     <PageShell
@@ -80,7 +94,41 @@ export const ClubDashboard = () => {
               </Badge>
             </div>
             <p className="mt-3 text-sm text-muted">{t('clubs.disclaimer')}</p>
+            <div className="mt-4 space-y-2">
+              <div>
+                <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wider text-subtle">
+                  <span>Members</span>
+                  <span>
+                    {club.usage?.members ?? 0}/{limits.maxMembers}
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-gold/80" style={{ width: `${memberPct}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wider text-subtle">
+                  <span>Active tables</span>
+                  <span>
+                    {club.usage?.activeTables ?? 0}/{limits.maxActiveTables}
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-emerald/80" style={{ width: `${tablePct}%` }} />
+                </div>
+              </div>
+            </div>
+            <Link to="/legal/organizer" className="premium-link mt-2 inline-block text-xs">
+              Organizer policy
+            </Link>
           </div>
+
+          {readOnly ? (
+            <GlassPanel className="mb-6 border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+              Your paid plan expired — club is read-only at Basic limits. Renew to create tables and
+              add members beyond limits.
+            </GlassPanel>
+          ) : null}
 
           {tier === 'BASIC' ? (
             <section className="mb-10">
@@ -117,6 +165,7 @@ export const ClubDashboard = () => {
                   </Button>
                 </OrganizerPlanCard>
               </div>
+              <LegalDisclaimer className="mt-4" text={t('legal.checkoutNotice')} />
             </section>
           ) : (
             <GlassPanel className="mb-6 border-white/10 p-4 text-sm text-muted">
@@ -133,7 +182,58 @@ export const ClubDashboard = () => {
                   className="flex items-center justify-between rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-sm"
                 >
                   <span className="text-zinc-200">@{m.user.nickname}</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-subtle">{m.role}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-subtle">
+                      {m.role}
+                    </span>
+                    {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') &&
+                    m.role !== 'OWNER' ? (
+                      <>
+                        {m.role !== 'ADMIN' ? (
+                          <button
+                            type="button"
+                            className="text-[10px] text-gold"
+                            onClick={() =>
+                              void apiFetch(`/clubs/${clubId}/members/${m.user.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ role: 'ADMIN' })
+                              }).then(reload)
+                            }
+                          >
+                            Promote
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="text-[10px] text-muted"
+                            onClick={() =>
+                              void apiFetch(`/clubs/${clubId}/members/${m.user.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ role: 'MEMBER' })
+                              }).then(reload)
+                            }
+                          >
+                            Demote
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="text-[10px] text-rose-300"
+                          onClick={() =>
+                            void apiFetch(`/clubs/${clubId}/members/${m.user.id}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ remove: true })
+                            }).then(reload)
+                          }
+                        >
+                          Remove
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -193,7 +293,7 @@ export const ClubDashboard = () => {
             ) : (
               <p className="mb-4 text-sm text-muted">{t('clubs.noActiveTables')}</p>
             )}
-            {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') && (
+            {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') && !readOnly && (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
                   {(['HOLDEM', 'JOKER'] as const).map((m) => (

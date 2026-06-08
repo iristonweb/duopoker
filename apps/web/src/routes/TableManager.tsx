@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, GlassPanel, Input, LoadingSkeleton, PageShell, SectionHeader } from '@duopoker/ui-kit';
+import { Badge, Button, GlassPanel, Input, LegalDisclaimer, LoadingSkeleton, PageShell, SectionHeader } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
 type TableData = {
@@ -155,6 +155,10 @@ export const TableManager = () => {
       ) : (
         <GlassPanel className="border-white/10 p-6 text-muted">Стол не найден.</GlassPanel>
       )}
+      <LegalDisclaimer
+        className="mt-6"
+        text="Play-money only. Virtual chips have no cash value. No rake or withdrawals."
+      />
     </PageShell>
   );
 };

@@ -90,7 +90,11 @@ adminRoutes.get('/stats', async (c) => {
     totalClubs,
     livePrivateTables,
     scheduledPrivateTables,
-    pendingVipTables
+    pendingVipTables,
+    failedPayments24h,
+    unresolvedCompliance,
+    organizerPlansActive,
+    organizerPlansPastDue
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: 'SUPERADMIN' } }),
@@ -103,7 +107,13 @@ adminRoutes.get('/stats', async (c) => {
     prisma.club.count(),
     prisma.privateTable.count({ where: { status: 'LIVE' } }),
     prisma.privateTable.count({ where: { status: 'SCHEDULED' } }),
-    prisma.platformDuel.count({ where: { status: 'PENDING' } })
+    prisma.platformDuel.count({ where: { status: 'PENDING' } }),
+    prisma.paymentEvent.count({
+      where: { status: 'FAILED', createdAt: { gte: dayAgo } }
+    }),
+    prisma.complianceEvent.count({ where: { resolvedAt: null, severity: 'HIGH' } }),
+    prisma.organizerSubscription.count({ where: { billingStatus: 'ACTIVE', tier: { not: 'BASIC' } } }),
+    prisma.organizerSubscription.count({ where: { billingStatus: 'PAST_DUE' } })
   ]);
 
   return c.json({
@@ -119,6 +129,12 @@ adminRoutes.get('/stats', async (c) => {
     livePrivateTables,
     scheduledPrivateTables,
     pendingVipTables,
+    billing: {
+      failedPayments24h,
+      organizerPlansActive,
+      organizerPlansPastDue
+    },
+    compliance: { unresolvedHigh: unresolvedCompliance },
     timestamp: now.toISOString()
   });
 });
@@ -346,4 +362,46 @@ adminRoutes.post('/vip-tables/:id/cancel', async (c) => {
   const result = await cancelVipTable(c.get('auth').userId, c.req.param('id'));
   if (!result.ok) return c.json({ error: result.error }, 400);
   return c.body(null, 204);
+});
+
+const compliancePatchSchema = z.object({
+  resolved: z.boolean().optional(),
+  severity: z.enum(['INFO', 'MEDIUM', 'HIGH']).optional()
+});
+
+adminRoutes.get('/compliance-events', async (c) => {
+  const take = Math.min(Number(c.req.query('take') ?? 50), 100);
+  const severity = c.req.query('severity')?.trim();
+  const unresolved = c.req.query('unresolved') === 'true';
+
+  const events = await prisma.complianceEvent.findMany({
+    where: {
+      ...(severity ? { severity } : {}),
+      ...(unresolved ? { resolvedAt: null } : {})
+    },
+    orderBy: { createdAt: 'desc' },
+    take,
+    include: {
+      club: { select: { id: true, name: true } }
+    }
+  });
+
+  return c.json({ events });
+});
+
+adminRoutes.patch('/compliance-events/:id', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = compliancePatchSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const data: { resolvedAt?: Date | null; severity?: string } = {};
+  if (parsed.data.resolved === true) data.resolvedAt = new Date();
+  if (parsed.data.resolved === false) data.resolvedAt = null;
+  if (parsed.data.severity) data.severity = parsed.data.severity;
+
+  const event = await prisma.complianceEvent.update({
+    where: { id: c.req.param('id') },
+    data
+  });
+  return c.json({ event });
 });

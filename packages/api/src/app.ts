@@ -14,6 +14,8 @@ import { voiceRoutes } from './routes/voice.js';
 import { adminRoutes } from './routes/admin.js';
 import { referralRoutes } from './routes/referrals.js';
 import { notificationRoutes } from './routes/notifications.js';
+import { complianceRoutes } from './routes/compliance.js';
+import { correlationId } from './middleware/correlation-id.js';
 
 export const app = new Hono().basePath('/api');
 
@@ -34,6 +36,7 @@ app.use(
 );
 
 app.use('*', securityHeaders);
+app.use('*', correlationId);
 app.use('*', rateLimit(120, 60_000));
 app.use('/auth/*', rateLimit(20, 60_000));
 
@@ -49,6 +52,7 @@ app.route('/voice', voiceRoutes);
 app.route('/admin', adminRoutes);
 app.route('/referrals', referralRoutes);
 app.route('/notifications', notificationRoutes);
+app.route('/compliance', complianceRoutes);
 
 app.onError((err, c) => {
   console.error(err);

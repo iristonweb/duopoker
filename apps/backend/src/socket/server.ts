@@ -281,13 +281,52 @@ export const createRealtimeServer = (app: Express) => {
   attachSocketAuth(io);
   const replayCollection = getMongoDb().collection('replays');
 
+  const connectionsPerIp = new Map<string, number>();
+  const MAX_CONNECTIONS_PER_IP = 25;
+  const joinBurst = new Map<string, number[]>();
+  const MAX_JOINS_PER_MINUTE = 30;
+
   io.on('connection', (socket) => {
+    const ip = socket.handshake.address;
+    const current = connectionsPerIp.get(ip) ?? 0;
+    if (current >= MAX_CONNECTIONS_PER_IP) {
+      socket.emit('sessionError', { code: 'LOAD_SHED' });
+      socket.disconnect(true);
+      return;
+    }
+    connectionsPerIp.set(ip, current + 1);
+
     if (socket.data.userId) {
       registerUserSocket(socket.data.userId, socket.id);
     }
 
     socket.on('disconnect', () => {
+      const n = connectionsPerIp.get(ip) ?? 1;
+      if (n <= 1) connectionsPerIp.delete(ip);
+      else connectionsPerIp.set(ip, n - 1);
       unregisterSocketEverywhere(socket.id);
+    });
+
+    socket.on('reconnectSession', async (payload: { sessionId?: string }) => {
+      const sessionId = payload?.sessionId;
+      const userId = socket.data.userId;
+      if (!sessionId || !userId) {
+        socket.emit('sessionError', { code: 'INVALID_RECONNECT' });
+        return;
+      }
+      const access = await assertCanJoinSession(sessionId, userId);
+      if (!access.ok) {
+        socket.emit('sessionError', { code: access.reason });
+        return;
+      }
+      registerUserSocket(userId, socket.id);
+      await socket.join(sessionId);
+      const snapshot = await getSessionSnapshot(sessionId);
+      if (!snapshot) {
+        socket.emit('sessionError', { code: 'SESSION_NOT_FOUND' });
+        return;
+      }
+      socket.emit('sessionState', sanitizeStateForViewer(snapshot, userId));
     });
 
     socket.on('joinSession', async (payload) => {
@@ -303,6 +342,16 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
         return;
       }
+
+      const burstKey = `${ip}:${userId}`;
+      const now = Date.now();
+      const hits = (joinBurst.get(burstKey) ?? []).filter((t) => now - t < 60_000);
+      if (hits.length >= MAX_JOINS_PER_MINUTE) {
+        socket.emit('sessionError', { code: 'JOIN_RATE_LIMIT' });
+        return;
+      }
+      hits.push(now);
+      joinBurst.set(burstKey, hits);
 
       const access = await assertCanJoinSession(sessionId, userId);
       if (!access.ok) {

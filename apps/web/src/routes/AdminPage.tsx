@@ -9,7 +9,16 @@ import { useAppStore } from '../store/useAppStore';
 const PAID_TIERS: PaidSubscriptionTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'];
 const ORGANIZER_TIERS = ['BASIC', 'PRO', 'NETWORK'] as const;
 
-type Tab = 'overview' | 'players' | 'vip';
+type Tab = 'overview' | 'players' | 'vip' | 'compliance';
+
+type ComplianceEvent = {
+  id: string;
+  type: string;
+  severity: string;
+  createdAt: string;
+  resolvedAt?: string | null;
+  club?: { id: string; name: string } | null;
+};
 
 type AdminUser = {
   id: string;
@@ -59,6 +68,12 @@ type AdminStats = {
   livePrivateTables: number;
   scheduledPrivateTables: number;
   pendingVipTables?: number;
+  billing?: {
+    failedPayments24h: number;
+    organizerPlansActive: number;
+    organizerPlansPastDue: number;
+  };
+  compliance?: { unresolvedHigh: number };
 };
 
 type QueueTicket = {
@@ -125,14 +140,16 @@ export function AdminPage() {
   const [grantChips, setGrantChips] = useState(999_999);
   const [clubPlanTier, setClubPlanTier] = useState<(typeof ORGANIZER_TIERS)[number]>('PRO');
   const [clubPlanLifetime, setClubPlanLifetime] = useState(false);
+  const [complianceEvents, setComplianceEvents] = useState<ComplianceEvent[]>([]);
 
   const loadCore = useCallback(
     async (query: string) => {
-      const [statsRes, usersRes, queueRes, vipRes] = await Promise.all([
+      const [statsRes, usersRes, queueRes, vipRes, complianceRes] = await Promise.all([
         apiFetch('/admin/stats'),
         apiFetch(`/admin/users?take=40${query ? `&q=${encodeURIComponent(query)}` : ''}`),
         apiFetch('/admin/queue'),
-        apiFetch('/admin/vip-tables')
+        apiFetch('/admin/vip-tables'),
+        apiFetch('/admin/compliance-events?unresolved=true&take=50')
       ]);
       if (!statsRes.ok || !usersRes.ok) {
         const failed = !statsRes.ok ? statsRes : usersRes;
@@ -149,6 +166,11 @@ export function AdminPage() {
       }
       if (vipRes.ok) {
         setVipDuels(((await vipRes.json()) as { duels: VipDuel[] }).duels);
+      }
+      if (complianceRes.ok) {
+        setComplianceEvents(
+          ((await complianceRes.json()) as { events: ComplianceEvent[] }).events
+        );
       }
     },
     [apiFetch]
@@ -333,8 +355,18 @@ export function AdminPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: t('admin.tabOverview') },
     { id: 'players', label: t('admin.tabPlayers') },
-    { id: 'vip', label: t('admin.tabVip') }
+    { id: 'vip', label: t('admin.tabVip') },
+    { id: 'compliance', label: 'Compliance' }
   ];
+
+  const resolveCompliance = async (id: string) => {
+    await apiFetch(`/admin/compliance-events/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resolved: true })
+    });
+    void loadCore(search);
+  };
 
   return (
     <PageShell
@@ -381,6 +413,28 @@ export function AdminPage() {
                 <StatCard label={t('admin.statQueue')} value={stats.waitingQueue} accent="text-amber-300" />
                 <StatCard label={t('admin.statActiveSessions')} value={stats.activeSessions} accent="text-emerald" />
                 <StatCard label={t('admin.statVipPending')} value={stats.pendingVipTables ?? 0} accent="text-gold-light" />
+                <StatCard label="Clubs" value={stats.totalClubs} />
+                <StatCard label="Live tables" value={stats.livePrivateTables} accent="text-emerald" />
+                <StatCard
+                  label="Failed payments (24h)"
+                  value={stats.billing?.failedPayments24h ?? 0}
+                  accent="text-rose-300"
+                />
+                <StatCard
+                  label="Organizer plans"
+                  value={stats.billing?.organizerPlansActive ?? 0}
+                  accent="text-gold-light"
+                />
+                <StatCard
+                  label="Past due clubs"
+                  value={stats.billing?.organizerPlansPastDue ?? 0}
+                  accent="text-amber-300"
+                />
+                <StatCard
+                  label="Open compliance (HIGH)"
+                  value={stats.compliance?.unresolvedHigh ?? 0}
+                  accent="text-rose-300"
+                />
               </div>
             </section>
           ) : null}
@@ -576,6 +630,37 @@ export function AdminPage() {
             )}
           </div>
         </div>
+      ) : tab === 'compliance' ? (
+        <GlassPanel className="border-white/10 p-0">
+          <div className="border-b border-white/5 px-4 py-3">
+            <p className="font-display font-semibold text-ivory">Moderation queue</p>
+            <p className="text-xs text-muted">Unresolved compliance events</p>
+          </div>
+          {!complianceEvents.length ? (
+            <p className="px-4 py-8 text-center text-muted">No open reports</p>
+          ) : (
+            <ul className="divide-y divide-white/5">
+              {complianceEvents.map((ev) => (
+                <li key={ev.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                  <div>
+                    <Badge variant={ev.severity === 'HIGH' ? 'rose' : 'default'}>{ev.severity}</Badge>
+                    <span className="ml-2 text-ivory">{ev.type}</span>
+                    <p className="text-xs text-muted">
+                      {ev.club?.name ?? 'Platform'} · {new Date(ev.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="premium-btn premium-btn-ghost text-xs"
+                    onClick={() => void resolveCompliance(ev.id)}
+                  >
+                    Resolve
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </GlassPanel>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <GlassPanel className="border-white/10 p-5">

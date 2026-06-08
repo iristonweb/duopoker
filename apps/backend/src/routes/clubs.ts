@@ -9,7 +9,8 @@ import {
   NON_GAMBLING_DISCLAIMER,
   ORGANIZER_PLAN_PRICES_RUB,
   PLAN_LIMITS,
-  effectiveMaxPlayers
+  effectiveMaxPlayers,
+  getEffectiveOrganizerTier
 } from '../services/club-plans.js';
 import { createOrganizerPayment } from '../services/yookassa.js';
 import { joinTable } from '../services/game-session.js';
@@ -199,7 +200,7 @@ clubsRouter.get('/mine', async (req, res) => {
   return res.json({
     clubs: clubs.map((club) => {
       const membership = memberships.find((m) => m.clubId === club.id);
-      const tier = club.organizerPlan?.tier ?? 'BASIC';
+      const tier = getEffectiveOrganizerTier(club.organizerPlan);
       return { ...club, myRole: membership?.role ?? 'MEMBER', limits: PLAN_LIMITS[tier] };
     }),
     disclaimer: NON_GAMBLING_DISCLAIMER
@@ -225,7 +226,7 @@ clubsRouter.get('/:clubId', async (req, res) => {
   });
   if (!club) return res.status(404).json({ error: 'Club not found' });
 
-  const tier = club.organizerPlan?.tier ?? 'BASIC';
+  const tier = getEffectiveOrganizerTier(club.organizerPlan);
   const activeTables = await prisma.privateTable.count({
     where: { clubId, status: { in: ['SCHEDULED', 'LIVE'] } }
   });
@@ -293,7 +294,7 @@ clubsRouter.post('/:clubId/members', async (req, res) => {
   });
   if (!club || club.isArchived) return res.status(404).json({ error: 'Club not found' });
 
-  const tier = club.organizerPlan?.tier ?? 'BASIC';
+  const tier = getEffectiveOrganizerTier(club.organizerPlan);
   if (club._count.members >= PLAN_LIMITS[tier].maxMembers) {
     return res.status(409).json({ error: `Member limit reached for ${tier} plan` });
   }
@@ -326,7 +327,7 @@ clubsRouter.post('/:clubId/private-tables', async (req, res) => {
   const club = await prisma.club.findUnique({ where: { id: clubId }, include: { organizerPlan: true } });
   if (!club || club.isArchived) return res.status(404).json({ error: 'Club not found' });
 
-  const tier = club.organizerPlan?.tier ?? 'BASIC';
+  const tier = getEffectiveOrganizerTier(club.organizerPlan);
   const activeTableCount = await prisma.privateTable.count({
     where: { clubId, status: { in: ['SCHEDULED', 'LIVE'] } }
   });
@@ -524,6 +525,8 @@ clubsRouter.post('/:clubId/private-tables/:tableId/close', async (req, res) => {
       where: { id: closedSessionId },
       data: { status: 'FINISHED', finishedAt: new Date() }
     });
+    const { clearTableChatSession } = await import('../services/table-chat.js');
+    clearTableChatSession(closedSessionId);
     const { emitTableClosedToSession } = await import('../socket/server.js');
     emitTableClosedToSession(closedSessionId, {
       clubId,

@@ -81,6 +81,39 @@ profileRoutes.put('/me/nickname', async (c) => {
   return c.json(updated);
 });
 
+const deleteRequestSchema = z.object({
+  reason: z.string().trim().max(500).optional()
+});
+
+profileRoutes.post('/delete-request', async (c) => {
+  const userId = c.get('auth').userId;
+  const body = await c.req.json().catch(() => ({}));
+  const parsed = deleteRequestSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+  const pending = await prisma.accountDeletionRequest.findFirst({
+    where: { userId, status: 'PENDING' }
+  });
+  if (pending) {
+    return c.json({ ok: true, requestId: pending.id, status: 'PENDING' });
+  }
+
+  const request = await prisma.accountDeletionRequest.create({
+    data: { userId, reason: parsed.data.reason }
+  });
+
+  await prisma.complianceEvent.create({
+    data: {
+      actorUserId: userId,
+      type: 'account.deletion_requested',
+      severity: 'INFO',
+      details: { requestId: request.id, reason: parsed.data.reason }
+    }
+  });
+
+  return c.json({ ok: true, requestId: request.id, status: 'PENDING' }, 201);
+});
+
 profileRoutes.put('/me', async (c) => {
   const userId = c.get('auth').userId;
   const body = await c.req.json().catch(() => null);

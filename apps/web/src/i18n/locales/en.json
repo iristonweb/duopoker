@@ -437,7 +437,7 @@
       "chatPlaceholder": "Table message…",
       "chatSend": "Send",
       "fullscreenPrompt": "Fullscreen mode",
-      "fullscreenHint": "Hide browser chrome and rotate to landscape for the best table view.",
+      "fullscreenHint": "Hide browser chrome and keep portrait for the immersive table view.",
       "fullscreenAccept": "Go fullscreen",
       "fullscreenDecline": "Not now",
       "menu": "Menu",

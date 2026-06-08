@@ -87,6 +87,15 @@ enum OrganizerPlanTier {
   NETWORK
 }
 
+enum OrganizerBillingStatus {
+  TRIAL
+  ACTIVE
+  GRACE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
 enum UserRole {
   USER
   SUPERADMIN
@@ -146,6 +155,7 @@ model User {
   referralRewards ReferralRewardClaim[]
   pushSubscriptions PushSubscription[]
   deviceTokens      DeviceToken[]
+  deletionRequests  AccountDeletionRequest[]
   @@map("users")
 }
 
@@ -283,6 +293,7 @@ model Club {
   privateTables    PrivateTable[]
   organizerPlan    OrganizerSubscription?
   complianceEvents ComplianceEvent[]
+  usageSnapshots   ClubUsageSnapshot[]
   @@index([ownerId])
   @@map("clubs")
 }
@@ -337,34 +348,73 @@ model PrivateTableSeat {
 }
 
 model OrganizerSubscription {
-  id                    String            @id @default(cuid())
-  clubId                 String            @unique
+  id                    String                 @id @default(cuid())
+  clubId                 String                 @unique
   ownerId                String
   tier                   OrganizerPlanTier
   status                 Status
-  startsAt               DateTime          @default(now())
+  billingStatus          OrganizerBillingStatus @default(ACTIVE)
+  startsAt               DateTime               @default(now())
   expiresAt              DateTime
   billingProvider        PaymentProvider
   providerSubscriptionId String?
   providerPaymentId      String?
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
-  club                   Club              @relation(fields: [clubId], references: [id])
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  club                   Club                   @relation(fields: [clubId], references: [id])
   @@index([ownerId])
+  @@index([billingStatus])
   @@map("organizer_subscriptions")
 }
 
 model ComplianceEvent {
   id          String   @id @default(cuid())
-  clubId       String
+  clubId       String?
   actorUserId  String?
   type         String
   severity     String   @default("INFO")
   details      Json?
+  resolvedAt   DateTime?
   createdAt    DateTime @default(now())
-  club         Club     @relation(fields: [clubId], references: [id])
+  club         Club?    @relation(fields: [clubId], references: [id])
   @@index([clubId, createdAt])
+  @@index([severity, createdAt])
   @@map("compliance_events")
+}
+
+model AccountDeletionRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  reason    String?
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, status])
+  @@map("account_deletion_requests")
+}
+
+model ClubUsageSnapshot {
+  id                String   @id @default(cuid())
+  clubId            String
+  memberCount       Int
+  activeTableCount  Int
+  billingCycleStart DateTime
+  capturedAt        DateTime @default(now())
+  club              Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  @@index([clubId, billingCycleStart])
+  @@map("club_usage_snapshots")
+}
+
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  userId    String
+  path      String
+  response  Json?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }
 
 /** Admin-initiated VIP table — invited players accept before the host starts the session. */

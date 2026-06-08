@@ -8,6 +8,7 @@ import {
   enterMatchmaking,
   getQueueStatus,
   getSessionSnapshot,
+  assertPlayMoneySession,
   joinTable,
   leaveQueue,
   leaveTable,
@@ -207,6 +208,14 @@ gameRoutes.post('/join', async (c) => {
   }
 
   const { sessionId, mode, buyIn } = parsed.data;
+
+  if (body && typeof body === 'object') {
+    try {
+      assertPlayMoneySession(body as Record<string, unknown>);
+    } catch {
+      return c.json({ error: 'Play-money sessions only', code: 'PLAY_MONEY_ONLY' }, 400);
+    }
+  }
 
   const access = await assertCanJoinSession(sessionId, userId);
   if (!access.ok) {

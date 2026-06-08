@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 
-type PaymentProvider = 'STRIPE' | 'APPLE_IAP' | 'GOOGLE_PLAY';
+type PaymentProvider = 'STRIPE' | 'APPLE_IAP' | 'GOOGLE_PLAY' | 'YOOKASSA';
 
 const isUniqueViolation = (err: unknown): boolean => {
   const code = (err as { code?: string })?.code;
