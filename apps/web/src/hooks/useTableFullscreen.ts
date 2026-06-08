@@ -2,6 +2,45 @@ import { useCallback, useEffect, useState } from 'react';
 
 const PROMPT_KEY = 'duopoker_fullscreen_prompted';
 
+type FullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void>;
+};
+
+type FullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
+};
+
+async function requestElementFullscreen(el: HTMLElement) {
+  const target = el as FullscreenElement;
+  if (target.requestFullscreen) {
+    await target.requestFullscreen();
+    return;
+  }
+  if (target.webkitRequestFullscreen) {
+    await target.webkitRequestFullscreen();
+  }
+}
+
+async function exitDocumentFullscreen() {
+  const doc = document as FullscreenDocument;
+  if (doc.fullscreenElement) {
+    await doc.exitFullscreen();
+    return;
+  }
+  if (doc.webkitFullscreenElement) {
+    await doc.webkitExitFullscreen?.();
+  }
+}
+
+async function lockLandscape() {
+  try {
+    await screen.orientation?.lock?.('landscape');
+  } catch {
+    /* unsupported or requires user gesture */
+  }
+}
+
 export function useTableFullscreen(enabled: boolean) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -13,15 +52,22 @@ export function useTableFullscreen(enabled: boolean) {
   }, [enabled]);
 
   useEffect(() => {
-    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const doc = document as FullscreenDocument;
+    const sync = () =>
+      setIsFullscreen(Boolean(doc.fullscreenElement ?? doc.webkitFullscreenElement));
     document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
     sync();
-    return () => document.removeEventListener('fullscreenchange', sync);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync);
+    };
   }, []);
 
   const enterFullscreen = useCallback(async () => {
     try {
-      await document.documentElement.requestFullscreen();
+      await requestElementFullscreen(document.documentElement);
+      await lockLandscape();
     } catch {
       /* Safari / unsupported */
     }
@@ -35,12 +81,10 @@ export function useTableFullscreen(enabled: boolean) {
   }, []);
 
   const exitFullscreen = useCallback(async () => {
-    if (document.fullscreenElement) {
-      try {
-        await document.exitFullscreen();
-      } catch {
-        /* ignore */
-      }
+    try {
+      await exitDocumentFullscreen();
+    } catch {
+      /* ignore */
     }
   }, []);
 

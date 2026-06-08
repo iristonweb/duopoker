@@ -1,7 +1,7 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { ContactShadows, Environment } from '@react-three/drei';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PointLight } from 'three';
 import type { Card, EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types/index';
@@ -104,19 +104,28 @@ export function PokerTable3D({
   const playerIndex = new Map(players.map((p, i) => [p.userId, i]));
   const bubbleByUser = new Map(seatBubbles.map((b) => [b.userId, b]));
   const foldingSet = new Set(foldingUsers);
+  const [webglOk, setWebglOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setWebglOk((v) => (v === null ? false : v));
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const showWebgl = webglOk !== false;
 
   return (
     <div className={cn('relative h-full min-h-0 w-full overflow-hidden', className)}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_50%,_#000_100%)]" />
 
       <div
-        className="pointer-events-none absolute inset-x-[4%] top-[8%] h-[78%] rounded-[50%] blur-3xl"
+        className="pointer-events-none absolute inset-x-[4%] top-[8%] z-[1] h-[78%] rounded-[50%] blur-3xl"
         style={{ background: `radial-gradient(ellipse at center, ${felt.ambientGlow} 0%, transparent 65%)` }}
       />
 
-      {/* Static table rim on compact viewports — no WebGL */}
-      <div className="pointer-events-none absolute inset-0 max-table-compact:hidden" aria-hidden>
-        <div className="absolute inset-0 bg-[#030305]" />
+      {/* CSS felt underlay — always visible as WebGL fallback */}
+      <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
         <div
           className={cn('rounded-[50%]', feltPlayAreaClass)}
           style={{
@@ -130,11 +139,13 @@ export function PokerTable3D({
         />
       </div>
 
+      {showWebgl ? (
       <Canvas
         camera={{ position: [0, 7.2, 8.6], fov: 32 }}
         dpr={[1, 1.5]}
         shadows
-        className="!absolute inset-0 hidden max-table-compact:block"
+        className="pointer-events-none !absolute inset-0 z-[2] hidden max-table-compact:block"
+        onCreated={() => setWebglOk(true)}
       >
         <color attach="background" args={['#030305']} />
         <ambientLight intensity={0.28} />
@@ -158,10 +169,11 @@ export function PokerTable3D({
         </mesh>
         <ContactShadows position={[0, 0.005, 0]} opacity={0.55} scale={14} blur={3.2} far={6} />
       </Canvas>
+      ) : null}
 
       <div
         className={cn(
-          'pointer-events-none overflow-visible rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)]',
+          'pointer-events-none z-[1] overflow-visible rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)]',
           feltPlayAreaClass,
           felt.className,
           heroTableFeltId === 'table_void'
@@ -446,10 +458,10 @@ export function PokerTable3D({
       </div>
 
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 z-[5]"
         style={{
           background:
-            'radial-gradient(ellipse 75% 65% at 50% 45%, transparent 35%, rgba(5,5,8,0.55) 100%)'
+            'radial-gradient(ellipse 75% 65% at 50% 45%, transparent 35%, rgba(5,5,8,0.35) 100%)'
         }}
       />
       <div

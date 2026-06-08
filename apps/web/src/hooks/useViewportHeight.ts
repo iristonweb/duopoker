@@ -3,7 +3,8 @@ import { useEffect } from 'react';
 const CSS_VAR = '--app-vh';
 
 function syncViewportHeight() {
-  const h = window.visualViewport?.height ?? window.innerHeight;
+  const raw = window.visualViewport?.height ?? window.innerHeight;
+  const h = Math.max(raw, 320);
   document.documentElement.style.setProperty(CSS_VAR, `${h * 0.01}px`);
 }
 

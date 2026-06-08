@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { Button } from '@duopoker/ui-kit';
+import { saveTableImmersivePref } from '../../lib/table-layout-prefs';
+import { notifyTableLayoutPrefChange } from '../../hooks/useTableLayoutMode';
 
 const PORTRAIT_MOBILE = '(max-width: 767px) and (orientation: portrait)';
 
@@ -55,6 +58,16 @@ export function TableOrientationGate() {
       </motion.div>
       <h2 className="font-display text-xl font-semibold text-gradient-gold">{t('table.rotateDevice')}</h2>
       <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">{t('table.rotateDeviceHint')}</p>
+      <Button
+        variant="secondary"
+        className="mt-8 min-h-[48px] px-6"
+        onClick={() => {
+          saveTableImmersivePref(true);
+          notifyTableLayoutPrefChange();
+        }}
+      >
+        {t('table.playInPortrait')}
+      </Button>
     </div>
   );
 }

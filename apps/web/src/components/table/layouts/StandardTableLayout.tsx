@@ -68,7 +68,6 @@ export function StandardTableLayout({
         </div>
       }
       table={
-        p.session.street ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -199,7 +198,6 @@ export function StandardTableLayout({
               </div>
             ) : null}
           </motion.div>
-        ) : null
       }
       dock={
         p.session.mode === 'JOKER' && p.session.joker ? (
