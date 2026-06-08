@@ -402,6 +402,10 @@ export const leaveTable = async (sessionId: string, userId: string) => {
   }
   const saved = await saveState(result.state);
   await clearMatchAssignment(userId);
+  if (saved.players.length === 0) {
+    const { clearTableChatSession } = await import('./table-chat.js');
+    await clearTableChatSession(sessionId);
+  }
   return { ok: true as const, state: saved };
 };
 

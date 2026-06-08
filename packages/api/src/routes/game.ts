@@ -23,6 +23,11 @@ import {
 import { listLiveTableInvites, listPendingTableInvites } from '../services/table-invites.js';
 import { prisma } from '../lib/prisma.js';
 import { normalizeGameMode } from '@duopoker/shared-types/index';
+import {
+  getTableChatHistory,
+  sendTableChatMessage,
+  waitForTableChatMessages
+} from '../services/table-chat.js';
 
 const gameModeSchema = z.preprocess(
   (v) => (typeof v === 'string' ? normalizeGameMode(v as 'HOLDEM' | 'JOKER' | 'RASPISNOY') : v),
@@ -76,6 +81,10 @@ const readySchema = z.object({
 
 const leaveSchema = z.object({
   sessionId: z.string().min(1)
+});
+
+const chatSendSchema = z.object({
+  text: z.string().trim().min(1).max(280)
 });
 
 export const gameRoutes = new Hono();
@@ -290,4 +299,61 @@ gameRoutes.get('/session/:sessionId/players', async (c) => {
   }
   const players = await getSessionPlayerProfiles(snapshot.players);
   return c.json({ players });
+});
+
+const assertSeatedAtTable = async (sessionId: string, userId: string) => {
+  const snapshot = await getSessionSnapshot(sessionId);
+  if (!snapshot) {
+    return { ok: false as const, status: 404 as const, code: 'SESSION_NOT_FOUND' };
+  }
+  if (!snapshot.players.includes(userId)) {
+    return { ok: false as const, status: 403 as const, code: 'NOT_IN_SESSION' };
+  }
+  return { ok: true as const };
+};
+
+gameRoutes.get('/session/:sessionId/chat/wait', async (c) => {
+  const userId = c.get('auth').userId;
+  const sessionId = c.req.param('sessionId');
+  const access = await assertSeatedAtTable(sessionId, userId);
+  if (!access.ok) {
+    return c.json({ error: access.code, code: access.code }, access.status);
+  }
+  const afterRaw = c.req.query('after');
+  const after = afterRaw != null && afterRaw !== '' ? Number(afterRaw) : undefined;
+  const messages = await waitForTableChatMessages(sessionId, after);
+  return c.json({ sessionId, messages });
+});
+
+gameRoutes.get('/session/:sessionId/chat', async (c) => {
+  const userId = c.get('auth').userId;
+  const sessionId = c.req.param('sessionId');
+  const access = await assertSeatedAtTable(sessionId, userId);
+  if (!access.ok) {
+    return c.json({ error: access.code, code: access.code }, access.status);
+  }
+  const afterRaw = c.req.query('after');
+  const after = afterRaw != null && afterRaw !== '' ? Number(afterRaw) : undefined;
+  const messages = await getTableChatHistory(sessionId, after);
+  return c.json({ sessionId, messages });
+});
+
+gameRoutes.post('/session/:sessionId/chat', async (c) => {
+  const userId = c.get('auth').userId;
+  const sessionId = c.req.param('sessionId');
+  const access = await assertSeatedAtTable(sessionId, userId);
+  if (!access.ok) {
+    return c.json({ error: access.code, code: access.code }, access.status);
+  }
+  const body = await c.req.json().catch(() => null);
+  const parsed = chatSendSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ code: 'INVALID_CHAT_PAYLOAD' }, 400);
+  }
+  const result = await sendTableChatMessage(sessionId, userId, parsed.data.text);
+  if (!result.ok) {
+    const status = result.code === 'CHAT_RATE_LIMIT' ? 429 : 400;
+    return c.json({ code: result.code }, status);
+  }
+  return c.json({ message: result.message });
 });

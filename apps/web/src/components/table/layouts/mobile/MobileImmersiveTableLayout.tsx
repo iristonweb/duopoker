@@ -28,7 +28,11 @@ import type { TableLayoutProps } from '../table-layout-types';
 export function MobileImmersiveTableLayout(p: TableLayoutProps) {
   useViewportHeight();
   const socket = useAppStore((s) => s.socket);
-  const chat = useTableChat(p.sessionId, socket);
+  const apiFetch = useAppStore((s) => s.apiFetch);
+  const chat = useTableChat(p.sessionId, socket, {
+    apiFetch,
+    realtime: p.realtimeSocket ?? false
+  });
   const fullscreen = useTableFullscreen(true);
 
   useEffect(() => () => void fullscreen.exitFullscreen(), [fullscreen.exitFullscreen]);

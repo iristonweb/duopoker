@@ -92,6 +92,7 @@ export type TableLayoutProps = {
   onJokerPlayCard: (card: Card, declaration?: string) => void;
   onJokerChooseTrump: (trumpSuit: string) => void;
   sessionId: string;
+  realtimeSocket?: boolean;
 };
 
 export type TableHudProps = Pick<

@@ -142,7 +142,11 @@ export const Table = () => {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
 
   const layoutMode = useTableLayoutMode();
-  const chat = useTableChat(routeSessionId, socket);
+  const apiFetch = useAppStore((s) => s.apiFetch);
+  const chat = useTableChat(routeSessionId, socket, {
+    apiFetch,
+    realtime: usesRealtimeSocket()
+  });
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
@@ -691,6 +695,7 @@ export const Table = () => {
           playerAction({ sessionId: sid, type: 'chooseTrump', trumpSuit })
         }
         sessionId={sid}
+        realtimeSocket={usesRealtimeSocket()}
       />
       {showDesktopChat ? (
         <TableChatDrawer

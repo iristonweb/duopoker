@@ -183,7 +183,22 @@ model GameSession {
   replayMeta ReplayMeta?
   /** Serialized SessionState snapshot for reconnect / multi-instance recovery */
   gameState  Json?
+  chatMessages TableChatMessage[]
   @@map("game_sessions")
+}
+
+model TableChatMessage {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  displayName String
+  avatar      String?
+  text        String
+  createdAt   DateTime @default(now())
+  session     GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("table_chat_messages")
 }
 
 model MatchmakingTicket {
