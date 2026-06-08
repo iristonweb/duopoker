@@ -33,6 +33,7 @@ type Props = {
   onCall: () => void;
   onRaise: () => void;
   sessionError?: string | null;
+  className?: string;
 };
 
 export function TableActionDock({
@@ -59,7 +60,8 @@ export function TableActionDock({
   onCheck,
   onCall,
   onRaise,
-  sessionError
+  sessionError,
+  className
 }: Props) {
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -75,7 +77,8 @@ export function TableActionDock({
         'glass-shine relative z-40 shrink-0 border-t bg-background/92 backdrop-blur-xl',
         showActions
           ? 'border-gradient-gold border-gold/35 shadow-glow-gold table-action-segment-active'
-          : 'border-white/10'
+          : 'border-white/10',
+        className
       )}
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >

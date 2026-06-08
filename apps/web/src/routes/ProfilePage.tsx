@@ -25,6 +25,8 @@ import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { useAppStore } from '../store/useAppStore';
 import { resolveApiUrl } from '../config/api';
+import { loadTableImmersivePref, saveTableImmersivePref } from '../lib/table-layout-prefs';
+import { notifyTableLayoutPrefChange } from '../hooks/useTableLayoutMode';
 
 const fade = {
   hidden: { opacity: 0, y: 16 },
@@ -55,6 +57,7 @@ export const ProfilePage = () => {
   const [shopMsg, setShopMsg] = useState<string | null>(null);
   const [bonusMsg, setBonusMsg] = useState<string | null>(null);
   const [bonusBusy, setBonusBusy] = useState(false);
+  const [immersiveTable, setImmersiveTable] = useState(() => loadTableImmersivePref());
 
   useEffect(() => {
     void fetchProfile();
@@ -178,6 +181,33 @@ export const ProfilePage = () => {
             <div className="p-6 sm:p-8">
               <ProfileEditor />
             </div>
+          </GlassPanel>
+        </motion.div>
+
+        <motion.div
+          initial={reduceMotion ? false : 'hidden'}
+          animate="show"
+          variants={reduceMotion ? undefined : fade}
+          className="mb-8"
+        >
+          <GlassPanel className="border-white/10 p-5 sm:p-6">
+            <label className="flex cursor-pointer items-start justify-between gap-4">
+              <div>
+                <p className="font-medium text-ivory">{t('profile.mobileImmersiveTable')}</p>
+                <p className="mt-1 text-sm text-muted">{t('profile.mobileImmersiveTableHint')}</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={immersiveTable}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setImmersiveTable(on);
+                  saveTableImmersivePref(on);
+                  notifyTableLayoutPrefChange();
+                }}
+                className="mt-1 h-5 w-5 shrink-0 accent-gold"
+              />
+            </label>
           </GlassPanel>
         </motion.div>
 

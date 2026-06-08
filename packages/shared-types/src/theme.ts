@@ -47,7 +47,9 @@ export const breakpoints = {
   sm: 640,
   md: 768,
   lg: 1024,
-  xl: 1280
+  xl: 1280,
+  smallMobile: 480,
+  tabletMax: 1279
 } as const;
 
 export type BrandColors = typeof colors;

@@ -20,8 +20,22 @@ export {
   type SeatAnchor
 } from './layout/seat-coordinates';
 
+export {
+  mobileSeatCoordinates,
+  mobileSeatPositionStyle,
+  mobileBubbleOffset,
+  isHeroSeatIndex
+} from './layout/mobile-seat-coordinates';
+
+export { useTableChat } from './hooks/useTableChat';
+
 export * from './session/table-session-steps';
-export { formatTableError } from './session/table-errors';
+export {
+  formatTableError,
+  isChatErrorCode,
+  CHAT_ERROR_CODES,
+  type ChatErrorCode
+} from './session/table-errors';
 
 export {
   describeHoldemStrength,

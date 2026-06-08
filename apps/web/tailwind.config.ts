@@ -14,6 +14,10 @@ export default {
       lg: '1024px',
       xl: '1280px',
       '2xl': '1536px',
+      'mobile-max': { max: '767px' },
+      'small-mobile': { max: '480px' },
+      tablet: { min: '768px', max: '1279px' },
+      desktop: { min: '1280px' },
       'table-compact': { raw: '(max-width: 639px), (max-height: 520px)' },
       'max-table-compact': { raw: '(min-width: 640px) and (min-height: 521px)' }
     },

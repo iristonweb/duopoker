@@ -28,6 +28,15 @@ import {
   playersWithChips
 } from '@duopoker/game-engine/index';
 import { attachSocketAuth, resolveUserId } from './socket-auth.js';
+import { resolveChatSender } from '../services/chat-profile.js';
+import {
+  appendTableChatMessage,
+  canSendTableChat,
+  clearTableChatSession,
+  createTableChatMessage,
+  getTableChatHistory,
+  markTableChatSent
+} from '../services/table-chat.js';
 
 const gameModeSchema = z.preprocess(
   (v) => (typeof v === 'string' ? normalizeGameMode(v as 'HOLDEM' | 'JOKER' | 'RASPISNOY') : v),
@@ -404,6 +413,10 @@ export const createRealtimeServer = (app: Express) => {
       }
       await socket.leave(sessionId);
       socket.emit('leftTable', { sessionId });
+      const remaining = await io.in(sessionId).fetchSockets();
+      if (remaining.length === 0) {
+        clearTableChatSession(sessionId);
+      }
       await broadcastSessionState(io, sessionId, result.state);
     });
 
@@ -411,6 +424,66 @@ export const createRealtimeServer = (app: Express) => {
       const sid = typeof payload.sessionId === 'string' ? payload.sessionId : '';
       if (!sid) return;
       socket.to(sid).emit('voiceSignal', { ...payload, from: socket.id });
+    });
+
+    const tableChatSendSchema = z.object({
+      sessionId: z.string().min(1),
+      text: z.string().trim().min(1).max(280)
+    });
+
+    const assertSocketInSession = async (sessionId: string) => {
+      const sockets = await io.in(sessionId).fetchSockets();
+      return sockets.some((s) => s.id === socket.id);
+    };
+
+    socket.on('tableChatJoin', async ({ sessionId }: { sessionId?: string }) => {
+      if (!sessionId || typeof sessionId !== 'string') return;
+      const userId = resolveUserId(socket, undefined);
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
+      if (!(await assertSocketInSession(sessionId))) {
+        socket.emit('sessionError', { code: 'NOT_IN_SESSION' });
+        return;
+      }
+      socket.emit('tableChatHistory', {
+        sessionId,
+        messages: getTableChatHistory(sessionId)
+      });
+    });
+
+    socket.on('tableChatSend', async (payload) => {
+      const parsed = tableChatSendSchema.safeParse(payload);
+      if (!parsed.success) {
+        socket.emit('sessionError', { code: 'INVALID_CHAT_PAYLOAD' });
+        return;
+      }
+      const userId = resolveUserId(socket, undefined);
+      if (!userId) {
+        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+        return;
+      }
+      const { sessionId, text } = parsed.data;
+      if (!canSendTableChat(userId, sessionId)) {
+        socket.emit('sessionError', { code: 'CHAT_RATE_LIMIT' });
+        return;
+      }
+      if (!(await assertSocketInSession(sessionId))) {
+        socket.emit('sessionError', { code: 'NOT_IN_SESSION' });
+        return;
+      }
+      markTableChatSent(userId, sessionId);
+      const sender = await resolveChatSender(userId);
+      const msg = createTableChatMessage({
+        sessionId,
+        userId,
+        displayName: sender.displayName,
+        avatar: sender.avatar,
+        text
+      });
+      appendTableChatMessage(msg);
+      io.to(sessionId).emit('tableChatMessage', msg);
     });
 
     socket.on('queueMatchmaking', async (payload) => {

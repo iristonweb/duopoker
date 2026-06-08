@@ -45,6 +45,7 @@ type Props = {
   heroId?: string;
   onOpenLeaderboard?: () => void;
   className?: string;
+  layoutVariant?: 'desktop' | 'tablet' | 'compact';
 };
 
 function MetaChipGroup({
@@ -134,7 +135,8 @@ export function TableTopHUD({
   leaderboardProfiles = {},
   heroId,
   onOpenLeaderboard,
-  className
+  className,
+  layoutVariant = 'desktop'
 }: Props) {
   const { t } = useTranslation();
   const isJoker = mode === 'JOKER' && joker ? joker : null;
@@ -148,6 +150,7 @@ export function TableTopHUD({
       data-testid="table-top-hud"
       className={cn(
         'relative z-30 shrink-0 overflow-hidden border-b border-gold/20 bg-[linear-gradient(180deg,rgba(5,5,8,0.94)_0%,rgba(5,5,8,0.82)_100%)] shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_48px_rgba(232,197,71,0.06)] backdrop-blur-xl',
+        layoutVariant === 'tablet' && '[&_.max-table-compact\\:flex]:flex',
         className
       )}
     >

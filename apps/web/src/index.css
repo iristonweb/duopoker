@@ -357,6 +357,23 @@
   }
 }
 
+.mobile-playing-card {
+  width: clamp(80px, 22vw, 100px);
+}
+
+body.table-mobile-immersive * {
+  backdrop-filter: none !important;
+}
+
+body.table-mobile-immersive .glass-shine {
+  background: rgba(12, 12, 18, 0.95);
+}
+
+body.table-mobile-immersive [class*='shadow-glow'],
+body.table-mobile-immersive [class*='blur-'] {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .framer-motion-static {
     transform: none !important;

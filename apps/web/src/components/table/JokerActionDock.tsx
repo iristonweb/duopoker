@@ -40,6 +40,7 @@ type Props = {
   onBid: () => void;
   onPlayCard: (card: Card, declaration?: JokerDeclaration) => void;
   onChooseTrump: (trumpSuit: Suit | null) => void;
+  className?: string;
 };
 
 export function JokerActionDock({
@@ -63,7 +64,8 @@ export function JokerActionDock({
   strictJoker = false,
   onBid,
   onPlayCard,
-  onChooseTrump
+  onChooseTrump,
+  className
 }: Props) {
   const { t } = useTranslation();
   const [pendingCard, setPendingCard] = useState<string | null>(null);
@@ -149,7 +151,8 @@ export function JokerActionDock({
       animate={{ y: 0, opacity: 1 }}
       className={cn(
         'glass-shine relative z-40 shrink-0 border-t bg-background/92 backdrop-blur-xl',
-        showActions ? 'border-gradient-gold border-gold/35 shadow-glow-gold table-action-segment-active' : 'border-white/10'
+        showActions ? 'border-gradient-gold border-gold/35 shadow-glow-gold table-action-segment-active' : 'border-white/10',
+        className
       )}
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
