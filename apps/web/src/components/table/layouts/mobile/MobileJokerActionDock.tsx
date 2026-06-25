@@ -1,5 +1,11 @@
 import { cn } from '@duopoker/ui-kit';
-import type { Card, GameStreet, JokerDeclaration, JokerHandState, Suit } from '@duopoker/shared-types/index';
+import type {
+  Card,
+  GameStreet,
+  JokerDeclaration,
+  JokerHandState,
+  Suit
+} from '@duopoker/shared-types/index';
 import { JokerActionDock } from '../../JokerActionDock';
 
 type Props = {
@@ -31,6 +37,7 @@ type Props = {
   menuLabel: string;
   stack: number;
   stackLabel: string;
+  dockRef?: (node: HTMLElement | null) => void;
 };
 
 export function MobileJokerActionDock({
@@ -41,13 +48,22 @@ export function MobileJokerActionDock({
   menuLabel,
   stack,
   stackLabel,
+  dockRef,
   ...dock
 }: Props) {
   return (
-    <div data-testid="mobile-joker-action-dock" className="fixed inset-x-0 bottom-0 z-50">
+    <div
+      ref={dockRef}
+      data-testid="mobile-joker-action-dock"
+      className="fixed inset-x-0 bottom-0 z-50"
+    >
       <div
         className="flex items-center justify-between border-t border-gold/20 bg-background/95 px-3 py-2"
-        style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
+        style={{
+          paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))',
+          paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+          paddingRight: 'max(0.75rem, env(safe-area-inset-right))'
+        }}
       >
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-subtle">{stackLabel}</p>

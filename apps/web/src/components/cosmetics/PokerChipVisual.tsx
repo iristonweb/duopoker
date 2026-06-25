@@ -11,10 +11,17 @@ export function PokerChipVisual({
   chipId?: string;
   amount?: number;
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
 }) {
   const resolvedChipId = gameChipId(chipId);
-  const dim = size === 'sm' ? 'h-9 w-9' : size === 'lg' ? 'h-16 w-16' : 'h-11 w-11';
+  const dim =
+    size === 'xs'
+      ? 'h-4 w-4'
+      : size === 'sm'
+        ? 'h-9 w-9'
+        : size === 'lg'
+          ? 'h-16 w-16'
+          : 'h-11 w-11';
   return (
     <div className={cn('relative inline-flex flex-col items-center', className)}>
       <div className={cn('relative flex items-center justify-center', dim)}>
@@ -26,7 +33,9 @@ export function PokerChipVisual({
         />
       </div>
       {amount != null ? (
-        <span className="mt-0.5 font-mono text-[10px] font-semibold text-gold-light">{amount.toLocaleString()}</span>
+        <span className="mt-0.5 font-mono text-[10px] font-semibold text-gold-light">
+          {amount.toLocaleString()}
+        </span>
       ) : null}
     </div>
   );

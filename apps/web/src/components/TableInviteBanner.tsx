@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@duopoker/ui-kit';
+import { Button, GlassPanel } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
 export function TableInviteBanner() {
@@ -27,7 +27,11 @@ export function TableInviteBanner() {
   if (tableLiveSessions.length) {
     const live = tableLiveSessions[0]!;
     return (
-      <GlassPanel glow="emerald" className="border-emerald-500/30 p-4" data-testid="table-invite-live">
+      <GlassPanel
+        glow="emerald"
+        className="border-emerald-500/30 p-4"
+        data-testid="table-invite-live"
+      >
         <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-300">
           {t('tableInvite.liveEyebrow')}
         </p>
@@ -38,10 +42,12 @@ export function TableInviteBanner() {
             nick: live.host.nickname
           })}
         </p>
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
           data-testid="table-invite-join"
-          className="premium-btn premium-btn-primary mt-4 text-sm"
+          className="mt-4"
           onClick={() => {
             useAppStore.getState().resetTableJoin();
             void joinSession(live.sessionId, live.mode as 'HOLDEM' | 'JOKER', live.buyIn).then(() =>
@@ -50,7 +56,7 @@ export function TableInviteBanner() {
           }}
         >
           {t('tableInvite.joinTable')}
-        </button>
+        </Button>
       </GlassPanel>
     );
   }
@@ -91,39 +97,41 @@ export function TableInviteBanner() {
       </p>
       <p className="mt-1 font-display text-lg font-semibold text-ivory">{invite.tableName}</p>
       <p className="mt-1 text-sm text-muted">
-        {invite.clubName} · @
-        {invite.host.nickname}
+        {invite.clubName} · @{invite.host.nickname}
       </p>
       <p className="mt-1 text-xs text-subtle">
         {invite.mode} · {invite.virtualBuyIn.toLocaleString()} {t('admin.chips')}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
           data-testid="table-invite-accept"
           disabled={busy !== null}
-          className="premium-btn premium-btn-primary text-sm"
           onClick={() => void onAccept()}
         >
           {busy === 'accept' ? t('tableInvite.accepting') : t('tableInvite.accept')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           data-testid="table-invite-decline"
           disabled={busy !== null}
-          className="premium-btn premium-btn-ghost text-sm"
           onClick={() => void onDecline()}
         >
           {busy === 'decline' ? t('tableInvite.declining') : t('tableInvite.decline')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           data-testid="table-invite-view"
-          className="premium-btn premium-btn-ghost text-sm"
           onClick={() => navigate(`/invite/${invite.inviteCode}`)}
         >
           {t('tableInvite.view')}
-        </button>
+        </Button>
       </div>
       {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
     </GlassPanel>

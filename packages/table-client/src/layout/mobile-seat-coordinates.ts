@@ -1,4 +1,9 @@
-import type { BubbleOffset, SeatAnchor, SeatPosition } from './seat-coordinates';
+import {
+  seatAnchorTransform,
+  type BubbleOffset,
+  type SeatAnchor,
+  type SeatPosition
+} from './seat-coordinates';
 
 const ARC_START_DEG = -150;
 const ARC_END_DEG = -30;
@@ -48,12 +53,10 @@ export function mobileSeatPositionStyle(
   total: number
 ): { left: string; top: string; transform: string } {
   const pos = mobileSeatCoordinates(index, total);
-  const transform =
-    pos.anchor === 'bottom' ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)';
   return {
     left: `${pos.left}%`,
     top: `${pos.top}%`,
-    transform
+    transform: seatAnchorTransform(pos.anchor)
   };
 }
 

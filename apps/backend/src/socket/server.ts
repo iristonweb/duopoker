@@ -8,7 +8,10 @@ import { normalizeGameMode } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { getMongoDb, isMongoReady } from '../services/mongo.js';
-import { getSubscriptionTiersBatch, getUserSubscriptionTier } from '../services/subscription-tier.js';
+import {
+  getSubscriptionTiersBatch,
+  getUserSubscriptionTier
+} from '../services/subscription-tier.js';
 import { assertCanJoinSession, newSessionId } from '../services/session-access.js';
 import {
   autoStartNextHand,
@@ -148,18 +151,23 @@ const scheduleBotTickRetry = (io: Server, sessionId: string, state: SessionState
     scheduleNextHandTimer(io, sessionId, next);
 
     const stillBot = next.players[next.activePlayerIndex]?.startsWith(BOT_PREFIX);
-    const stillActive =
-      stillBot && (next.street === 'BIDDING' || next.street === 'TRICKS');
+    const stillActive = stillBot && (next.street === 'BIDDING' || next.street === 'TRICKS');
     const retries = (botTickRetries.get(sessionId) ?? 0) + 1;
     if (stillActive && retries < 3) {
       botTickRetries.set(sessionId, retries);
-      botTickTimers.set(sessionId, setTimeout(() => void run(), 500));
+      botTickTimers.set(
+        sessionId,
+        setTimeout(() => void run(), 500)
+      );
     } else {
       clearBotTickTimer(sessionId);
     }
   };
 
-  botTickTimers.set(sessionId, setTimeout(() => void run(), 500));
+  botTickTimers.set(
+    sessionId,
+    setTimeout(() => void run(), 500)
+  );
 };
 
 const emitStateToSession = async (io: Server, sessionId: string, state: SessionState) => {
@@ -170,7 +178,7 @@ const emitStateToSession = async (io: Server, sessionId: string, state: SessionS
   const tiers = await getSubscriptionTiersBatch(viewerIds);
   for (const s of sockets) {
     const viewerId = typeof s.data.userId === 'string' ? s.data.userId : undefined;
-    const subscriptionTier = viewerId ? tiers.get(viewerId) ?? 'FREE' : 'FREE';
+    const subscriptionTier = viewerId ? (tiers.get(viewerId) ?? 'FREE') : 'FREE';
     s.emit('stateUpdate', sanitizeStateForViewer(state, viewerId, { subscriptionTier }));
   }
 };
@@ -246,11 +254,7 @@ const emitMatchFoundToPlayers = (
 
 let globalIo: Server | null = null;
 
-export const emitNotificationToUsers = (
-  userIds: string[],
-  event: string,
-  payload: unknown
-) => {
+export const emitNotificationToUsers = (userIds: string[], event: string, payload: unknown) => {
   if (!globalIo) return;
   for (const userId of userIds) {
     const set = userToSockets.get(userId);
@@ -307,13 +311,14 @@ export const createRealtimeServer = (app: Express) => {
       unregisterSocketEverywhere(socket.id);
     });
 
-    socket.on('reconnectSession', async (payload: { sessionId?: string }) => {
+    socket.on('reconnectSession', async (payload: { sessionId?: string; userId?: string }) => {
       const sessionId = payload?.sessionId;
-      const userId = socket.data.userId;
+      const userId = resolveUserId(socket, payload?.userId);
       if (!sessionId || !userId) {
         socket.emit('sessionError', { code: 'INVALID_RECONNECT' });
         return;
       }
+      socket.data.userId = userId;
       const access = await assertCanJoinSession(sessionId, userId);
       if (!access.ok) {
         socket.emit('sessionError', { code: access.reason });
@@ -342,6 +347,7 @@ export const createRealtimeServer = (app: Express) => {
         socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
         return;
       }
+      socket.data.userId = userId;
 
       const burstKey = `${ip}:${userId}`;
       const now = Date.now();
@@ -417,57 +423,69 @@ export const createRealtimeServer = (app: Express) => {
       io.to(parsed.data.sessionId).emit('reconciliation', { replay: result.replay });
     });
 
-    socket.on('reconnectSession', async ({ sessionId }: { sessionId?: string }) => {
-      if (!sessionId) return;
-      socket.join(sessionId);
-      const snapshot = await tickSession(sessionId);
-      const viewerId = typeof socket.data.userId === 'string' ? socket.data.userId : undefined;
-      const subscriptionTier = viewerId ? await getUserSubscriptionTier(viewerId) : 'FREE';
-      socket.emit('sessionReconnected', {
-        sessionId,
-        snapshot: snapshot ? sanitizeStateForViewer(snapshot, viewerId, { subscriptionTier }) : null
-      });
-      if (snapshot) {
-        await broadcastSessionState(io, sessionId, snapshot);
+    socket.on(
+      'reconnectSession',
+      async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
+        if (!sessionId) return;
+        socket.join(sessionId);
+        const snapshot = await tickSession(sessionId);
+        const viewerId = resolveUserId(socket, payloadUserId) ?? undefined;
+        if (viewerId) socket.data.userId = viewerId;
+        const subscriptionTier = viewerId ? await getUserSubscriptionTier(viewerId) : 'FREE';
+        socket.emit('sessionReconnected', {
+          sessionId,
+          snapshot: snapshot
+            ? sanitizeStateForViewer(snapshot, viewerId, { subscriptionTier })
+            : null
+        });
+        if (snapshot) {
+          await broadcastSessionState(io, sessionId, snapshot);
+        }
       }
-    });
+    );
 
-    socket.on('readyNextHand', async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
-      if (!sessionId || typeof sessionId !== 'string') return;
-      const userId = resolveUserId(socket, payloadUserId);
-      if (!userId) {
-        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
-        return;
+    socket.on(
+      'readyNextHand',
+      async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
+        if (!sessionId || typeof sessionId !== 'string') return;
+        const userId = resolveUserId(socket, payloadUserId);
+        if (!userId) {
+          socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+          return;
+        }
+        const result = requestNextHand(sessionId, userId);
+        if (!result.ok) {
+          socket.emit('sessionError', { code: result.reason });
+          return;
+        }
+        await broadcastSessionState(io, sessionId, result.state);
       }
-      const result = requestNextHand(sessionId, userId);
-      if (!result.ok) {
-        socket.emit('sessionError', { code: result.reason });
-        return;
-      }
-      await broadcastSessionState(io, sessionId, result.state);
-    });
+    );
 
-    socket.on('leaveTable', async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
-      if (!sessionId || typeof sessionId !== 'string') return;
-      const userId = resolveUserId(socket, payloadUserId);
-      if (!userId) {
-        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
-        return;
+    socket.on(
+      'leaveTable',
+      async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
+        if (!sessionId || typeof sessionId !== 'string') return;
+        const userId = resolveUserId(socket, payloadUserId);
+        if (!userId) {
+          socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
+          return;
+        }
+        clearActionTimer(sessionId);
+        const result = await leaveTable(sessionId, userId);
+        if (!result.ok) {
+          socket.emit('sessionError', { code: result.reason });
+          return;
+        }
+        await socket.leave(sessionId);
+        socket.emit('leftTable', { sessionId });
+        const remaining = await io.in(sessionId).fetchSockets();
+        if (remaining.length === 0) {
+          clearTableChatSession(sessionId);
+        }
+        await broadcastSessionState(io, sessionId, result.state);
       }
-      clearActionTimer(sessionId);
-      const result = await leaveTable(sessionId, userId);
-      if (!result.ok) {
-        socket.emit('sessionError', { code: result.reason });
-        return;
-      }
-      await socket.leave(sessionId);
-      socket.emit('leftTable', { sessionId });
-      const remaining = await io.in(sessionId).fetchSockets();
-      if (remaining.length === 0) {
-        clearTableChatSession(sessionId);
-      }
-      await broadcastSessionState(io, sessionId, result.state);
-    });
+    );
 
     socket.on('voiceSignal', (payload: Record<string, unknown>) => {
       const sid = typeof payload.sessionId === 'string' ? payload.sessionId : '';

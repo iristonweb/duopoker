@@ -32,6 +32,7 @@ type Props = {
   chatLabel: string;
   menuLabel: string;
   t: (key: string, opts?: Record<string, unknown>) => string;
+  dockRef?: (node: HTMLElement | null) => void;
 };
 
 export function MobileActionDock({
@@ -55,7 +56,8 @@ export function MobileActionDock({
   chatUnread,
   chatLabel,
   menuLabel,
-  t
+  t,
+  dockRef
 }: Props) {
   const [raiseOpen, setRaiseOpen] = useState(false);
   const showActions = myTurn && street !== 'COMPLETE' && street !== 'LOBBY' && !heroSpectating;
@@ -69,7 +71,7 @@ export function MobileActionDock({
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            className="fixed inset-x-0 bottom-[5.5rem] z-[45] rounded-t-2xl border border-gold/25 bg-surface px-4 py-4 shadow-panel"
+            className="fixed inset-x-0 bottom-[var(--mobile-table-dock-height)] z-[45] rounded-t-2xl border border-gold/25 bg-surface px-4 py-4 shadow-panel"
             style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
           >
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold/70">
@@ -99,12 +101,15 @@ export function MobileActionDock({
       </AnimatePresence>
 
       <footer
+        ref={dockRef}
         data-testid="mobile-action-dock"
         className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/25 bg-background/95"
         style={{
           minHeight: '5rem',
           maxHeight: '6.875rem',
-          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)'
         }}
       >
         {sessionError ? (

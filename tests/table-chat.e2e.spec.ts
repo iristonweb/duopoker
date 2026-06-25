@@ -27,7 +27,10 @@ const waitForState = (
   });
 
 test.describe('table chat', () => {
-  test('player can send and see own chat message on mobile immersive table', async ({ page, request }, testInfo) => {
+  test('player can send and see own chat message on mobile immersive table', async ({
+    page,
+    request
+  }, testInfo) => {
     const health = await request.get(`${API}/health`).catch(() => null);
     if (!health?.ok()) {
       testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
@@ -62,12 +65,13 @@ test.describe('table chat', () => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
+      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
     await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole('button', { name: /Чат|Chat/i }).click();
+    await page.getByRole('button', { name: /^(Чат|Chat)$/i }).click();
     await expect(page.getByTestId('table-chat-drawer')).toBeVisible();
 
     const message = `hello-${Date.now()}`;

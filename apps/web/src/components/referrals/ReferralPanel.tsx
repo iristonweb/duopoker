@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { nextReferralMilestone } from '@duopoker/shared-types';
-import { Button, GlassPanel, SectionHeader } from '@duopoker/ui-kit';
+import { Button, GlassPanel, Input, SectionHeader } from '@duopoker/ui-kit';
 import { useAppStore } from '../../store/useAppStore';
 
 type Milestone = {
@@ -90,7 +90,11 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string };
-        setMsg(t(`referral.errors.${err.error ?? 'unknown'}`, { defaultValue: t('referral.applyFailed') }));
+        setMsg(
+          t(`referral.errors.${err.error ?? 'unknown'}`, {
+            defaultValue: t('referral.applyFailed')
+          })
+        );
         return;
       }
       setMsg(t('referral.applyOk'));
@@ -127,7 +131,9 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
         if (!res.ok) {
           const err = (await res.json().catch(() => ({}))) as { error?: string };
           setMsg(
-            t(`referral.errors.${err.error ?? 'unknown'}`, { defaultValue: t('referral.applyFailed') })
+            t(`referral.errors.${err.error ?? 'unknown'}`, {
+              defaultValue: t('referral.applyFailed')
+            })
           );
           return;
         }
@@ -145,8 +151,12 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
     return (
       <GlassPanel glow="gold" className="flex h-full flex-col justify-between border-gold/15 p-6">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{t('referral.eyebrow')}</p>
-          <h2 className="mt-1 font-display text-xl font-semibold text-ivory">{t('referral.title')}</h2>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
+            {t('referral.eyebrow')}
+          </p>
+          <h2 className="mt-1 font-display text-xl font-semibold text-ivory">
+            {t('referral.title')}
+          </h2>
           <p className="mt-2 text-sm text-muted">{t('referral.lobbyTeaser')}</p>
         </div>
         <Link to="/lobby#auth" className="mt-4">
@@ -171,15 +181,25 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
         {data ? (
           <div className="mb-4 grid grid-cols-3 gap-2 text-center text-sm">
             <div className="rounded-lg bg-white/5 px-2 py-2">
-              <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.active')}</p>
-              <p className="font-display text-lg font-semibold text-gold-light">{data.activeReferrals}</p>
+              <p className="text-[10px] uppercase tracking-wider text-subtle">
+                {t('referral.active')}
+              </p>
+              <p className="font-display text-lg font-semibold text-gold-light">
+                {data.activeReferrals}
+              </p>
             </div>
             <div className="rounded-lg bg-white/5 px-2 py-2">
-              <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.pending')}</p>
-              <p className="font-display text-lg font-semibold text-ivory">{data.pendingReferrals}</p>
+              <p className="text-[10px] uppercase tracking-wider text-subtle">
+                {t('referral.pending')}
+              </p>
+              <p className="font-display text-lg font-semibold text-ivory">
+                {data.pendingReferrals}
+              </p>
             </div>
             <div className="rounded-lg bg-white/5 px-2 py-2">
-              <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.total')}</p>
+              <p className="text-[10px] uppercase tracking-wider text-subtle">
+                {t('referral.total')}
+              </p>
               <p className="font-display text-lg font-semibold text-ivory">{data.totalReferrals}</p>
             </div>
           </div>
@@ -191,27 +211,25 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
             <code className="rounded-lg bg-gold/10 px-3 py-1.5 font-mono text-base font-semibold text-gold-light">
               {data?.code ?? '…'}
             </code>
-            <button
-              type="button"
-              className="premium-btn premium-btn-ghost text-xs"
-              onClick={() => void copyShareLink()}
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={() => void copyShareLink()}>
               {copied ? t('referral.copied') : t('referral.copyLink')}
-            </button>
+            </Button>
           </div>
         </div>
 
         {claimable ? (
           <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm">
             <p className="text-emerald-200">{milestoneLabel(claimable)}</p>
-            <button
+            <Button
               type="button"
               disabled={busy}
-              className="premium-btn premium-btn-primary mt-2 text-xs"
+              variant="primary"
+              size="sm"
+              className="mt-2"
               onClick={() => void claim(claimable.level)}
             >
               {t('referral.claim')}
-            </button>
+            </Button>
           </div>
         ) : nextMilestone ? (
           <p className="mb-3 text-xs text-muted">
@@ -246,15 +264,23 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
       {data ? (
         <div className="mb-4 grid grid-cols-3 gap-2 text-center text-sm">
           <div className="rounded-lg bg-white/5 px-2 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.active')}</p>
-            <p className="font-display text-xl font-semibold text-gold-light">{data.activeReferrals}</p>
+            <p className="text-[10px] uppercase tracking-wider text-subtle">
+              {t('referral.active')}
+            </p>
+            <p className="font-display text-xl font-semibold text-gold-light">
+              {data.activeReferrals}
+            </p>
           </div>
           <div className="rounded-lg bg-white/5 px-2 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.pending')}</p>
+            <p className="text-[10px] uppercase tracking-wider text-subtle">
+              {t('referral.pending')}
+            </p>
             <p className="font-display text-xl font-semibold text-ivory">{data.pendingReferrals}</p>
           </div>
           <div className="rounded-lg bg-white/5 px-2 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-subtle">{t('referral.total')}</p>
+            <p className="text-[10px] uppercase tracking-wider text-subtle">
+              {t('referral.total')}
+            </p>
             <p className="font-display text-xl font-semibold text-ivory">{data.totalReferrals}</p>
           </div>
         </div>
@@ -266,28 +292,32 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
           <code className="rounded-lg bg-gold/10 px-3 py-2 font-mono text-lg font-semibold text-gold-light">
             {data?.code ?? '…'}
           </code>
-          <button
-            type="button"
-            className="premium-btn premium-btn-ghost text-xs"
-            onClick={() => void copyShareLink()}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={() => void copyShareLink()}>
             {copied ? t('referral.copied') : t('referral.copyLink')}
-          </button>
+          </Button>
         </div>
         <p className="mt-2 text-[11px] text-muted">{t('referral.activeRule')}</p>
       </div>
 
       {!data?.referredBy ? (
         <div className="mb-4 flex flex-wrap gap-2">
-          <input
-            className="premium-input min-w-[140px] flex-1 text-sm"
-            placeholder={t('referral.applyPlaceholder')}
-            value={applyCode}
-            onChange={(e) => setApplyCode(e.target.value.toUpperCase())}
-          />
-          <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-sm" onClick={() => void apply(undefined)}>
+          <div className="min-w-[140px] flex-1">
+            <Input
+              className="text-sm"
+              placeholder={t('referral.applyPlaceholder')}
+              value={applyCode}
+              onChange={(e) => setApplyCode(e.target.value.toUpperCase())}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => void apply(undefined)}
+          >
             {t('referral.apply')}
-          </button>
+          </Button>
         </div>
       ) : (
         <p className="mb-4 text-xs text-muted">
@@ -308,16 +338,19 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
             {m.claimed ? (
               <span className="text-xs text-emerald-300">{t('referral.claimed')}</span>
             ) : m.claimable ? (
-              <button
+              <Button
                 type="button"
                 disabled={busy}
-                className="premium-btn premium-btn-primary text-xs"
+                variant="primary"
+                size="sm"
                 onClick={() => void claim(m.level)}
               >
                 {t('referral.claim')}
-              </button>
+              </Button>
             ) : (
-              <span className="text-xs text-muted">{t('referral.needMore', { n: m.activeReferralsRequired })}</span>
+              <span className="text-xs text-muted">
+                {t('referral.needMore', { n: m.activeReferralsRequired })}
+              </span>
             )}
           </li>
         ))}

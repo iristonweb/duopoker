@@ -33,14 +33,6 @@ async function exitDocumentFullscreen() {
   }
 }
 
-async function lockLandscape() {
-  try {
-    await screen.orientation?.lock?.('landscape');
-  } catch {
-    /* unsupported or requires user gesture */
-  }
-}
-
 export function useTableFullscreen(enabled: boolean) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -67,7 +59,6 @@ export function useTableFullscreen(enabled: boolean) {
   const enterFullscreen = useCallback(async () => {
     try {
       await requestElementFullscreen(document.documentElement);
-      await lockLandscape();
     } catch {
       /* Safari / unsupported */
     }

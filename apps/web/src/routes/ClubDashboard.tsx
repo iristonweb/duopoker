@@ -31,6 +31,7 @@ export const ClubDashboard = () => {
   const upgradeClubPlan = useAppStore((s) => s.upgradeClubPlan);
   const createPrivateTable = useAppStore((s) => s.createPrivateTable);
   const fetchPrivateTables = useAppStore((s) => s.fetchPrivateTables);
+  const apiFetch = useAppStore((s) => s.apiFetch);
   const navigate = useNavigate();
   const [data, setData] = useState<ClubDetail | null>(null);
   const [tables, setTables] = useState<PrivateTableSummary[]>([]);
@@ -51,10 +52,9 @@ export const ClubDashboard = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(reload, [clubId, fetchClub]);
+  useEffect(reload, [clubId, fetchClub, fetchPrivateTables]);
 
   if (!clubId) return null;
-  const apiFetch = useAppStore((s) => s.apiFetch);
   const club = data?.club as ClubWithMeta | undefined;
   const tier = club?.effectiveTier ?? club?.organizerPlan?.tier ?? 'BASIC';
   const limits = club?.limits ?? { maxMembers: 30, maxActiveTables: 2 };
@@ -82,8 +82,12 @@ export const ClubDashboard = () => {
       ) : club ? (
         <>
           <div className="mb-8">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{t('clubs.eyebrow')}</p>
-            <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ivory">{club.name}</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
+              {t('clubs.eyebrow')}
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ivory">
+              {club.name}
+            </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Badge variant="gold">{tier}</Badge>
               <Badge>
@@ -150,7 +154,12 @@ export const ClubDashboard = () => {
                   description={t('clubs.planPro.desc')}
                   bannerUrl={organizerPlanBanners.PRO}
                 >
-                  <Button variant="secondary" size="sm" className="w-full" onClick={() => void upgradeClubPlan(clubId, 'PRO')}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => void upgradeClubPlan(clubId, 'PRO')}
+                  >
                     {t('clubs.payPro')}
                   </Button>
                 </OrganizerPlanCard>
@@ -160,7 +169,12 @@ export const ClubDashboard = () => {
                   description={t('clubs.planNetwork.desc')}
                   bannerUrl={organizerPlanBanners.NETWORK}
                 >
-                  <Button variant="secondary" size="sm" className="w-full" onClick={() => void upgradeClubPlan(clubId, 'NETWORK')}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => void upgradeClubPlan(clubId, 'NETWORK')}
+                  >
                     {t('clubs.payNetwork')}
                   </Button>
                 </OrganizerPlanCard>
@@ -186,8 +200,7 @@ export const ClubDashboard = () => {
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-subtle">
                       {m.role}
                     </span>
-                    {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') &&
-                    m.role !== 'OWNER' ? (
+                    {(club.myRole === 'OWNER' || club.myRole === 'ADMIN') && m.role !== 'OWNER' ? (
                       <>
                         {m.role !== 'ADMIN' ? (
                           <button
@@ -277,7 +290,9 @@ export const ClubDashboard = () => {
                       <div className="min-w-0">
                         <span className="font-medium text-zinc-200">{tbl.name}</span>
                         <div className="mt-1 flex flex-wrap gap-1.5">
-                          <Badge variant={tbl.status === 'LIVE' ? 'emerald' : 'default'}>{tbl.status}</Badge>
+                          <Badge variant={tbl.status === 'LIVE' ? 'emerald' : 'default'}>
+                            {tbl.status}
+                          </Badge>
                           <Badge>{tbl.mode}</Badge>
                         </div>
                       </div>
@@ -308,7 +323,9 @@ export const ClubDashboard = () => {
                     </Button>
                   ))}
                   {tableMode === 'JOKER' ? (
-                    <span className="self-center text-xs text-muted">{t('lobby.jokerBotPlayerCount')}</span>
+                    <span className="self-center text-xs text-muted">
+                      {t('lobby.jokerBotPlayerCount')}
+                    </span>
                   ) : null}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -323,9 +340,11 @@ export const ClubDashboard = () => {
                     size="sm"
                     className="shrink-0"
                     onClick={() => {
-                      void createPrivateTable(clubId, { name: tableName, mode: tableMode }).then(({ table }) => {
-                        navigate(`/clubs/${clubId}/tables/${table.id}`);
-                      });
+                      void createPrivateTable(clubId, { name: tableName, mode: tableMode }).then(
+                        ({ table }) => {
+                          navigate(`/clubs/${clubId}/tables/${table.id}`);
+                        }
+                      );
                     }}
                   >
                     {t('clubs.createBtn')}

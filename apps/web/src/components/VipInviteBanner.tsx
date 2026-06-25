@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel } from '@duopoker/ui-kit';
+import { Button, GlassPanel } from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
 export function VipInviteBanner() {
@@ -14,6 +14,8 @@ export function VipInviteBanner() {
   const acceptVipInvite = useAppStore((s) => s.acceptVipInvite);
   const declineVipInvite = useAppStore((s) => s.declineVipInvite);
   const joinSession = useAppStore((s) => s.joinSession);
+  const [busy, setBusy] = useState<'accept' | 'decline' | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -28,16 +30,20 @@ export function VipInviteBanner() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300">
           {t('vipInvite.liveEyebrow')}
         </p>
-        <p className="mt-1 font-display text-lg font-semibold text-ivory">{t('vipInvite.liveTitle')}</p>
+        <p className="mt-1 font-display text-lg font-semibold text-ivory">
+          {t('vipInvite.liveTitle')}
+        </p>
         <p className="mt-1 text-sm text-muted">
           {t('vipInvite.from', {
             name: vipLiveSession.host.displayName,
             nick: vipLiveSession.host.nickname
           })}
         </p>
-        <button
+        <Button
           type="button"
-          className="premium-btn premium-btn-primary mt-4 text-sm"
+          variant="primary"
+          size="sm"
+          className="mt-4"
           onClick={() => {
             useAppStore.getState().resetTableJoin();
             void joinSession(
@@ -48,7 +54,7 @@ export function VipInviteBanner() {
           }}
         >
           {t('vipInvite.joinTable')}
-        </button>
+        </Button>
       </GlassPanel>
     );
   }
@@ -56,6 +62,32 @@ export function VipInviteBanner() {
   if (!vipInvites.length) return null;
 
   const invite = vipInvites[0]!;
+
+  const onAccept = async () => {
+    setBusy('accept');
+    setError(null);
+    try {
+      await acceptVipInvite(invite.duelId);
+      await fetchVipInvites();
+    } catch {
+      setError(t('vipInvite.acceptFailed', { defaultValue: t('admin.actionFailed') }));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onDecline = async () => {
+    setBusy('decline');
+    setError(null);
+    try {
+      await declineVipInvite(invite.duelId);
+      await fetchVipInvites();
+    } catch {
+      setError(t('vipInvite.declineFailed', { defaultValue: t('admin.actionFailed') }));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <GlassPanel glow="gold" className="border-gold/30 p-4">
@@ -74,23 +106,28 @@ export function VipInviteBanner() {
         {invite.mode} · {invite.buyIn.toLocaleString()} {t('admin.chips')}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
           data-testid="vip-invite-accept"
-          className="premium-btn premium-btn-primary text-sm"
-          onClick={() => void acceptVipInvite(invite.duelId).then(() => fetchVipInvites())}
+          disabled={busy !== null}
+          onClick={() => void onAccept()}
         >
-          {t('vipInvite.accept')}
-        </button>
-        <button
+          {busy === 'accept' ? t('tableInvite.accepting') : t('vipInvite.accept')}
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           data-testid="vip-invite-decline"
-          className="premium-btn premium-btn-ghost text-sm"
-          onClick={() => void declineVipInvite(invite.duelId).then(() => fetchVipInvites())}
+          disabled={busy !== null}
+          onClick={() => void onDecline()}
         >
-          {t('vipInvite.decline')}
-        </button>
+          {busy === 'decline' ? t('tableInvite.declining') : t('vipInvite.decline')}
+        </Button>
       </div>
+      {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
     </GlassPanel>
   );
 }

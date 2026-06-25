@@ -1,6 +1,7 @@
 import { cn } from '@duopoker/ui-kit';
 import { tierMeetsRequirement } from '@duopoker/shared-types';
 import type { SubscriptionTier } from '@duopoker/shared-types/index';
+import type { BubbleOffset } from '@duopoker/table-client';
 import { PlayerAvatar } from '../../../cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../../../cosmetics/PokerChipVisual';
 import { TurnTimer } from '../../TurnTimer';
@@ -11,12 +12,34 @@ import type { SeatActionBubble as SeatBubble } from '../../../../hooks/useTableA
 type Props = {
   player: TablePlayerVisual;
   bubble?: SeatBubble;
+  bubbleOffset?: BubbleOffset;
   secondsLeft: number | null;
   chipId: string;
   onAvatarTap?: (userId: string) => void;
 };
 
-export function MobileSeatNode({ player, bubble, secondsLeft, chipId, onAvatarTap }: Props) {
+const bubbleOffsetClass = (offset?: BubbleOffset) => {
+  switch (offset?.anchor) {
+    case 'below':
+      return 'top-full left-1/2 mt-1 -translate-x-1/2';
+    case 'left':
+      return 'right-full top-1/2 mr-1 -translate-y-1/2';
+    case 'right':
+      return 'left-full top-1/2 ml-1 -translate-y-1/2';
+    case 'above':
+    default:
+      return '-top-8 left-1/2 -translate-x-1/2';
+  }
+};
+
+export function MobileSeatNode({
+  player,
+  bubble,
+  bubbleOffset,
+  secondsLeft,
+  chipId,
+  onAvatarTap
+}: Props) {
   const premium = tierMeetsRequirement((player.tier ?? 'FREE') as SubscriptionTier, 'GOLD');
   const avatarSize = premium ? 'mobile-premium' : 'mobile';
 
@@ -26,7 +49,7 @@ export function MobileSeatNode({ player, bubble, secondsLeft, chipId, onAvatarTa
         <SeatActionBubble
           text={bubble.text}
           kind={bubble.kind}
-          className="absolute -top-8 z-10 whitespace-nowrap"
+          className={cn('absolute z-10 whitespace-nowrap', bubbleOffsetClass(bubbleOffset))}
         />
       ) : null}
       <button
@@ -37,7 +60,7 @@ export function MobileSeatNode({ player, bubble, secondsLeft, chipId, onAvatarTa
       >
         {player.isActive && secondsLeft !== null ? (
           <div className="absolute -inset-1">
-            <TurnTimer secondsLeft={secondsLeft} size={premium ? 76 : 68} className="opacity-90" />
+            <TurnTimer secondsLeft={secondsLeft} size={premium ? 72 : 64} className="opacity-90" />
           </div>
         ) : null}
         <PlayerAvatar
@@ -55,7 +78,7 @@ export function MobileSeatNode({ player, bubble, secondsLeft, chipId, onAvatarTa
       </button>
       <p className="max-w-[4.5rem] truncate text-[10px] font-medium text-ivory">{player.name}</p>
       <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/50 px-1.5 py-0.5">
-        <PokerChipVisual chipId={chipId} size="xs" className="h-3 w-3" />
+        <PokerChipVisual chipId={chipId} size="xs" />
         <span className="font-mono text-[10px] tabular-nums text-gold-light">{player.stack}</span>
       </div>
       {(player.roundBet ?? 0) > 0 ? (

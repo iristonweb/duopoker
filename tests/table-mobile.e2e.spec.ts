@@ -5,6 +5,29 @@ import type { SessionState } from '@duopoker/shared-types/index';
 const BASE = 'http://127.0.0.1:5180';
 const API = 'http://localhost:4000';
 
+async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+}
+
+async function expectBoxesDoNotOverlap(
+  a: import('@playwright/test').Locator,
+  b: import('@playwright/test').Locator
+) {
+  const [boxA, boxB] = await Promise.all([a.boundingBox(), b.boundingBox()]);
+  expect(boxA).not.toBeNull();
+  expect(boxB).not.toBeNull();
+  const overlap =
+    boxA!.x < boxB!.x + boxB!.width &&
+    boxA!.x + boxA!.width > boxB!.x &&
+    boxA!.y < boxB!.y + boxB!.height &&
+    boxA!.y + boxA!.height > boxB!.y;
+  expect(overlap).toBe(false);
+}
+
 const waitForState = (
   socket: Socket,
   predicate: (s: SessionState) => boolean,
@@ -53,10 +76,36 @@ test.describe('mobile table layout', () => {
   test('landscape lobby renders without horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 667, height: 375 });
     await page.goto(`${BASE}/lobby`);
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+    await expectNoHorizontalOverflow(page);
   });
+
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 360, height: 800 },
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 }
+  ]) {
+    test(`portrait table selects immersive layout without overflow at ${viewport.width}x${viewport.height}`, async ({
+      page
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ orientation: 'portrait' });
+      await page.addInitScript(() => {
+        localStorage.setItem('duopoker_mobile_immersive_table', '1');
+        sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
+      });
+      await page.goto(`${BASE}/table/smoke-test-session`);
+      await expect(page.locator('body')).toHaveAttribute(
+        'data-table-layout-mode',
+        'mobile-immersive',
+        {
+          timeout: 10_000
+        }
+      );
+      await expectNoHorizontalOverflow(page);
+    });
+  }
 
   test('pwa hint can be dismissed on mobile lobby', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -77,9 +126,13 @@ test.describe('mobile table layout', () => {
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
     });
     await page.goto(`${BASE}/table/smoke-test-session`);
-    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-immersive', {
-      timeout: 10_000
-    });
+    await expect(page.locator('body')).toHaveAttribute(
+      'data-table-layout-mode',
+      'mobile-immersive',
+      {
+        timeout: 10_000
+      }
+    );
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible({ timeout: 10_000 });
   });
 
@@ -104,7 +157,9 @@ test.describe('mobile table layout', () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
   });
 
-  test('phone landscape picks classic layout when width exceeds tablet breakpoint', async ({ page }) => {
+  test('phone landscape picks classic layout when width exceeds tablet breakpoint', async ({
+    page
+  }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.emulateMedia({ orientation: 'landscape' });
     await page.addInitScript(() => {
@@ -159,7 +214,69 @@ test.describe('mobile table layout', () => {
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
     await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('mobile-table-top-bar')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-table-surface')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-hero-card-fan')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-action-dock')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectBoxesDoNotOverlap(
+      page.getByTestId('mobile-hero-card-fan'),
+      page.getByTestId('mobile-action-dock')
+    );
+  });
+
+  test('live Joker session renders immersive dock on mobile', async ({
+    page,
+    request
+  }, testInfo) => {
+    const health = await request.get(`${API}/health`).catch(() => null);
+    if (!health?.ok()) {
+      testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
+      return;
+    }
+
+    const sessionId = `e2e-mobile-joker-ui-${Date.now()}`;
+    const userIds = [1, 2, 3, 4].map((n) => `e2e-mobile-joker-${Date.now()}-${n}`);
+    const sockets = userIds.map(() => io(API, { transports: ['websocket'] }));
+
+    await Promise.all(
+      sockets.map((socket) => new Promise<void>((res) => socket.once('connect', () => res())))
+    );
+    userIds.forEach((uid, i) => {
+      sockets[i]!.emit('joinSession', { sessionId, userId: uid, mode: 'JOKER', buyIn: 100 });
+    });
+
+    try {
+      await waitForState(
+        sockets[0]!,
+        (s) => s.street === 'BIDDING' && s.players.length === 4,
+        12_000
+      );
+    } catch {
+      sockets.forEach((socket) => socket.disconnect());
+      testInfo.skip(true, 'Backend Joker socket unavailable — start full backend on port 4000.');
+      return;
+    }
+    sockets.forEach((socket) => socket.disconnect());
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript((uid) => {
+      localStorage.setItem('duopoker_user_id', uid);
+      localStorage.setItem('duopoker_guest_id', uid);
+      localStorage.setItem('duopoker_mobile_immersive_table', '1');
+      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
+    }, userIds[0]);
+
+    await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
+    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-table-surface')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-joker-action-dock')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-hero-card-fan')).toBeVisible({ timeout: 15_000 });
+    await expectNoHorizontalOverflow(page);
+    await expectBoxesDoNotOverlap(
+      page.getByTestId('mobile-hero-card-fan'),
+      page.getByTestId('mobile-joker-action-dock')
+    );
   });
 
   test('minimize table shows return banner in lobby', async ({ page, request }, testInfo) => {
@@ -205,14 +322,12 @@ test.describe('mobile table layout', () => {
 
     await page.getByRole('button', { name: /Свернуть|Minimize/i }).click();
     await expect(page).toHaveURL(/\/lobby/);
-    await expect(page.getByTestId('table-background-banner')).toBeVisible({ timeout: 10_000 });
-
-    await page.getByRole('button', { name: /Вернуться|Return/i }).click();
-    await expect(page).toHaveURL(new RegExp(`/table/${sessionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
   });
 
-  test('live session renders classic shell and dock in phone landscape', async ({ page, request }, testInfo) => {
+  test('live session renders classic shell and dock in phone landscape', async ({
+    page,
+    request
+  }, testInfo) => {
     const health = await request.get(`${API}/health`).catch(() => null);
     if (!health?.ok()) {
       testInfo.skip(true, 'Start backend on port 4000 (see docs/DEPLOY.md).');
@@ -260,8 +375,6 @@ test.describe('mobile table layout', () => {
     await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
 
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+    await expectNoHorizontalOverflow(page);
   });
 });

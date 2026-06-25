@@ -74,8 +74,7 @@ function LeaderboardList({
           const name = profile?.name ?? entry.userId.slice(0, 8);
           const isHero = entry.userId === heroId;
           const delta = entry.handDelta;
-          const netPl =
-            mode === 'HOLDEM' && buyIn !== undefined ? entry.score - buyIn : undefined;
+          const netPl = mode === 'HOLDEM' && buyIn !== undefined ? entry.score - buyIn : undefined;
 
           return (
             <li
@@ -86,7 +85,9 @@ function LeaderboardList({
                 rankRowClass(entry.rank, isHero)
               )}
             >
-              <span className={cn('text-sm font-bold', rankStyle(entry.rank))}>{rankIcon(entry.rank)}</span>
+              <span className={cn('text-sm font-bold', rankStyle(entry.rank))}>
+                {rankIcon(entry.rank)}
+              </span>
               <div className="flex min-w-0 items-center gap-2">
                 {profile ? (
                   <PlayerAvatar
@@ -109,7 +110,9 @@ function LeaderboardList({
                     ) : null}
                   </p>
                   {netPl !== undefined ? (
-                    <p className={cn('text-[10px]', netPl >= 0 ? 'text-emerald/80' : 'text-rose/80')}>
+                    <p
+                      className={cn('text-[10px]', netPl >= 0 ? 'text-emerald/80' : 'text-rose/80')}
+                    >
                       {netPl >= 0 ? '+' : ''}
                       {netPl.toLocaleString()}
                     </p>
@@ -240,12 +243,11 @@ export function TableLeaderboardPanel({
           title={t('table.openLeaderboard')}
           onClick={() => onOpenChange(true)}
           className={cn(
-            'absolute right-3 z-30 flex h-11 w-11 items-center justify-center rounded-full',
+            'absolute right-3 z-50 flex h-11 w-11 items-center justify-center rounded-full',
             'border border-gold/35 bg-black/55 text-gold-light shadow-[0_0_24px_rgba(232,197,71,0.2)] backdrop-blur-md',
             'transition hover:border-gold/55 hover:bg-gold/10 hover:shadow-glow-gold',
             open && 'border-gold/60 bg-gold/15 shadow-glow-gold ring-2 ring-gold/25',
             tableFabBottomClass,
-            'table-compact:bottom-[calc(var(--table-dock-height,7.5rem)+4.5rem+env(safe-area-inset-bottom))]',
             className
           )}
         >
@@ -277,35 +279,38 @@ export function TableLeaderboardPanel({
               )}
               data-testid="table-leaderboard-panel"
             >
-            <GlassPanel glow="gold" className="relative overflow-hidden border-gold/25 p-0 shadow-[0_0_48px_rgba(232,197,71,0.18)]">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-gold/[0.08] to-transparent" />
-              <div className="relative flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/60">
-                    {t('table.liveTable')}
-                  </p>
-                  <h2 className="font-display text-base font-semibold text-gradient-gold">
-                    {t('table.leaderboardTitle')}
-                  </h2>
+              <GlassPanel
+                glow="gold"
+                className="relative overflow-hidden border-gold/25 p-0 shadow-[0_0_48px_rgba(232,197,71,0.18)]"
+              >
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-gold/[0.08] to-transparent" />
+                <div className="relative flex items-center justify-between border-b border-white/10 px-4 py-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/60">
+                      {t('table.liveTable')}
+                    </p>
+                    <h2 className="font-display text-base font-semibold text-gradient-gold">
+                      {t('table.leaderboardTitle')}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={t('table.leaderboardClose')}
+                    className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-subtle transition hover:border-gold/30 hover:text-gold-light"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    ✕
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label={t('table.leaderboardClose')}
-                  className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-subtle transition hover:border-gold/30 hover:text-gold-light"
-                  onClick={() => onOpenChange(false)}
-                >
-                  ✕
-                </button>
-              </div>
-              <LeaderboardList
-                entries={entries}
-                mode={mode}
-                heroId={heroId}
-                profiles={profiles}
-                buyIn={buyIn}
-              />
-            </GlassPanel>
-          </motion.div>
+                <LeaderboardList
+                  entries={entries}
+                  mode={mode}
+                  heroId={heroId}
+                  profiles={profiles}
+                  buyIn={buyIn}
+                />
+              </GlassPanel>
+            </motion.div>
           </>
         ) : null}
       </AnimatePresence>

@@ -3,11 +3,29 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PaidSubscriptionTier } from '@duopoker/shared-types';
 import { tierLabel } from '@duopoker/shared-types';
-import { Badge, GlassPanel, LoadingSkeleton, PageShell, SectionHeader } from '@duopoker/ui-kit';
+import {
+  Badge,
+  Button,
+  GlassPanel,
+  Input,
+  LoadingSkeleton,
+  PageShell,
+  SectionHeader,
+  Textarea
+} from '@duopoker/ui-kit';
 import { useAppStore } from '../store/useAppStore';
 
-const PAID_TIERS: PaidSubscriptionTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'BLACK'];
+const PAID_TIERS: PaidSubscriptionTier[] = [
+  'BRONZE',
+  'SILVER',
+  'GOLD',
+  'PLATINUM',
+  'DIAMOND',
+  'BLACK'
+];
 const ORGANIZER_TIERS = ['BASIC', 'PRO', 'NETWORK'] as const;
+const selectClassName =
+  'rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-zinc-100 shadow-inner transition-[border-color,box-shadow,background-color] duration-200 hover:border-white/15 hover:bg-black/50 focus:border-gold/35 focus:bg-black/55 focus:shadow-[0_0_0_3px_rgba(232,197,71,0.12)] disabled:cursor-not-allowed disabled:opacity-50';
 
 type Tab = 'overview' | 'players' | 'vip' | 'compliance';
 
@@ -98,13 +116,28 @@ type VipDuel = {
   }>;
 };
 
-function StatCard({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
-  const glow =
-    accent?.includes('emerald') ? 'emerald' : accent?.includes('gold') || accent?.includes('amber') ? 'gold' : 'none';
+function StatCard({
+  label,
+  value,
+  accent
+}: {
+  label: string;
+  value: number | string;
+  accent?: string;
+}) {
+  const glow = accent?.includes('emerald')
+    ? 'emerald'
+    : accent?.includes('gold') || accent?.includes('amber')
+      ? 'gold'
+      : 'none';
   return (
     <GlassPanel glow={glow} className="border-white/10 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{label}</p>
-      <p className={`mt-2 font-display text-2xl font-semibold tabular-nums ${accent ?? 'text-ivory'}`}>{value}</p>
+      <p
+        className={`mt-2 font-display text-2xl font-semibold tabular-nums ${accent ?? 'text-ivory'}`}
+      >
+        {value}
+      </p>
     </GlassPanel>
   );
 }
@@ -168,9 +201,7 @@ export function AdminPage() {
         setVipDuels(((await vipRes.json()) as { duels: VipDuel[] }).duels);
       }
       if (complianceRes.ok) {
-        setComplianceEvents(
-          ((await complianceRes.json()) as { events: ComplianceEvent[] }).events
-        );
+        setComplianceEvents(((await complianceRes.json()) as { events: ComplianceEvent[] }).events);
       }
     },
     [apiFetch]
@@ -312,7 +343,11 @@ export function AdminPage() {
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string; missing?: string[] };
-        setActionMsg(err.missing?.length ? t('admin.vipNotFound', { list: err.missing.join(', ') }) : t('admin.actionFailed'));
+        setActionMsg(
+          err.missing?.length
+            ? t('admin.vipNotFound', { list: err.missing.join(', ') })
+            : t('admin.actionFailed')
+        );
         return;
       }
       setVipNicknames('');
@@ -344,7 +379,14 @@ export function AdminPage() {
 
   if (!accessToken || (!loading && userRole !== 'SUPERADMIN')) {
     return (
-      <PageShell maxWidth="2xl" back={<Link to="/lobby" className="premium-link text-sm">{t('nav.backLobby')}</Link>}>
+      <PageShell
+        maxWidth="2xl"
+        back={
+          <Link to="/lobby" className="premium-link text-sm">
+            {t('nav.backLobby')}
+          </Link>
+        }
+      >
         <GlassPanel className="border-white/10 p-6 text-muted">
           {!accessToken ? t('auth.signInRequired') : t('admin.forbidden')}
         </GlassPanel>
@@ -371,7 +413,11 @@ export function AdminPage() {
   return (
     <PageShell
       maxWidth="5xl"
-      back={<Link to="/lobby" className="premium-link text-sm">{t('nav.backLobby')}</Link>}
+      back={
+        <Link to="/lobby" className="premium-link text-sm">
+          {t('nav.backLobby')}
+        </Link>
+      }
       eyebrow={t('admin.eyebrow')}
       title={t('admin.dashboardTitle')}
       description={t('admin.dashboardDesc', { count: total })}
@@ -382,7 +428,9 @@ export function AdminPage() {
             key={item.id}
             type="button"
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              tab === item.id ? 'bg-gold/20 text-gold-light ring-1 ring-gold/40' : 'bg-white/5 text-muted hover:text-ivory'
+              tab === item.id
+                ? 'bg-gold/20 text-gold-light ring-1 ring-gold/40'
+                : 'bg-white/5 text-muted hover:text-ivory'
             }`}
             onClick={() => setTab(item.id)}
           >
@@ -392,7 +440,9 @@ export function AdminPage() {
       </div>
 
       {actionMsg ? (
-        <GlassPanel className="mb-4 border-emerald-500/30 p-3 text-sm text-emerald-200">{actionMsg}</GlassPanel>
+        <GlassPanel className="mb-4 border-emerald-500/30 p-3 text-sm text-emerald-200">
+          {actionMsg}
+        </GlassPanel>
       ) : null}
 
       {loading ? (
@@ -405,16 +455,44 @@ export function AdminPage() {
         <div className="flex flex-col gap-8">
           {stats ? (
             <section>
-              <SectionHeader eyebrow={t('admin.statsEyebrow')} title={t('admin.statsTitle')} className="mb-4" />
+              <SectionHeader
+                eyebrow={t('admin.statsEyebrow')}
+                title={t('admin.statsTitle')}
+                className="mb-4"
+              />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 <StatCard label={t('admin.statUsers')} value={stats.totalUsers} />
-                <StatCard label={t('admin.statNew24h')} value={stats.newUsers24h} accent="text-emerald" />
-                <StatCard label={t('admin.statSubscriptions')} value={stats.activeSubscriptions} accent="text-gold-light" />
-                <StatCard label={t('admin.statQueue')} value={stats.waitingQueue} accent="text-amber-300" />
-                <StatCard label={t('admin.statActiveSessions')} value={stats.activeSessions} accent="text-emerald" />
-                <StatCard label={t('admin.statVipPending')} value={stats.pendingVipTables ?? 0} accent="text-gold-light" />
+                <StatCard
+                  label={t('admin.statNew24h')}
+                  value={stats.newUsers24h}
+                  accent="text-emerald"
+                />
+                <StatCard
+                  label={t('admin.statSubscriptions')}
+                  value={stats.activeSubscriptions}
+                  accent="text-gold-light"
+                />
+                <StatCard
+                  label={t('admin.statQueue')}
+                  value={stats.waitingQueue}
+                  accent="text-amber-300"
+                />
+                <StatCard
+                  label={t('admin.statActiveSessions')}
+                  value={stats.activeSessions}
+                  accent="text-emerald"
+                />
+                <StatCard
+                  label={t('admin.statVipPending')}
+                  value={stats.pendingVipTables ?? 0}
+                  accent="text-gold-light"
+                />
                 <StatCard label="Clubs" value={stats.totalClubs} />
-                <StatCard label="Live tables" value={stats.livePrivateTables} accent="text-emerald" />
+                <StatCard
+                  label="Live tables"
+                  value={stats.livePrivateTables}
+                  accent="text-emerald"
+                />
                 <StatCard
                   label="Failed payments (24h)"
                   value={stats.billing?.failedPayments24h ?? 0}
@@ -439,17 +517,28 @@ export function AdminPage() {
             </section>
           ) : null}
           <section>
-            <SectionHeader eyebrow={t('admin.queueEyebrow')} title={t('admin.queueTitle')} className="mb-4" />
+            <SectionHeader
+              eyebrow={t('admin.queueEyebrow')}
+              title={t('admin.queueTitle')}
+              className="mb-4"
+            />
             <GlassPanel className="overflow-hidden border-white/10 p-0">
               {!queue.length ? (
                 <p className="px-4 py-8 text-center text-muted">{t('admin.queueEmpty')}</p>
               ) : (
                 <ul className="divide-y divide-white/5">
                   {queue.map((ticket) => (
-                    <li key={ticket.userId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                    <li
+                      key={ticket.userId}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+                    >
                       <div>
-                        <p className="font-medium text-zinc-100">{ticket.user?.displayName ?? ticket.userId.slice(0, 8)}</p>
-                        <p className="text-xs text-muted">@{ticket.user?.nickname} · {ticket.mode}</p>
+                        <p className="font-medium text-zinc-100">
+                          {ticket.user?.displayName ?? ticket.userId.slice(0, 8)}
+                        </p>
+                        <p className="text-xs text-muted">
+                          @{ticket.user?.nickname} · {ticket.mode}
+                        </p>
                       </div>
                       <Badge variant="gold">{t('admin.inQueue')}</Badge>
                     </li>
@@ -463,20 +552,22 @@ export function AdminPage() {
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <GlassPanel className="border-white/10 p-4">
-              <input
-                className="premium-input mb-3 w-full"
+              <Input
+                className="mb-3"
                 placeholder={t('admin.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void loadCore(search).catch(handleLoadError)}
               />
-              <button
+              <Button
                 type="button"
-                className="premium-btn premium-btn-ghost mb-4 w-full text-sm"
+                variant="ghost"
+                size="md"
+                className="mb-4 w-full"
                 onClick={() => void loadCore(search).catch(handleLoadError)}
               >
                 {t('admin.search')}
-              </button>
+              </Button>
               <ul className="max-h-[480px] divide-y divide-white/5 overflow-y-auto">
                 {users.map((u) => (
                   <li key={u.id}>
@@ -486,7 +577,9 @@ export function AdminPage() {
                       onClick={() => void openUser(u.id)}
                     >
                       <p className="font-medium text-ivory">{u.displayName}</p>
-                      <p className="text-xs text-muted">@{u.nickname} · {u.subscriptionTier ?? 'FREE'}</p>
+                      <p className="text-xs text-muted">
+                        @{u.nickname} · {u.subscriptionTier ?? 'FREE'}
+                      </p>
                     </button>
                   </li>
                 ))}
@@ -496,22 +589,55 @@ export function AdminPage() {
           <div className="lg:col-span-3">
             {selected ? (
               <GlassPanel className="border-white/10 p-5">
-                <SectionHeader title={selected.displayName} description={`@${selected.nickname} · ${selected.email}`} />
+                <SectionHeader
+                  title={selected.displayName}
+                  description={`@${selected.nickname} · ${selected.email}`}
+                />
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-subtle">{t('admin.chips')}</span><p className="font-semibold">{selected.chips.toLocaleString()}</p></div>
-                  <div><span className="text-subtle">{t('admin.level')}</span><p className="font-semibold">{selected.level} · {selected.xp} XP</p></div>
-                  <div><span className="text-subtle">{t('admin.subscription')}</span><p className="font-semibold">{selected.subscription?.tier ?? 'FREE'}</p></div>
-                  <div><span className="text-subtle">{t('admin.gamesPlayed')}</span><p className="font-semibold">{selected.stats.gamesPlayed}</p></div>
-                  <div><span className="text-subtle">{t('admin.gamesWon')}</span><p className="font-semibold text-emerald">{selected.stats.gamesWon}</p></div>
-                  <div><span className="text-subtle">{t('admin.gamesLost')}</span><p className="font-semibold">{selected.stats.gamesLost}</p></div>
-                  <div><span className="text-subtle">{t('admin.role')}</span><p className="font-semibold">{selected.role}</p></div>
-                  <div><span className="text-subtle">{t('admin.inventory')}</span><p className="font-semibold">{selected.inventory.length} {t('admin.items')}</p></div>
+                  <div>
+                    <span className="text-subtle">{t('admin.chips')}</span>
+                    <p className="font-semibold">{selected.chips.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-subtle">{t('admin.level')}</span>
+                    <p className="font-semibold">
+                      {selected.level} · {selected.xp} XP
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-subtle">{t('admin.subscription')}</span>
+                    <p className="font-semibold">{selected.subscription?.tier ?? 'FREE'}</p>
+                  </div>
+                  <div>
+                    <span className="text-subtle">{t('admin.gamesPlayed')}</span>
+                    <p className="font-semibold">{selected.stats.gamesPlayed}</p>
+                  </div>
+                  <div>
+                    <span className="text-subtle">{t('admin.gamesWon')}</span>
+                    <p className="font-semibold text-emerald">{selected.stats.gamesWon}</p>
+                  </div>
+                  <div>
+                    <span className="text-subtle">{t('admin.gamesLost')}</span>
+                    <p className="font-semibold">{selected.stats.gamesLost}</p>
+                  </div>
+                  <div>
+                    <span className="text-subtle">{t('admin.role')}</span>
+                    <p className="font-semibold">{selected.role}</p>
+                  </div>
+                  <div>
+                    <span className="text-subtle">{t('admin.inventory')}</span>
+                    <p className="font-semibold">
+                      {selected.inventory.length} {t('admin.items')}
+                    </p>
+                  </div>
                 </div>
                 <section className="mt-6 space-y-3 border-t border-white/10 pt-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('admin.grantSubscription')}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">
+                    {t('admin.grantSubscription')}
+                  </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <select
-                      className="premium-input text-sm"
+                      className={selectClassName}
                       value={grantTier}
                       onChange={(e) => setGrantTier(e.target.value as PaidSubscriptionTier)}
                     >
@@ -522,69 +648,111 @@ export function AdminPage() {
                       ))}
                     </select>
                     <label className="flex items-center gap-1 text-xs text-muted">
-                      <input type="checkbox" checked={grantLifetime} onChange={(e) => setGrantLifetime(e.target.checked)} />
+                      <input
+                        type="checkbox"
+                        checked={grantLifetime}
+                        onChange={(e) => setGrantLifetime(e.target.checked)}
+                      />
                       {t('admin.lifetime')}
                     </label>
-                    <button
+                    <Button
                       type="button"
                       disabled={busy}
-                      className="premium-btn premium-btn-primary text-xs"
-                      onClick={() => void grantAction('/subscription', { tier: grantTier, lifetime: grantLifetime })}
+                      variant="primary"
+                      size="sm"
+                      onClick={() =>
+                        void grantAction('/subscription', {
+                          tier: grantTier,
+                          lifetime: grantLifetime
+                        })
+                      }
                     >
                       {t('admin.grantSub')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       disabled={busy}
-                      className="premium-btn premium-btn-ghost text-xs"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => void grantAction('/subscription/revoke', {})}
                     >
                       {t('admin.revokeSub')}
-                    </button>
+                    </Button>
                   </div>
                 </section>
                 <section className="mt-4 space-y-3 border-t border-white/10 pt-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('admin.grantExtras')}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">
+                    {t('admin.grantExtras')}
+                  </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <input
+                    <Input
                       type="number"
-                      className="premium-input w-32 text-sm"
+                      className="w-32 text-sm"
                       value={grantChips}
                       onChange={(e) => setGrantChips(Number(e.target.value))}
                     />
-                    <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/chips', { chips: grantChips })}>
-                      {t('admin.grantChips')}
-                    </button>
-                    <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/cosmetics', { grantAll: true })}>
-                      {t('admin.grantCosmetics')}
-                    </button>
-                    <button
+                    <Button
                       type="button"
                       disabled={busy}
-                      className="premium-btn premium-btn-ghost text-xs"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void grantAction('/chips', { chips: grantChips })}
+                    >
+                      {t('admin.grantChips')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={busy}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void grantAction('/cosmetics', { grantAll: true })}
+                    >
+                      {t('admin.grantCosmetics')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={busy}
+                      variant="ghost"
+                      size="sm"
                       onClick={() => void grantAction('/cosmetics/tier', { tier: grantTier })}
                     >
                       {t('admin.grantTierCosmetics')}
-                    </button>
+                    </Button>
                     {selected.role !== 'SUPERADMIN' ? (
-                      <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/role', { role: 'SUPERADMIN' })}>
+                      <Button
+                        type="button"
+                        disabled={busy}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void grantAction('/role', { role: 'SUPERADMIN' })}
+                      >
                         {t('admin.makeAdmin')}
-                      </button>
+                      </Button>
                     ) : selected.id !== userId ? (
-                      <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantAction('/role', { role: 'USER' })}>
+                      <Button
+                        type="button"
+                        disabled={busy}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void grantAction('/role', { role: 'USER' })}
+                      >
                         {t('admin.demoteAdmin')}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </section>
                 {selected.clubsOwned?.length ? (
                   <section className="mt-4 space-y-3 border-t border-white/10 pt-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('admin.clubsOwned')}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">
+                      {t('admin.clubsOwned')}
+                    </p>
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <select
-                        className="premium-input text-sm"
+                        className={selectClassName}
                         value={clubPlanTier}
-                        onChange={(e) => setClubPlanTier(e.target.value as (typeof ORGANIZER_TIERS)[number])}
+                        onChange={(e) =>
+                          setClubPlanTier(e.target.value as (typeof ORGANIZER_TIERS)[number])
+                        }
                       >
                         {ORGANIZER_TIERS.map((tier) => (
                           <option key={tier} value={tier}>
@@ -593,29 +761,49 @@ export function AdminPage() {
                         ))}
                       </select>
                       <label className="flex items-center gap-1 text-xs text-muted">
-                        <input type="checkbox" checked={clubPlanLifetime} onChange={(e) => setClubPlanLifetime(e.target.checked)} />
+                        <input
+                          type="checkbox"
+                          checked={clubPlanLifetime}
+                          onChange={(e) => setClubPlanLifetime(e.target.checked)}
+                        />
                         {t('admin.lifetime')}
                       </label>
                     </div>
                     <ul className="space-y-2 text-sm">
                       {selected.clubsOwned.map((club) => (
-                        <li key={club.id} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                        <li
+                          key={club.id}
+                          className="rounded-lg border border-white/10 bg-black/20 px-3 py-2"
+                        >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
                               <p className="font-medium text-ivory">{club.name}</p>
                               <p className="text-xs text-muted">
-                                {club.organizerTier} · {club.members}/{club.limits.maxMembers} {t('admin.members')} ·{' '}
-                                {club.activeTables}/{club.limits.maxActiveTables} {t('admin.tables')}
+                                {club.organizerTier} · {club.members}/{club.limits.maxMembers}{' '}
+                                {t('admin.members')} · {club.activeTables}/
+                                {club.limits.maxActiveTables} {t('admin.tables')}
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void grantClubPlan(club.id)}>
+                              <Button
+                                type="button"
+                                disabled={busy}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void grantClubPlan(club.id)}
+                              >
                                 {t('admin.applyClubPlan')}
-                              </button>
+                              </Button>
                               {club.organizerTier !== 'BASIC' ? (
-                                <button type="button" disabled={busy} className="premium-btn premium-btn-ghost text-xs" onClick={() => void revokeClubPlan(club.id)}>
+                                <Button
+                                  type="button"
+                                  disabled={busy}
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => void revokeClubPlan(club.id)}
+                                >
                                   {t('admin.revokeClubPlan')}
-                                </button>
+                                </Button>
                               ) : null}
                             </div>
                           </div>
@@ -626,7 +814,9 @@ export function AdminPage() {
                 ) : null}
               </GlassPanel>
             ) : (
-              <GlassPanel className="border-white/10 p-8 text-center text-muted">{t('admin.selectPlayer')}</GlassPanel>
+              <GlassPanel className="border-white/10 p-8 text-center text-muted">
+                {t('admin.selectPlayer')}
+              </GlassPanel>
             )}
           </div>
         </div>
@@ -641,21 +831,27 @@ export function AdminPage() {
           ) : (
             <ul className="divide-y divide-white/5">
               {complianceEvents.map((ev) => (
-                <li key={ev.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                <li
+                  key={ev.id}
+                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+                >
                   <div>
-                    <Badge variant={ev.severity === 'HIGH' ? 'rose' : 'default'}>{ev.severity}</Badge>
+                    <Badge variant={ev.severity === 'HIGH' ? 'rose' : 'default'}>
+                      {ev.severity}
+                    </Badge>
                     <span className="ml-2 text-ivory">{ev.type}</span>
                     <p className="text-xs text-muted">
                       {ev.club?.name ?? 'Platform'} · {new Date(ev.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <button
+                  <Button
                     type="button"
-                    className="premium-btn premium-btn-ghost text-xs"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => void resolveCompliance(ev.id)}
                   >
                     Resolve
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -664,21 +860,42 @@ export function AdminPage() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <GlassPanel className="border-white/10 p-5">
-            <SectionHeader eyebrow={t('admin.vipEyebrow')} title={t('admin.vipTitle')} description={t('admin.vipDesc')} className="mb-4" />
+            <SectionHeader
+              eyebrow={t('admin.vipEyebrow')}
+              title={t('admin.vipTitle')}
+              description={t('admin.vipDesc')}
+              className="mb-4"
+            />
             <label className="mb-2 block text-xs text-subtle">{t('admin.vipNicknames')}</label>
-            <textarea
-              className="premium-input mb-3 min-h-[80px] w-full"
+            <Textarea
+              className="mb-3 min-h-[80px]"
               placeholder="@player1, @player2"
               value={vipNicknames}
               onChange={(e) => setVipNicknames(e.target.value)}
             />
             <label className="mb-2 block text-xs text-subtle">{t('admin.vipMessage')}</label>
-            <input className="premium-input mb-3 w-full" value={vipMessage} onChange={(e) => setVipMessage(e.target.value)} />
+            <Input
+              className="mb-3"
+              value={vipMessage}
+              onChange={(e) => setVipMessage(e.target.value)}
+            />
             <label className="mb-2 block text-xs text-subtle">{t('admin.vipBuyIn')}</label>
-            <input type="number" className="premium-input mb-4 w-full" value={vipBuyIn} onChange={(e) => setVipBuyIn(Number(e.target.value))} />
-            <button type="button" disabled={busy} className="premium-btn premium-btn-primary w-full" onClick={() => void createVipTable()}>
+            <Input
+              type="number"
+              className="mb-4"
+              value={vipBuyIn}
+              onChange={(e) => setVipBuyIn(Number(e.target.value))}
+            />
+            <Button
+              type="button"
+              disabled={busy}
+              variant="primary"
+              size="md"
+              className="w-full"
+              onClick={() => void createVipTable()}
+            >
               {t('admin.vipSend')}
-            </button>
+            </Button>
           </GlassPanel>
           <GlassPanel className="border-white/10 p-0">
             <div className="border-b border-white/5 px-4 py-3">
@@ -692,19 +909,37 @@ export function AdminPage() {
                   const accepted = duel.invites.filter((i) => i.status === 'ACCEPTED').length;
                   return (
                     <li key={duel.id} className="px-4 py-4 text-sm">
-                      <p className="font-medium text-ivory">{duel.mode} · {duel.buyIn} · {duel.status}</p>
-                      <p className="text-xs text-muted">{accepted}/{duel.invites.length} {t('admin.vipAccepted')}</p>
+                      <p className="font-medium text-ivory">
+                        {duel.mode} · {duel.buyIn} · {duel.status}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {accepted}/{duel.invites.length} {t('admin.vipAccepted')}
+                      </p>
                       <ul className="mt-2 space-y-1 text-xs text-subtle">
                         {duel.invites.map((i) => (
-                          <li key={i.userId}>@{i.user.nickname} — {i.status}</li>
+                          <li key={i.userId}>
+                            @{i.user.nickname} — {i.status}
+                          </li>
                         ))}
                       </ul>
                       {duel.status === 'PENDING' ? (
-                        <button type="button" disabled={busy || accepted < 2} className="premium-btn premium-btn-primary mt-3 text-xs" onClick={() => void startVip(duel.id)}>
+                        <Button
+                          type="button"
+                          disabled={busy || accepted < 2}
+                          variant="primary"
+                          size="sm"
+                          className="mt-3"
+                          onClick={() => void startVip(duel.id)}
+                        >
                           {t('admin.vipStart')}
-                        </button>
+                        </Button>
                       ) : duel.sessionId ? (
-                        <Link to={`/table/${duel.sessionId}`} className="premium-link mt-3 inline-block text-xs">{t('admin.openTable')}</Link>
+                        <Link
+                          to={`/table/${duel.sessionId}`}
+                          className="premium-link mt-3 inline-block text-xs"
+                        >
+                          {t('admin.openTable')}
+                        </Link>
                       ) : null}
                     </li>
                   );

@@ -3,8 +3,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useReducedMotion } from 'framer-motion';
 import { Button, GlassPanel, LoadingSkeleton, PageShell } from '@duopoker/ui-kit';
-import type { EquippedCosmetics, PlayerAction, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
-import { GHOST_BOARD_MIN_TIER, JOKER_TOTAL_HANDS, NEXT_HAND_DELAY_MS, defaultEquipped, tierMeetsRequirement } from '@duopoker/shared-types';
+import type {
+  EquippedCosmetics,
+  PlayerAction,
+  SessionState,
+  SubscriptionTier
+} from '@duopoker/shared-types/index';
+import {
+  GHOST_BOARD_MIN_TIER,
+  JOKER_TOTAL_HANDS,
+  NEXT_HAND_DELAY_MS,
+  defaultEquipped,
+  tierMeetsRequirement
+} from '@duopoker/shared-types';
 import type { TablePlayerVisual } from '../components/PokerTable3D';
 import { TableLayoutRouter } from '../components/table/layouts/TableLayoutRouter';
 import { TableChatDrawer } from '../components/table/chat/TableChatDrawer';
@@ -12,7 +23,12 @@ import { useCommunityCardSounds, useTableGameFeed } from '../hooks/useTableGameF
 import { useTableAnimationQueue } from '../hooks/useTableAnimationQueue';
 import { useTableDisplayState } from '../hooks/useTableDisplayState';
 import { useTableSessionTick } from '../hooks/useTableSessionTick';
-import { loadTableMusicPref, loadTableSfxPref, saveTableSfxPref, useTableMusic } from '../hooks/useTableMusic';
+import {
+  loadTableMusicPref,
+  loadTableSfxPref,
+  saveTableSfxPref,
+  useTableMusic
+} from '../hooks/useTableMusic';
 import { saveTableMusicPref } from '../lib/table-music';
 import { useAppStore } from '../store/useAppStore';
 import { usesRealtimeSocket } from '../config/api';
@@ -79,7 +95,7 @@ export const Table = () => {
 
   useEffect(() => {
     if (!userId) return;
-    const heroName = nickname ? `@${nickname}` : (displayName || userId.slice(0, 8));
+    const heroName = nickname ? `@${nickname}` : displayName || userId.slice(0, 8);
     setPlayerProfiles((prev) => ({
       ...prev,
       [userId]: {
@@ -158,9 +174,13 @@ export const Table = () => {
       if (document.visibilityState !== 'visible' || !routeSessionId || tableVoluntaryLeave) return;
       connect();
       if (usesRealtimeSocket()) {
-        useAppStore.getState().socket?.emit('reconnectSession', { sessionId: routeSessionId });
+        useAppStore
+          .getState()
+          .socket?.emit('reconnectSession', { sessionId: routeSessionId, userId });
       } else {
-        void useAppStore.getState().apiFetch(`/game/session/${encodeURIComponent(routeSessionId)}`)
+        void useAppStore
+          .getState()
+          .apiFetch(`/game/session/${encodeURIComponent(routeSessionId)}`)
           .then((r) => (r.ok ? r.json() : null))
           .then((data: { session?: SessionState } | null) => {
             if (data?.session) useAppStore.setState({ session: data.session });
@@ -220,13 +240,20 @@ export const Table = () => {
     [label, t]
   );
 
-  const viewSession = useTableDisplayState(session, userId, formatDisplayAction, reduceMotion) ?? session;
+  const viewSession =
+    useTableDisplayState(session, userId, formatDisplayAction, reduceMotion) ?? session;
 
-  const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(viewSession, label, t, soundOn, {
-    actionSounds: false,
-    handSounds: false,
-    streetSounds: false
-  });
+  const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(
+    viewSession,
+    label,
+    t,
+    soundOn,
+    {
+      actionSounds: false,
+      handSounds: false,
+      streetSounds: false
+    }
+  );
   const { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers } =
     useTableAnimationQueue(session, userId, label, t, soundOn, reduceMotion);
   useCommunityCardSounds(viewSession?.communityCards?.length ?? 0, false);
@@ -320,7 +347,6 @@ export const Table = () => {
     resumeTable();
     if (usesRealtimeSocket()) {
       joinSession(routeSessionId, mode);
-      socket?.emit('reconnectSession', { sessionId: routeSessionId });
       return;
     }
     void joinSession(routeSessionId, mode);
@@ -328,7 +354,16 @@ export const Table = () => {
     return () => {
       if (!useAppStore.getState().tableMinimized) stopPolling();
     };
-  }, [routeSessionId, tableVoluntaryLeave, joinSession, pollSession, stopPolling, mode, socket, resumeTable]);
+  }, [
+    routeSessionId,
+    tableVoluntaryLeave,
+    joinSession,
+    pollSession,
+    stopPolling,
+    mode,
+    socket,
+    resumeTable
+  ]);
 
   const raiseBounds = useMemo(() => {
     if (!session || session.mode === 'JOKER' || !userId) {
@@ -351,7 +386,13 @@ export const Table = () => {
     setRaiseAmount((v) =>
       Math.min(raiseBounds.maxTotal, Math.max(raiseBounds.minTotal, v || raiseBounds.minTotal))
     );
-  }, [session?.handNumber, session?.street, raiseBounds.minTotal, raiseBounds.maxTotal, session?.mode]);
+  }, [
+    session?.handNumber,
+    session?.street,
+    raiseBounds.minTotal,
+    raiseBounds.maxTotal,
+    session?.mode
+  ]);
 
   useEffect(() => {
     if (session?.mode === 'JOKER') setJokerBid(0);
@@ -418,6 +459,32 @@ export const Table = () => {
     return () => window.clearTimeout(timer);
   }, [matchRoute, session, routeSessionId, tableVoluntaryLeave]);
 
+  const tableViewForHooks = viewSession ?? session;
+  const lastActionText = useMemo(() => {
+    const log = session?.actionLog;
+    if (!log?.length) return undefined;
+    return formatDisplayAction(log[log.length - 1]);
+  }, [session?.actionLog, formatDisplayAction]);
+  const isPreflopMuckWin =
+    session?.street === 'COMPLETE' &&
+    session.mode === 'HOLDEM' &&
+    (session.communityCards?.length ?? 0) === 0;
+  const holdemHandRankLine = useMemo(
+    () =>
+      tableViewForHooks && !isPreflopMuckWin
+        ? holdemShowdownHandLines(tableViewForHooks, label, t)
+        : undefined,
+    [isPreflopMuckWin, tableViewForHooks, label, t]
+  );
+  const holdemSidePotLine = useMemo(
+    () => (tableViewForHooks ? holdemSidePotSummary(tableViewForHooks, t) : undefined),
+    [tableViewForHooks, t]
+  );
+  const holdemSidePotList = useMemo(
+    () => (tableViewForHooks ? holdemSidePotAmounts(tableViewForHooks) : []),
+    [tableViewForHooks]
+  );
+
   if (!routeSessionId) {
     return (
       <PageShell maxWidth="lg">
@@ -454,7 +521,7 @@ export const Table = () => {
     );
   }
 
-  const tableView = viewSession ?? session;
+  const tableView = tableViewForHooks ?? session;
 
   const leaderboardEntries = session ? buildTableLeaderboard(session) : [];
   const leaderboardProfiles = Object.fromEntries(
@@ -468,11 +535,7 @@ export const Table = () => {
       }
     ])
   );
-  const matchLeaderNames = session
-    ? leaderboardLeaders(session)
-        .map(label)
-        .join(', ')
-    : '';
+  const matchLeaderNames = session ? leaderboardLeaders(session).map(label).join(', ') : '';
 
   const need = amountToCall(session, userId);
   const myTurn = activeId === userId && session.street !== 'LOBBY' && session.street !== 'COMPLETE';
@@ -505,20 +568,23 @@ export const Table = () => {
 
   const kettle =
     session.pot +
-    Object.values(session.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
+    Object.values(session.playerRoundBet ?? {}).reduce(
+      (s, v) => s + (typeof v === 'number' ? v : 0),
+      0
+    );
   const { minTotal, maxTotal, canRaise, roundBet } = raiseBounds;
   const halfPotRaise = Math.max(
     minTotal,
     need > 0 ? roundBet + need + Math.floor(kettle / 2) : roundBet + Math.floor(kettle / 2)
   );
-  const potRaise = Math.max(
-    minTotal,
-    need > 0 ? roundBet + need + kettle : roundBet + kettle
-  );
+  const potRaise = Math.max(minTotal, need > 0 ? roundBet + need + kettle : roundBet + kettle);
   const holeCards = session.playerCards[userId] ?? [];
   const viewKettle =
     tableView.pot +
-    Object.values(tableView.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
+    Object.values(tableView.playerRoundBet ?? {}).reduce(
+      (s, v) => s + (typeof v === 'number' ? v : 0),
+      0
+    );
 
   const jokerBoardCards =
     tableView.mode !== 'JOKER'
@@ -529,7 +595,8 @@ export const Table = () => {
   const jokerBoardKeys =
     tableView.mode === 'JOKER' && tableView.street === 'TRICKS' && tableView.joker
       ? tableView.joker.currentTrick.map(
-          (p, i) => `h${tableView.handNumber}-trick-${tableView.joker!.trickNumber}-${p.userId}-${i}`
+          (p, i) =>
+            `h${tableView.handNumber}-trick-${tableView.joker!.trickNumber}-${p.userId}-${i}`
         )
       : tableView.mode !== 'JOKER'
         ? (tableView.communityCards ?? []).map((c, i) => `h${tableView.handNumber}-board-${c}-${i}`)
@@ -537,33 +604,18 @@ export const Table = () => {
   const activeLabel = activeId
     ? `${label(activeId)}${activeId === userId ? ` ${t('table.you')}` : ''}`
     : '—';
-  const lastActionText = useMemo(() => {
-    const log = session?.actionLog;
-    if (!log?.length) return undefined;
-    return formatDisplayAction(log[log.length - 1]);
-  }, [session?.actionLog, formatDisplayAction]);
   const winnerNames = (tableView.winners ?? []).map(label).join(', ') || '—';
   const holdemPayoutSummary =
     !isJoker && tableView.winnersShare
       ? (tableView.winners ?? [])
           .map((uid) =>
-            t('table.feedWinnerShare', { name: label(uid), amount: tableView.winnersShare![uid] ?? 0 })
+            t('table.feedWinnerShare', {
+              name: label(uid),
+              amount: tableView.winnersShare![uid] ?? 0
+            })
           )
           .join(' · ')
       : undefined;
-  const isPreflopMuckWin =
-    session.street === 'COMPLETE' &&
-    session.mode === 'HOLDEM' &&
-    (session.communityCards?.length ?? 0) === 0;
-  const holdemHandRankLine = useMemo(
-    () => (isPreflopMuckWin ? undefined : holdemShowdownHandLines(tableView, label, t)),
-    [isPreflopMuckWin, tableView, label, t]
-  );
-  const holdemSidePotLine = useMemo(
-    () => holdemSidePotSummary(tableView, t),
-    [tableView, t]
-  );
-  const holdemSidePotList = useMemo(() => holdemSidePotAmounts(tableView), [tableView]);
   const jokerHandSummary =
     isJoker && session.joker?.handPoints
       ? session.players
@@ -577,7 +629,9 @@ export const Table = () => {
       : undefined;
   const hasGhostBoard = (session.ghostCommunityCards?.length ?? 0) === 5;
   const canPeekGhostBoard =
-    isPreflopMuckWin && hasGhostBoard && tierMeetsRequirement(subscriptionTier, GHOST_BOARD_MIN_TIER);
+    isPreflopMuckWin &&
+    hasGhostBoard &&
+    tierMeetsRequirement(subscriptionTier, GHOST_BOARD_MIN_TIER);
   const showGhostUpsell =
     isPreflopMuckWin && !tierMeetsRequirement(subscriptionTier, GHOST_BOARD_MIN_TIER);
 

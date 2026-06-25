@@ -68,7 +68,11 @@ type AppStore = {
   refreshAccessToken: () => Promise<boolean>;
   connect: () => void;
   apiFetch: (path: string, init?: RequestInit) => Promise<Response>;
-  queue: () => Promise<{ status: 'waiting' | 'matched' | 'error'; sessionId?: string; message?: string }>;
+  queue: () => Promise<{
+    status: 'waiting' | 'matched' | 'error';
+    sessionId?: string;
+    message?: string;
+  }>;
   pollQueueStatus: () => Promise<{
     status: 'idle' | 'waiting' | 'matched' | 'error';
     sessionId?: string;
@@ -84,7 +88,11 @@ type AppStore = {
     amount?: number;
     card?: string;
     trumpSuit?: 'S' | 'H' | 'D' | 'C' | null;
-    declaration?: 'nominal' | 'senior' | 'minor' | { suit: 'S' | 'H' | 'D' | 'C'; rankMode: 'senior' | 'minor' };
+    declaration?:
+      | 'nominal'
+      | 'senior'
+      | 'minor'
+      | { suit: 'S' | 'H' | 'D' | 'C'; rankMode: 'senior' | 'minor' };
   }) => Promise<void>;
   readyNextHand: () => Promise<void>;
   leaveTable: (sessionId: string) => Promise<{ ok: boolean; reason?: string }>;
@@ -333,7 +341,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
       socket.on('leftTable', () => {
         get().stopPolling();
-        set({ tableVoluntaryLeave: true, tableMinimized: false, session: undefined, sessionError: undefined });
+        set({
+          tableVoluntaryLeave: true,
+          tableMinimized: false,
+          session: undefined,
+          sessionError: undefined
+        });
         if (typeof window !== 'undefined' && window.location.pathname.startsWith('/table/')) {
           window.location.replace('/lobby');
         }
@@ -368,7 +381,7 @@ export const useAppStore = create<AppStore>((set, get) => {
           !get().tableMinimized
         )
           return;
-        socket.emit('reconnectSession', { sessionId: sid });
+        socket.emit('reconnectSession', { sessionId: sid, userId: get().userId });
       });
       set({ socket });
     },
@@ -600,7 +613,12 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
     clearTableSession: () => {
       get().stopPolling();
-      set({ tableVoluntaryLeave: true, tableMinimized: false, session: undefined, sessionError: undefined });
+      set({
+        tableVoluntaryLeave: true,
+        tableMinimized: false,
+        session: undefined,
+        sessionError: undefined
+      });
     },
     minimizeTable: () => {
       const sid = get().session?.sessionId;
@@ -616,7 +634,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       get().stopPolling();
       set({ tableVoluntaryLeave: true, tableMinimized: false });
       const clearLocal = () =>
-        set({ tableVoluntaryLeave: true, tableMinimized: false, session: undefined, sessionError: undefined });
+        set({
+          tableVoluntaryLeave: true,
+          tableMinimized: false,
+          session: undefined,
+          sessionError: undefined
+        });
       if (usesRealtimeSocket()) {
         get().connect();
         get().socket?.emit('leaveTable', { sessionId, userId: get().userId });
@@ -864,9 +887,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       window.location.href = data.confirmationUrl;
     },
     addClubMember: async (clubId, query) => {
-      const body = query.startsWith('@') || !query.includes('-')
-        ? { nickname: query.replace(/^@/, '') }
-        : { userId: query };
+      const body =
+        query.startsWith('@') || !query.includes('-')
+          ? { nickname: query.replace(/^@/, '') }
+          : { userId: query };
       const res = await get().apiFetch(`/clubs/${clubId}/members`, {
         method: 'POST',
         body: JSON.stringify(body)
@@ -886,9 +910,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       return (await res.json()) as { table: { id: string } };
     },
     inviteToTable: async (clubId, tableId, query) => {
-      const body = query.startsWith('@') || !query.includes('-')
-        ? { nickname: query.replace(/^@/, '') }
-        : { userId: query };
+      const body =
+        query.startsWith('@') || !query.includes('-')
+          ? { nickname: query.replace(/^@/, '') }
+          : { userId: query };
       const res = await get().apiFetch(`/clubs/${clubId}/private-tables/${tableId}/invite`, {
         method: 'POST',
         body: JSON.stringify(body)
@@ -979,7 +1004,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       try {
         const res = await get().apiFetch('/game/vip-invites');
         if (!res.ok) return;
-        const data = (await res.json()) as { invites: VipInvite[]; liveSession: VipLiveSession | null };
+        const data = (await res.json()) as {
+          invites: VipInvite[];
+          liveSession: VipLiveSession | null;
+        };
         set({ vipInvites: data.invites ?? [], vipLiveSession: data.liveSession ?? null });
       } catch {
         /* ignore */
@@ -1022,9 +1050,12 @@ export const useAppStore = create<AppStore>((set, get) => {
       return data;
     },
     declineTableInvite: async (seatId) => {
-      const res = await get().apiFetch(`/game/table-invites/${encodeURIComponent(seatId)}/decline`, {
-        method: 'POST'
-      });
+      const res = await get().apiFetch(
+        `/game/table-invites/${encodeURIComponent(seatId)}/decline`,
+        {
+          method: 'POST'
+        }
+      );
       if (!res.ok) throw new Error('decline failed');
       await get().fetchTableInvites();
     }

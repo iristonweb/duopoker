@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppBackground, GlassPanel } from '@duopoker/ui-kit';
 import { motion } from 'framer-motion';
 import { useViewportHeight } from '../../../../hooks/useViewportHeight';
 import { formatTableError, useTableChat } from '@duopoker/table-client';
 import { useAppStore } from '../../../../store/useAppStore';
 import { useTableFullscreen } from '../../../../hooks/useTableFullscreen';
+import { useTableDockHeight } from '../../../../hooks/useTableDockHeight';
 import { loadTableImmersivePref, saveTableImmersivePref } from '../../../../lib/table-layout-prefs';
 import { notifyTableLayoutPrefChange } from '../../../../hooks/useTableLayoutMode';
 import { HandResultOverlay } from '../../HandResultOverlay';
@@ -27,6 +28,22 @@ import type { TableLayoutProps } from '../table-layout-types';
 
 export function MobileImmersiveTableLayout(p: TableLayoutProps) {
   useViewportHeight();
+  const dockRef = useRef<HTMLElement | null>(null);
+  const bottomStackVars = useCallback(
+    (height: string) => ({
+      '--mobile-table-bottom-clearance': `calc(${height} + var(--mobile-hero-card-height, 7.75rem) + 0.75rem)`,
+      '--mobile-hero-card-bottom': `calc(${height} + 0.5rem)`
+    }),
+    []
+  );
+  useTableDockHeight(dockRef, {
+    cssVar: '--mobile-table-dock-height',
+    fallback: '6.875rem',
+    extraVars: bottomStackVars
+  });
+  const setDockNode = useCallback((node: HTMLElement | null) => {
+    dockRef.current = node;
+  }, []);
   const socket = useAppStore((s) => s.socket);
   const apiFetch = useAppStore((s) => s.apiFetch);
   const chat = useTableChat(p.sessionId, socket, {
@@ -46,8 +63,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
   const streetLabel = p.tableView.street
     ? p.t(`table.street.${p.tableView.street}`, { defaultValue: p.tableView.street })
     : null;
-  const potLabel =
-    p.tableView.mode === 'JOKER' ? p.t('table.jokerPoolLabel') : p.t('table.pot');
+  const potLabel = p.tableView.mode === 'JOKER' ? p.t('table.jokerPoolLabel') : p.t('table.pot');
   const heroStack = p.session.stacks[p.userId] ?? 0;
   const profile = profileUserId ? p.playerProfiles[profileUserId] : null;
 
@@ -61,7 +77,10 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
   return (
     <div
       data-testid="mobile-immersive-table"
-      className="relative flex h-[calc(var(--app-vh,1vh)*100)] min-h-[100svh] w-full flex-col overflow-hidden overscroll-none"
+      className="relative flex h-[calc(var(--app-vh,1vh)*100)] min-h-0 w-full flex-col overflow-hidden overscroll-none"
+      style={{
+        ['--mobile-hero-card-height' as string]: '7.75rem'
+      }}
     >
       <MobilePerformanceLayer active />
       <AppBackground />
@@ -109,6 +128,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
         activeUserId={p.session.players[p.session.activePlayerIndex]}
         onAvatarTap={setProfileUserId}
         reduceMotion={p.reduceMotion}
+        className="pb-[var(--mobile-table-bottom-clearance,15.375rem)]"
       />
 
       <HandResultOverlay
@@ -121,7 +141,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
         summaryText={
           p.isJoker && p.jokerHandSummary
             ? p.t('table.jokerHandSummary', { summary: p.jokerHandSummary })
-            : p.holdemPayoutSummary ?? undefined
+            : (p.holdemPayoutSummary ?? undefined)
         }
         handRankLine={p.holdemHandRankLine}
         sidePotLine={p.holdemSidePotLine}
@@ -180,7 +200,10 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
 
       {p.waitingForPlayers ? (
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/50 px-6">
-          <GlassPanel glow="emerald" className="pointer-events-auto max-w-sm border-emerald/20 p-6 text-center">
+          <GlassPanel
+            glow="emerald"
+            className="pointer-events-auto max-w-sm border-emerald/20 p-6 text-center"
+          >
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
@@ -202,11 +225,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
         onLeave={p.onLeaveTable}
       />
 
-      <MobileHeroCardFan
-        cards={p.holeCards}
-        deckId={p.equipped.deck}
-        className={p.session.mode === 'JOKER' ? 'mb-[9rem]' : 'mb-[5.5rem]'}
-      />
+      <MobileHeroCardFan cards={p.holeCards} deckId={p.equipped.deck} />
 
       {p.session.mode === 'JOKER' && p.session.joker ? (
         <MobileJokerActionDock
@@ -238,6 +257,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
           menuLabel={p.t('table.mobile.menu')}
           stack={heroStack}
           stackLabel={p.t('table.stack')}
+          dockRef={setDockNode}
         />
       ) : (
         <MobileActionDock
@@ -267,6 +287,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
           chatLabel={p.t('table.mobile.chat')}
           menuLabel={p.t('table.mobile.menu')}
           t={p.t}
+          dockRef={setDockNode}
         />
       )}
 
@@ -294,9 +315,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
         onMusicToggle={p.onMusicToggle}
         onHistoryOpen={() => setHistoryOpen(true)}
         onLeaderboardOpen={() => p.onLeaderboardOpenChange(true)}
-        onNotebookOpen={
-          p.session.mode === 'JOKER' ? () => setNotebookOpen(true) : undefined
-        }
+        onNotebookOpen={p.session.mode === 'JOKER' ? () => setNotebookOpen(true) : undefined}
         notebookLabel={p.session.mode === 'JOKER' ? p.t('table.notebookOpen') : undefined}
         onImmersiveToggle={toggleImmersive}
         immersiveOn={immersiveOn}

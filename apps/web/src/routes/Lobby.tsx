@@ -53,15 +53,17 @@ function PushNotifyPrompt() {
   const { supported, permission, vapidConfigured, busy, subscribe } = usePushNotifications();
   if (!supported || permission === 'granted' || vapidConfigured === false) return null;
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       data-testid="lobby-enable-push"
       disabled={busy}
-      className="premium-btn premium-btn-ghost w-full text-xs uppercase tracking-[0.28em]"
+      className="w-full uppercase tracking-[0.28em]"
       onClick={() => void subscribe()}
     >
       {t('lobby.enablePush')}
-    </button>
+    </Button>
   );
 }
 
@@ -88,7 +90,12 @@ type CatalogSub = {
   stripePriceId?: string;
   imageUrl?: string;
 };
-type CatalogGameMode = { id: 'HOLDEM' | 'JOKER'; title: string; description: string; imageUrl: string };
+type CatalogGameMode = {
+  id: 'HOLDEM' | 'JOKER';
+  title: string;
+  description: string;
+  imageUrl: string;
+};
 
 function AuthPanel() {
   const { t } = useTranslation();
@@ -123,11 +130,14 @@ function AuthPanel() {
   }, []);
 
   if (accessToken) {
-    const nickLabel = nickname ? `@${nickname}` : displayName ?? t('auth.player');
+    const nickLabel = nickname ? `@${nickname}` : (displayName ?? t('auth.player'));
     return (
       <GlassPanel glow="gold" className="w-full max-w-sm border-gold/20 p-4 sm:max-w-md">
         <div className="flex items-start justify-between gap-3">
-          <Link to="/profile" className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl transition hover:bg-white/[0.03]">
+          <Link
+            to="/profile"
+            className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl transition hover:bg-white/[0.03]"
+          >
             <PlayerAvatar
               name={nickLabel}
               avatarUrl={avatarUrl}
@@ -142,7 +152,10 @@ function AuthPanel() {
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/70">
                 {t('auth.welcomeBack')}
               </p>
-              <p className="truncate font-display text-lg font-semibold text-gradient-gold" title={nickLabel}>
+              <p
+                className="truncate font-display text-lg font-semibold text-gradient-gold"
+                title={nickLabel}
+              >
                 {nickLabel}
               </p>
               {displayName && nickname ? (
@@ -309,8 +322,7 @@ export const Lobby = () => {
     pollQueueStatus,
     session,
     fetchProfile
-  } =
-    useAppStore();
+  } = useAppStore();
   const accessToken = useAppStore((s) => s.accessToken);
   const sessionError = useAppStore((s) => s.sessionError);
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
@@ -548,15 +560,20 @@ export const Lobby = () => {
 
   const kettle = session
     ? session.pot +
-      Object.values(session.playerRoundBet ?? {}).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0)
+      Object.values(session.playerRoundBet ?? {}).reduce(
+        (s, v) => s + (typeof v === 'number' ? v : 0),
+        0
+      )
     : 0;
 
   const tableHref = session?.sessionId ? `/table/${session.sessionId}` : null;
 
   const holdemMode = gameModes.find((m) => m.id === 'HOLDEM') ?? catalogGameModes[0];
   const jokerMode = gameModes.find((m) => m.id === 'JOKER') ?? catalogGameModes[1];
-  const modeTitle = (id: 'HOLDEM' | 'JOKER', fallback: string) => t(`modes.${id}.title`, { defaultValue: fallback });
-  const modeDesc = (id: 'HOLDEM' | 'JOKER', fallback: string) => t(`modes.${id}.desc`, { defaultValue: fallback });
+  const modeTitle = (id: 'HOLDEM' | 'JOKER', fallback: string) =>
+    t(`modes.${id}.title`, { defaultValue: fallback });
+  const modeDesc = (id: 'HOLDEM' | 'JOKER', fallback: string) =>
+    t(`modes.${id}.desc`, { defaultValue: fallback });
   const subBanner = (tier: keyof typeof subscriptionBannerImages) =>
     catalogSubs.find((s) => s.tier === tier)?.imageUrl ?? subscriptionBannerImages[tier];
 
@@ -585,7 +602,9 @@ export const Lobby = () => {
                 {t('brand.title')}
                 <span className="text-gradient-gold">{t('brand.titleGold')}</span>
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">{t('brand.tagline')}</p>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
+                {t('brand.tagline')}
+              </p>
               <div className="mt-4 flex flex-wrap gap-5 text-xs">
                 <Link to="/legal/terms" className="premium-link">
                   {t('nav.terms')}
@@ -609,7 +628,11 @@ export const Lobby = () => {
         </motion.header>
 
         {accessToken ? (
-          <motion.div className="mb-8 flex flex-col gap-4" variants={reduceMotion ? undefined : section} custom={0.6}>
+          <motion.div
+            className="mb-8 flex flex-col gap-4"
+            variants={reduceMotion ? undefined : section}
+            custom={0.6}
+          >
             <VipInviteBanner />
             <TableInviteBanner />
             <PushNotifyPrompt />
@@ -639,13 +662,19 @@ export const Lobby = () => {
             <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-gold/80">
               {t('lobby.heroPremium')}
             </p>
-            <h2 className="mt-1 font-display text-2xl font-semibold text-ivory sm:text-3xl">{t('lobby.heroTitle')}</h2>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-ivory sm:text-3xl">
+              {t('lobby.heroTitle')}
+            </h2>
             <p className="mt-2 max-w-md text-sm text-muted">{t('lobby.heroDesc')}</p>
           </div>
         </motion.div>
 
         <div className="grid flex-1 grid-cols-1 gap-8 lg:grid-cols-12">
-          <motion.div className="flex flex-col gap-4 lg:col-span-5" variants={reduceMotion ? undefined : section} custom={1}>
+          <motion.div
+            className="flex flex-col gap-4 lg:col-span-5"
+            variants={reduceMotion ? undefined : section}
+            custom={1}
+          >
             <SectionHeader
               eyebrow={t('lobby.modesEyebrow')}
               title={t('lobby.modesTitle')}
@@ -725,101 +754,122 @@ export const Lobby = () => {
                     <h3 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">
                       {t('lobby.opponentTitle')}
                     </h3>
-                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-subtle">{t('lobby.opponentDesc')}</p>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-subtle">
+                      {t('lobby.opponentDesc')}
+                    </p>
                   </div>
-                  <DpClubMark size="md" variant={opponentType === 'BOT' ? 'emerald' : 'gold'} className="shrink-0" />
+                  <DpClubMark
+                    size="md"
+                    variant={opponentType === 'BOT' ? 'emerald' : 'gold'}
+                    className="shrink-0"
+                  />
                 </div>
               </div>
               <div className="space-y-4 bg-black/15 p-4 sm:p-6">
-              <OpponentSelector
-                value={opponentType}
-                onChange={setOpponentType}
-                selectedLabel={t('modes.selected')}
-                options={[
-                  {
-                    id: 'HUMAN',
-                    label: t('lobby.opponentHuman'),
-                    hint: t('lobby.opponentHumanHint')
-                  },
-                  {
-                    id: 'BOT',
-                    label: t('lobby.opponentBot'),
-                    hint: t('lobby.opponentBotHint')
-                  }
-                ]}
-                className="mb-0 border-0 bg-transparent p-0"
-              />
-              {opponentType === 'BOT' && mode === 'HOLDEM' ? (
-                <PlayerCountSelector
-                  value={botPlayerCount}
-                  onChange={setBotPlayerCount}
-                  label={t('lobby.botPlayerCount')}
-                  hint={t('lobby.botPlayerCountHint')}
+                <OpponentSelector
+                  value={opponentType}
+                  onChange={setOpponentType}
+                  selectedLabel={t('modes.selected')}
+                  options={[
+                    {
+                      id: 'HUMAN',
+                      label: t('lobby.opponentHuman'),
+                      hint: t('lobby.opponentHumanHint')
+                    },
+                    {
+                      id: 'BOT',
+                      label: t('lobby.opponentBot'),
+                      hint: t('lobby.opponentBotHint')
+                    }
+                  ]}
+                  className="mb-0 border-0 bg-transparent p-0"
                 />
-              ) : null}
-              {opponentType === 'BOT' && mode === 'JOKER' ? (
-                <p className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-center text-xs text-subtle">
-                  {t('lobby.jokerBotPlayerCount')}
-                </p>
-              ) : null}
-              <Button
-                variant={opponentType === 'BOT' ? 'secondary' : 'primary'}
-                size="lg"
-                className="w-full"
-                disabled={queueBusy}
-                data-testid="lobby-queue-button"
-                onClick={() => void startQueue()}
-              >
-                {opponentType === 'BOT'
-                  ? mode === 'HOLDEM'
-                    ? t('queue.buttonHoldemBot')
-                    : t('queue.buttonJokerBot')
-                  : mode === 'HOLDEM'
-                    ? t('queue.buttonHoldem')
-                    : t('queue.buttonJoker')}
-              </Button>
-              {queueBanner ? (
-                <p
-                  className={cn(
-                    'mt-3 rounded-xl border px-3 py-2.5 text-xs leading-relaxed',
-                    opponentType === 'BOT'
-                      ? 'border-emerald/25 bg-emerald/[0.08] text-emerald'
-                      : 'border-amber-500/20 bg-amber-500/10 text-amber-200/90'
-                  )}
+                {opponentType === 'BOT' && mode === 'HOLDEM' ? (
+                  <PlayerCountSelector
+                    value={botPlayerCount}
+                    onChange={setBotPlayerCount}
+                    label={t('lobby.botPlayerCount')}
+                    hint={t('lobby.botPlayerCountHint')}
+                  />
+                ) : null}
+                {opponentType === 'BOT' && mode === 'JOKER' ? (
+                  <p className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-center text-xs text-subtle">
+                    {t('lobby.jokerBotPlayerCount')}
+                  </p>
+                ) : null}
+                <Button
+                  variant={opponentType === 'BOT' ? 'secondary' : 'primary'}
+                  size="lg"
+                  className="w-full"
+                  disabled={queueBusy}
+                  data-testid="lobby-queue-button"
+                  onClick={() => void startQueue()}
                 >
-                  {queueBanner}
-                </p>
-              ) : null}
-              {sessionError ? (
-                <p className="mt-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300">
-                  {translateQueueError(sessionError)}
-                </p>
-              ) : null}
-              {tableHref ? (
-                <Link to={tableHref} className="mt-3 block">
-                  <Button variant="ghost" size="md" className="w-full">
-                    {t('queue.openTable')}
-                  </Button>
-                </Link>
-              ) : null}
+                  {opponentType === 'BOT'
+                    ? mode === 'HOLDEM'
+                      ? t('queue.buttonHoldemBot')
+                      : t('queue.buttonJokerBot')
+                    : mode === 'HOLDEM'
+                      ? t('queue.buttonHoldem')
+                      : t('queue.buttonJoker')}
+                </Button>
+                {queueBanner ? (
+                  <p
+                    className={cn(
+                      'mt-3 rounded-xl border px-3 py-2.5 text-xs leading-relaxed',
+                      opponentType === 'BOT'
+                        ? 'border-emerald/25 bg-emerald/[0.08] text-emerald'
+                        : 'border-amber-500/20 bg-amber-500/10 text-amber-200/90'
+                    )}
+                  >
+                    {queueBanner}
+                  </p>
+                ) : null}
+                {sessionError ? (
+                  <p className="mt-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300">
+                    {translateQueueError(sessionError)}
+                  </p>
+                ) : null}
+                {tableHref ? (
+                  <Link to={tableHref} className="mt-3 block">
+                    <Button variant="ghost" size="md" className="w-full">
+                      {t('queue.openTable')}
+                    </Button>
+                  </Link>
+                ) : null}
               </div>
             </GlassPanel>
           </motion.div>
 
-          <motion.div className="flex flex-col gap-4 lg:col-span-7" variants={reduceMotion ? undefined : section} custom={2}>
+          <motion.div
+            className="flex flex-col gap-4 lg:col-span-7"
+            variants={reduceMotion ? undefined : section}
+            custom={2}
+          >
             <SectionHeader
               eyebrow={t('lobby.liveEyebrow')}
               title={t('lobby.liveSession')}
               description={t('lobby.liveSessionDesc')}
             />
-            <GlassPanel glow="emerald" className="flex flex-col gap-4 overflow-hidden border-white/10 p-0">
+            <GlassPanel
+              glow="emerald"
+              className="flex flex-col gap-4 overflow-hidden border-white/10 p-0"
+            >
               {session && session.street && session.street !== 'LOBBY' ? (
                 <div className="border-b border-white/10 px-4 pt-4">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{t('lobby.table3d')}</p>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
+                    {t('lobby.table3d')}
+                  </p>
                   {reduceMotion ? (
                     <div className="flex h-36 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/30">
                       {(session.communityCards ?? []).slice(0, 5).map((c, i) => (
-                        <PlayingCard key={`${c}-${i}`} card={c} faceUp deckId={equipped.deck} size="sm" />
+                        <PlayingCard
+                          key={`${c}-${i}`}
+                          card={c}
+                          faceUp
+                          deckId={equipped.deck}
+                          size="sm"
+                        />
                       ))}
                       {(session.communityCards ?? []).length === 0 ? (
                         <PlayingCard faceUp={false} deckId={equipped.deck} size="sm" />
@@ -842,7 +892,11 @@ export const Lobby = () => {
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">
                     {t('lobby.lobbyPreview')}
                   </p>
-                  <Suspense fallback={<div className="aspect-video w-full animate-pulse rounded-2xl bg-white/5" />}>
+                  <Suspense
+                    fallback={
+                      <div className="aspect-video w-full animate-pulse rounded-2xl bg-white/5" />
+                    }
+                  >
                     <LobbyChipPreview />
                   </Suspense>
                 </div>
@@ -866,7 +920,9 @@ export const Lobby = () => {
             </GlassPanel>
 
             {checkoutMsg ? (
-              <p className="rounded-xl border border-gold/25 bg-gold/10 px-4 py-3 text-sm text-gold-light">{checkoutMsg}</p>
+              <p className="rounded-xl border border-gold/25 bg-gold/10 px-4 py-3 text-sm text-gold-light">
+                {checkoutMsg}
+              </p>
             ) : null}
             <div id="subscriptions" className="mb-6">
               <SectionHeader
@@ -946,7 +1002,9 @@ export const Lobby = () => {
               <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/80">
                 {t('lobby.clubsEyebrow')}
               </p>
-              <h2 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">{t('lobby.clubsTitle')}</h2>
+              <h2 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">
+                {t('lobby.clubsTitle')}
+              </h2>
               <p className="mt-2 max-w-lg text-sm text-muted">{t('lobby.clubsDesc')}</p>
             </div>
             <Link to="/clubs" className="shrink-0">
@@ -957,19 +1015,11 @@ export const Lobby = () => {
           </div>
         </motion.div>
 
-        <motion.div
-          className="mt-10"
-          variants={reduceMotion ? undefined : section}
-          custom={3}
-        >
+        <motion.div className="mt-10" variants={reduceMotion ? undefined : section} custom={3}>
           <ReferralPanel variant="lobby" />
         </motion.div>
 
-        <motion.footer
-          className="mt-8"
-          variants={reduceMotion ? undefined : section}
-          custom={4}
-        >
+        <motion.footer className="mt-8" variants={reduceMotion ? undefined : section} custom={4}>
           <LegalDisclaimer text={t('legal.disclaimer')} />
         </motion.footer>
       </motion.div>

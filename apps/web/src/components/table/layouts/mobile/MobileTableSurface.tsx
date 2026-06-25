@@ -4,6 +4,7 @@ import { cn } from '@duopoker/ui-kit';
 import { gameChipId, resolveEquipped } from '@duopoker/shared-types';
 import {
   isHeroSeatIndex,
+  mobileBubbleOffset,
   mobileSeatPositionStyle
 } from '@duopoker/table-client';
 import { PlayingCard } from '../../../cosmetics/PlayingCard';
@@ -67,7 +68,7 @@ export function MobileTableSurface({
   return (
     <div
       data-testid="mobile-table-surface"
-      className={cn('relative min-h-0 flex-1 w-full overflow-hidden', className)}
+      className={cn('relative min-h-0 w-full flex-1 overflow-visible', className)}
     >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_55%,_#000_100%)]" />
       <div
@@ -109,7 +110,13 @@ export function MobileTableSurface({
             </AnimatePresence>
           ) : showBoardSlots ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <PlayingCard key={`slot-${i}`} faceUp={false} size="sm" deckId={heroDeckId} className="opacity-40" />
+              <PlayingCard
+                key={`slot-${i}`}
+                faceUp={false}
+                size="sm"
+                deckId={heroDeckId}
+                className="opacity-40"
+              />
             ))
           ) : null}
         </div>
@@ -148,6 +155,7 @@ export function MobileTableSurface({
               <MobileSeatNode
                 player={player}
                 bubble={bubbleByUser.get(player.userId)}
+                bubbleOffset={mobileBubbleOffset(index, players.length)}
                 secondsLeft={seatSeconds}
                 chipId={gameChipId(equipped.chip)}
                 onAvatarTap={onAvatarTap}

@@ -12,6 +12,10 @@ export type BubbleOffset = {
   anchor: 'above' | 'below' | 'left' | 'right';
 };
 
+export function seatAnchorTransform(anchor: SeatAnchor): string {
+  return anchor === 'bottom' ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)';
+}
+
 /** Inline style for absolute seat placement (matches chip-flight anchors). */
 export function seatPositionStyle(
   index: number,
@@ -21,7 +25,7 @@ export function seatPositionStyle(
   return {
     left: `${pos.left}%`,
     top: `${pos.top}%`,
-    transform: 'translate(-50%, -50%)'
+    transform: seatAnchorTransform(pos.anchor)
   };
 }
 
@@ -55,9 +59,7 @@ export function seatCoordinates(index: number, total: number): SeatPosition {
 /** Bubble offset toward felt center from seat rim. */
 export function bubbleOffset(index: number, total: number): BubbleOffset {
   if (total <= 2) {
-    return index === 0
-      ? { dx: 0, dy: 8, anchor: 'below' }
-      : { dx: 0, dy: -40, anchor: 'above' };
+    return index === 0 ? { dx: 0, dy: 8, anchor: 'below' } : { dx: 0, dy: -40, anchor: 'above' };
   }
   if (total === 4) {
     switch (index) {

@@ -26,11 +26,16 @@ export function MobileHeroCardFan({ cards, deckId, className }: Props) {
     <div
       data-testid="mobile-hero-card-fan"
       className={cn(
-        'relative z-20 flex shrink-0 items-end justify-center px-4 pb-2',
+        'fixed inset-x-0 z-40 flex items-end justify-center px-4 pb-2',
         manyCards ? 'pointer-events-auto overflow-x-auto premium-scroll' : 'pointer-events-none',
         className
       )}
-      style={{ minHeight: '5.5rem' }}
+      style={{
+        bottom: 'var(--mobile-hero-card-bottom, 7.375rem)',
+        minHeight: 'var(--mobile-hero-card-height, 7.75rem)',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right))'
+      }}
     >
       <div
         className={cn(

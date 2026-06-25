@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bubbleOffset, seatCoordinates } from './seat-coordinates';
+import { bubbleOffset, seatCoordinates, seatPositionStyle } from './seat-coordinates';
 
 describe('seatCoordinates', () => {
   it('places heads-up seats top and bottom', () => {
@@ -12,6 +12,17 @@ describe('seatCoordinates', () => {
     expect(seatCoordinates(1, 4)).toMatchObject({ left: 92, top: 48 });
     expect(seatCoordinates(2, 4)).toMatchObject({ left: 8, top: 48 });
     expect(seatCoordinates(3, 4)).toMatchObject({ left: 50, top: 92, anchor: 'bottom' });
+  });
+});
+
+describe('seatPositionStyle', () => {
+  it('uses bottom-anchor transform for hero seats', () => {
+    expect(seatPositionStyle(1, 2)).toMatchObject({
+      left: '50%',
+      top: '92%',
+      transform: 'translate(-50%, -100%)'
+    });
+    expect(seatPositionStyle(0, 2).transform).toBe('translate(-50%, -50%)');
   });
 });
 

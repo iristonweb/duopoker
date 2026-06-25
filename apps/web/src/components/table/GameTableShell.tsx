@@ -24,7 +24,7 @@ export function GameTableShell({
     <div
       data-testid="game-table-shell"
       className={cn(
-        'relative min-h-[100svh] h-[calc(var(--app-vh,1vh)*100)] w-full overflow-hidden overscroll-none touch-pan-y',
+        'relative h-[calc(var(--app-vh,1vh)*100)] min-h-0 w-full overflow-hidden overscroll-none touch-pan-y',
         className
       )}
       style={{ ['--table-dock-height' as string]: '7.5rem' }}

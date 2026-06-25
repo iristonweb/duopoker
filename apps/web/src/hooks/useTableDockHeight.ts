@@ -3,14 +3,30 @@ import { useEffect, type RefObject } from 'react';
 const CSS_VAR = '--table-dock-height';
 const FALLBACK = '7.5rem';
 
-export function useTableDockHeight(dockRef: RefObject<HTMLElement | null>) {
+export function useTableDockHeight(
+  dockRef: RefObject<HTMLElement | null>,
+  {
+    cssVar = CSS_VAR,
+    fallback = FALLBACK,
+    extraVars
+  }: {
+    cssVar?: string;
+    fallback?: string;
+    extraVars?: (height: string) => Record<string, string>;
+  } = {}
+) {
   useEffect(() => {
     const el = dockRef.current;
     if (!el) return;
 
     const sync = () => {
       const h = el.getBoundingClientRect().height;
-      document.documentElement.style.setProperty(CSS_VAR, h > 0 ? `${h}px` : FALLBACK);
+      const value = h > 0 ? `${h}px` : fallback;
+      document.documentElement.style.setProperty(cssVar, value);
+      const extra = extraVars?.(value) ?? {};
+      for (const [key, val] of Object.entries(extra)) {
+        document.documentElement.style.setProperty(key, val);
+      }
     };
 
     sync();
@@ -23,9 +39,13 @@ export function useTableDockHeight(dockRef: RefObject<HTMLElement | null>) {
       ro.disconnect();
       window.removeEventListener('orientationchange', sync);
       window.removeEventListener('resize', sync);
-      document.documentElement.style.removeProperty(CSS_VAR);
+      document.documentElement.style.removeProperty(cssVar);
+      const extra = extraVars?.(fallback) ?? {};
+      for (const key of Object.keys(extra)) {
+        document.documentElement.style.removeProperty(key);
+      }
     };
-  }, [dockRef]);
+  }, [cssVar, dockRef, extraVars, fallback]);
 }
 
 export const tableFabBottomClass =

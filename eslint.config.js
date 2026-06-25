@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
   js.configs.recommended,
@@ -11,7 +12,12 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module'
     },
+    plugins: {
+      'react-hooks': reactHooks
+    },
     rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       ...prettier.rules
     }
   },
