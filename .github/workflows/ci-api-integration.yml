@@ -22,6 +22,7 @@ jobs:
     env:
       HUSKY: "0"
       DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
+      DIRECT_DATABASE_URL: postgresql://duopoker:duopoker@localhost:5434/duopoker
       JWT_SECRET: ci-jwt-secret-minimum-32-characters-long
       JWT_REFRESH_SECRET: ci-jwt-refresh-secret-min-32-chars-long
       ALLOW_SOLO_QUEUE: "true"
