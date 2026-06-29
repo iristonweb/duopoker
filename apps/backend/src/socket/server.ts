@@ -1,13 +1,10 @@
 import { createServer } from 'node:http';
 import type { Express } from 'express';
 import { Server } from 'socket.io';
-import { z } from 'zod';
 import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
-import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
-import { normalizeGameMode } from '@duopoker/shared-types/index';
+import type { SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
-import { getMongoDb, isMongoReady } from '../services/mongo.js';
 import {
   getSubscriptionTiersBatch,
   getUserSubscriptionTier
@@ -20,7 +17,6 @@ import {
   getSessionSnapshot,
   joinTable,
   leaveTable,
-  processPlayerAction,
   requestNextHand,
   seatPlayersBatch,
   tickSession
@@ -40,55 +36,11 @@ import {
   getTableChatHistory,
   markTableChatSent
 } from '../services/table-chat.js';
-
-const gameModeSchema = z.preprocess(
-  (v) => (typeof v === 'string' ? normalizeGameMode(v as 'HOLDEM' | 'JOKER' | 'RASPISNOY') : v),
-  z.enum(['HOLDEM', 'JOKER'])
-);
-
-const joinSchema = z.object({
-  sessionId: z.string().min(1),
-  userId: z.string().min(1),
-  mode: gameModeSchema.default('HOLDEM'),
-  buyIn: z.number().int().positive().default(100)
-});
-
-const actionSchema = z.object({
-  sessionId: z.string().min(1),
-  userId: z.string().min(1),
-  type: z.enum(['bet', 'check', 'fold', 'call', 'raise', 'bid', 'playCard', 'chooseTrump']),
-  amount: z.number().int().nonnegative().optional(),
-  raiseBy: z.number().int().nonnegative().optional(),
-  card: z
-    .string()
-    .regex(/^[6-9TJQKA][SHDC]$/)
-    .optional(),
-  trumpSuit: z.enum(['S', 'H', 'D', 'C']).nullable().optional(),
-  declaration: z
-    .union([
-      z.enum(['nominal', 'senior', 'minor']),
-      z.object({
-        suit: z.enum(['S', 'H', 'D', 'C']),
-        rankMode: z.enum(['senior', 'minor'])
-      })
-    ])
-    .optional(),
-  at: z.number().default(() => Date.now())
-});
-
-const matchmakingSchema = z.object({
-  userId: z.string().min(1),
-  mode: gameModeSchema,
-  buyIn: z.number().int().positive(),
-  opponent: z.enum(['human', 'bot']).optional().default('human'),
-  playerCount: z.number().int().min(2).max(6).optional().default(2),
-  jokerRules: z
-    .object({
-      strictJoker: z.boolean().optional(),
-      scoringMode: z.enum(['classic', 'minus']).optional()
-    })
-    .optional()
-});
+import { joinSchema, matchmakingSchema, tableChatSendSchema } from './schemas.js';
+import { registerReconnectHandler } from './handlers/reconnect.js';
+import { registerPlayerActionHandler } from './handlers/playerAction.js';
+import { registerVoiceSignalHandler } from './handlers/voice.js';
+import { actionSchema } from './schemas.js';
 
 const BOT_PREFIX = 'duopoker-bot';
 
@@ -283,12 +235,21 @@ export const createRealtimeServer = (app: Express) => {
   });
   globalIo = io;
   attachSocketAuth(io);
-  const replayCollection = getMongoDb().collection('replays');
 
   const connectionsPerIp = new Map<string, number>();
   const MAX_CONNECTIONS_PER_IP = 25;
   const joinBurst = new Map<string, number[]>();
   const MAX_JOINS_PER_MINUTE = 30;
+
+  const pruneJoinBurst = (now = Date.now()) => {
+    for (const [key, hits] of joinBurst) {
+      const fresh = hits.filter((t) => now - t < 60_000);
+      if (fresh.length === 0) joinBurst.delete(key);
+      else joinBurst.set(key, fresh);
+    }
+  };
+
+  setInterval(() => pruneJoinBurst(), 60_000).unref?.();
 
   io.on('connection', (socket) => {
     const ip = socket.handshake.address;
@@ -311,28 +272,12 @@ export const createRealtimeServer = (app: Express) => {
       unregisterSocketEverywhere(socket.id);
     });
 
-    socket.on('reconnectSession', async (payload: { sessionId?: string; userId?: string }) => {
-      const sessionId = payload?.sessionId;
-      const userId = resolveUserId(socket, payload?.userId);
-      if (!sessionId || !userId) {
-        socket.emit('sessionError', { code: 'INVALID_RECONNECT' });
-        return;
-      }
-      socket.data.userId = userId;
-      const access = await assertCanJoinSession(sessionId, userId);
-      if (!access.ok) {
-        socket.emit('sessionError', { code: access.reason });
-        return;
-      }
-      registerUserSocket(userId, socket.id);
-      await socket.join(sessionId);
-      const snapshot = await getSessionSnapshot(sessionId);
-      if (!snapshot) {
-        socket.emit('sessionError', { code: 'SESSION_NOT_FOUND' });
-        return;
-      }
-      socket.emit('sessionState', sanitizeStateForViewer(snapshot, userId));
-    });
+    const assertSocketInSession = async (sessionId: string) => {
+      const sockets = await io.in(sessionId).fetchSockets();
+      return sockets.some((s) => s.id === socket.id);
+    };
+
+    registerReconnectHandler(io, socket, registerUserSocket, broadcastSessionState);
 
     socket.on('joinSession', async (payload) => {
       const joined = joinSchema.safeParse(payload);
@@ -367,7 +312,7 @@ export const createRealtimeServer = (app: Express) => {
 
       registerUserSocket(userId, socket.id);
       await socket.join(sessionId);
-      const state = joinTable(sessionId, userId, mode, buyIn);
+      const state = await joinTable(sessionId, userId, mode, buyIn);
       await redis.publish(`lobby:${sessionId}`, JSON.stringify({ type: 'join', userId }));
       const subscriptionTier = await getUserSubscriptionTier(userId);
       socket.emit('sessionEvent', {
@@ -378,71 +323,7 @@ export const createRealtimeServer = (app: Express) => {
       await broadcastSessionState(io, sessionId, state);
     });
 
-    socket.on('playerAction', async (payload) => {
-      const parsed = actionSchema.safeParse(payload);
-      if (!parsed.success) {
-        socket.emit('sessionError', { code: 'INVALID_ACTION_PAYLOAD' });
-        return;
-      }
-
-      clearActionTimer(parsed.data.sessionId);
-
-      const userId = resolveUserId(socket, parsed.data.userId);
-      if (!userId) {
-        socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
-        return;
-      }
-
-      const action: PlayerAction = {
-        sessionId: parsed.data.sessionId,
-        userId,
-        type: parsed.data.type,
-        amount: parsed.data.amount,
-        at: parsed.data.at,
-        ...(parsed.data.card ? { card: parsed.data.card as Card } : {})
-      };
-      const result = await processPlayerAction(action);
-      if (result.rejected) {
-        socket.emit('sessionError', { code: result.reason });
-        return;
-      }
-
-      if (isMongoReady()) {
-        try {
-          await replayCollection.insertOne({
-            sessionId: parsed.data.sessionId,
-            action: parsed.data,
-            createdAt: new Date(parsed.data.at)
-          });
-        } catch (e) {
-          console.warn('[mongo] replay insert skipped:', e);
-        }
-      }
-      await redis.publish(`game:${parsed.data.sessionId}`, JSON.stringify(parsed.data));
-      await broadcastSessionState(io, parsed.data.sessionId, result.state);
-      io.to(parsed.data.sessionId).emit('reconciliation', { replay: result.replay });
-    });
-
-    socket.on(
-      'reconnectSession',
-      async ({ sessionId, userId: payloadUserId }: { sessionId?: string; userId?: string }) => {
-        if (!sessionId) return;
-        socket.join(sessionId);
-        const snapshot = await tickSession(sessionId);
-        const viewerId = resolveUserId(socket, payloadUserId) ?? undefined;
-        if (viewerId) socket.data.userId = viewerId;
-        const subscriptionTier = viewerId ? await getUserSubscriptionTier(viewerId) : 'FREE';
-        socket.emit('sessionReconnected', {
-          sessionId,
-          snapshot: snapshot
-            ? sanitizeStateForViewer(snapshot, viewerId, { subscriptionTier })
-            : null
-        });
-        if (snapshot) {
-          await broadcastSessionState(io, sessionId, snapshot);
-        }
-      }
-    );
+    registerPlayerActionHandler(io, socket, actionSchema, clearActionTimer, broadcastSessionState);
 
     socket.on(
       'readyNextHand',
@@ -453,7 +334,7 @@ export const createRealtimeServer = (app: Express) => {
           socket.emit('sessionError', { code: 'AUTH_REQUIRED' });
           return;
         }
-        const result = requestNextHand(sessionId, userId);
+        const result = await requestNextHand(sessionId, userId);
         if (!result.ok) {
           socket.emit('sessionError', { code: result.reason });
           return;
@@ -487,21 +368,7 @@ export const createRealtimeServer = (app: Express) => {
       }
     );
 
-    socket.on('voiceSignal', (payload: Record<string, unknown>) => {
-      const sid = typeof payload.sessionId === 'string' ? payload.sessionId : '';
-      if (!sid) return;
-      socket.to(sid).emit('voiceSignal', { ...payload, from: socket.id });
-    });
-
-    const tableChatSendSchema = z.object({
-      sessionId: z.string().min(1),
-      text: z.string().trim().min(1).max(280)
-    });
-
-    const assertSocketInSession = async (sessionId: string) => {
-      const sockets = await io.in(sessionId).fetchSockets();
-      return sockets.some((s) => s.id === socket.id);
-    };
+    registerVoiceSignalHandler(socket, assertSocketInSession);
 
     socket.on('tableChatJoin', async ({ sessionId }: { sessionId?: string }) => {
       if (!sessionId || typeof sessionId !== 'string') return;
@@ -591,7 +458,7 @@ export const createRealtimeServer = (app: Express) => {
         mode: parsed.data.mode,
         buyIn: parsed.data.buyIn
       };
-      seatPlayersBatch(
+      await seatPlayersBatch(
         match.sessionId,
         match.players,
         match.mode as 'HOLDEM' | 'JOKER',

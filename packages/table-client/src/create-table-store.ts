@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { io, type Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
 import { createApiHelpers, type TableClientConfig } from './config';
+import { bindTableSocket, detachTableSocket } from './socket-bindings';
 
 export type PlayerActionPayload = {
   sessionId: string;
@@ -86,29 +87,28 @@ export function createTableSessionStore(deps: TableStoreDeps) {
         return deps.shouldAcceptTableState?.() ?? true;
       };
 
-      socket.on('stateUpdate', (session: SessionState) => {
-        if (!shouldAccept()) return;
-        set({ session, sessionError: undefined });
-      });
-      socket.on('sessionEvent', (evt: { state?: SessionState }) => {
-        if (!shouldAccept()) return;
-        if (evt.state) set({ session: evt.state, sessionError: undefined });
-      });
-      socket.on('sessionReconnected', (payload: { snapshot?: SessionState | null }) => {
-        if (!shouldAccept()) return;
-        if (payload.snapshot) set({ session: payload.snapshot, sessionError: undefined });
-      });
-      socket.on('sessionError', (err: { code?: string }) => {
-        set({ sessionError: err.code ?? 'session_error' });
-      });
-      socket.on('leftTable', () => {
-        get().stopPolling();
-        set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
-        deps.onLeftTable?.();
-      });
-      socket.on(
-        'tableClosed',
-        (payload: { clubId?: string; tableId?: string; sessionId?: string }) => {
+      bindTableSocket(socket, {
+        onStateUpdate: (session) => {
+          if (!shouldAccept()) return;
+          set({ session, sessionError: undefined });
+        },
+        onSessionEvent: (evt) => {
+          if (!shouldAccept()) return;
+          if (evt.state) set({ session: evt.state, sessionError: undefined });
+        },
+        onSessionReconnected: (payload) => {
+          if (!shouldAccept()) return;
+          if (payload.snapshot) set({ session: payload.snapshot, sessionError: undefined });
+        },
+        onSessionError: (err) => {
+          set({ sessionError: err.code ?? 'session_error' });
+        },
+        onLeftTable: () => {
+          get().stopPolling();
+          set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
+          deps.onLeftTable?.();
+        },
+        onTableClosed: (payload) => {
           const sid = get().session?.sessionId;
           if (payload.sessionId && sid && payload.sessionId !== sid) return;
           get().stopPolling();
@@ -118,14 +118,14 @@ export function createTableSessionStore(deps: TableStoreDeps) {
             sessionError: 'table_closed'
           });
           deps.onTableClosed?.(payload);
+        },
+        onConnect: () => {
+          const sid = get().session?.sessionId;
+          if (!sid) return;
+          if (deps.shouldAcceptTableState && !deps.shouldAcceptTableState()) return;
+          socket.emit('reconnectSession', { sessionId: sid });
+          deps.onReconnectSession?.(sid);
         }
-      );
-      socket.on('connect', () => {
-        const sid = get().session?.sessionId;
-        if (!sid) return;
-        if (deps.shouldAcceptTableState && !deps.shouldAcceptTableState()) return;
-        socket.emit('reconnectSession', { sessionId: sid });
-        deps.onReconnectSession?.(sid);
       });
       set({ socket });
     },
@@ -251,6 +251,7 @@ export function createTableSessionStore(deps: TableStoreDeps) {
 
     clearTableSession: () => {
       get().stopPolling();
+      detachTableSocket(get().socket);
       set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
     },
 

@@ -31,6 +31,7 @@ import {
 } from '../hooks/useTableMusic';
 import { saveTableMusicPref } from '../lib/table-music';
 import { useAppStore } from '../store/useAppStore';
+import { useTableStore } from '../store/useTableStore';
 import { usesRealtimeSocket } from '../config/api';
 import { rotatePlayersForHero } from '../lib/table-layout';
 import { formatCardLabel } from '../lib/joker-labels';
@@ -56,20 +57,20 @@ export const Table = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
-  const session = useAppStore((s) => s.session);
-  const sessionError = useAppStore((s) => s.sessionError);
+  const session = useTableStore((s) => s.session);
+  const sessionError = useTableStore((s) => s.sessionError);
   const userId = useAppStore((s) => s.userId);
-  const playerAction = useAppStore((s) => s.playerAction);
-  const connect = useAppStore((s) => s.connect);
-  const socket = useAppStore((s) => s.socket);
-  const joinSession = useAppStore((s) => s.joinSession);
-  const pollSession = useAppStore((s) => s.pollSession);
-  const stopPolling = useAppStore((s) => s.stopPolling);
-  const leaveTable = useAppStore((s) => s.leaveTable);
+  const playerAction = useTableStore((s) => s.playerAction);
+  const connect = useTableStore((s) => s.connect);
+  const socket = useTableStore((s) => s.socket);
+  const joinSession = useTableStore((s) => s.joinSession);
+  const pollSession = useTableStore((s) => s.pollSession);
+  const stopPolling = useTableStore((s) => s.stopPolling);
+  const leaveTable = useTableStore((s) => s.leaveTable);
   const minimizeTable = useAppStore((s) => s.minimizeTable);
   const resumeTable = useAppStore((s) => s.resumeTable);
-  const clearTableSession = useAppStore((s) => s.clearTableSession);
-  const tableVoluntaryLeave = useAppStore((s) => s.tableVoluntaryLeave);
+  const clearTableSession = useTableStore((s) => s.clearTableSession);
+  const tableVoluntaryLeave = useTableStore((s) => s.tableVoluntaryLeave);
   const mode = useAppStore((s) => s.mode);
 
   const equipped = useAppStore((s) => s.equipped);
@@ -174,7 +175,7 @@ export const Table = () => {
       if (document.visibilityState !== 'visible' || !routeSessionId || tableVoluntaryLeave) return;
       connect();
       if (usesRealtimeSocket()) {
-        useAppStore
+        useTableStore
           .getState()
           .socket?.emit('reconnectSession', { sessionId: routeSessionId, userId });
       } else {
@@ -183,7 +184,7 @@ export const Table = () => {
           .apiFetch(`/game/session/${encodeURIComponent(routeSessionId)}`)
           .then((r) => (r.ok ? r.json() : null))
           .then((data: { session?: SessionState } | null) => {
-            if (data?.session) useAppStore.setState({ session: data.session });
+            if (data?.session) useTableStore.setState({ session: data.session });
           })
           .catch(() => undefined);
       }

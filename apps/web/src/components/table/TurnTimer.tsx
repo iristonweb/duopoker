@@ -1,4 +1,5 @@
 import { cn } from '@duopoker/ui-kit';
+import { colors } from '@duopoker/shared-types';
 
 type Props = {
   secondsLeft: number;
@@ -30,7 +31,7 @@ export function TurnTimer({ secondsLeft, totalSeconds = 45, size = 44, className
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={urgent ? '#f87171' : '#e8c547'}
+          stroke={urgent ? colors.danger : colors.gold}
           strokeWidth={3}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -43,6 +44,8 @@ export function TurnTimer({ secondsLeft, totalSeconds = 45, size = 44, className
           'absolute font-mono text-xs font-bold tabular-nums',
           urgent ? 'text-rose' : 'text-gold-light'
         )}
+        aria-live="polite"
+        aria-label={`${secondsLeft} seconds remaining`}
       >
         {secondsLeft}
       </span>

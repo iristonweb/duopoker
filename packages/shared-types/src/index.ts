@@ -4,6 +4,7 @@ export {
   motion,
   radii,
   shadows,
+  zIndex,
   type BrandColors
 } from './theme';
 
@@ -137,6 +138,8 @@ export type GameStreet =
 export type Suit = 'S' | 'H' | 'D' | 'C';
 export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'T' | 'J' | 'Q' | 'K' | 'A';
 export type Card = `${Rank}${Suit}`;
+export type ObfuscatedCard = `__${string}_${number}`;
+export type DisplayCard = Card | ObfuscatedCard;
 
 export type JokerDeclaration =
   | 'nominal'
@@ -268,6 +271,14 @@ export interface SessionState {
   /** @deprecated still populated for older clients — use activePlayerIndex */
   activePlayerId?: string;
 }
+
+/** Session snapshot safe for clients — server-only fields like `seed` are stripped. */
+export type ClientSessionState = Omit<SessionState, 'seed'>;
+
+/** Client-side animated table state — may use obfuscated hole-card placeholders. */
+export type DisplaySessionState = Omit<SessionState, 'playerCards'> & {
+  playerCards: Record<string, DisplayCard[]>;
+};
 
 /** Minimum subscription tier to reveal ghost board after a preflop muck-win. */
 export const GHOST_BOARD_MIN_TIER = 'BRONZE' as const;

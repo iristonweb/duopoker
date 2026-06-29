@@ -45,7 +45,7 @@ export function TableOrientationGate() {
   return (
     <div
       data-testid="table-orientation-gate"
-      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#050508]/98 px-8 text-center backdrop-blur-md"
+      className="fixed inset-0 z-[115] flex flex-col items-center justify-center bg-[#050508]/98 px-8 text-center backdrop-blur-md"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <motion.div

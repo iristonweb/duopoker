@@ -3,8 +3,11 @@ import type { SessionState } from '@duopoker/shared-types/index';
 import {
   addPlayerToTable,
   applyTableAction,
+  assertChipConservation,
+  countChipsInPlay,
   createInitialTableState,
   markReadyForNextHand,
+  removePlayerFromTable,
   sanitizeStateForViewer,
   startNewHand
 } from './index';
@@ -25,6 +28,7 @@ describe('sanitizeStateForViewer', () => {
     expect(view.playerCards.u1?.length).toBe(2);
     expect(view.playerCards.u2).toEqual([]);
     expect(view.deck).toEqual([]);
+    expect('seed' in view).toBe(false);
   });
 
   it('reveals all cards at COMPLETE', () => {
@@ -460,6 +464,80 @@ describe('Joker flow', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.playerCards.a).toEqual(['7S']);
+  });
+});
+
+describe('removePlayerFromTable — chip conservation', () => {
+  it('preserves total chips when a player leaves mid-hand in a 3-way pot', () => {
+    let s = createInitialTableState('leave3', 'HOLDEM', 100, 55);
+    s = startNewHand({
+      ...s,
+      players: ['a', 'b', 'c'],
+      stacks: { a: 100, b: 100, c: 100 }
+    });
+    const initialTotal = countChipsInPlay(s);
+    expect(initialTotal).toBe(300);
+
+    const actor = s.players[s.activePlayerIndex]!;
+    let r = applyTableAction(s, { sessionId: 'leave3', userId: actor, type: 'raise', amount: 10, at: 1 });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    s = r.state;
+    assertChipConservation(s, initialTotal, 'after raise');
+
+    const leaver = s.players.find((p) => p !== actor && p !== s.players[s.activePlayerIndex])!;
+    const leaverStack = s.stacks[leaver] ?? 0;
+    r = removePlayerFromTable(s, leaver);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(countChipsInPlay(r.state) + leaverStack).toBe(initialTotal);
+    expect(r.state.players).not.toContain(leaver);
+    expect(r.state.handContributions[leaver] ?? 0).toBeGreaterThan(0);
+  });
+
+  it('awards pot to sole remaining player when table drops to one mid-hand', () => {
+    let s = createInitialTableState('leave2', 'HOLDEM', 100, 56);
+    s = startNewHand({
+      ...s,
+      players: ['a', 'b'],
+      stacks: { a: 100, b: 100 }
+    });
+    const actor = s.players[s.activePlayerIndex]!;
+    let r = applyTableAction(s, { sessionId: 'leave2', userId: actor, type: 'call', at: 1 });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    s = r.state;
+
+    const leaver = s.players[s.activePlayerIndex]!;
+    r = removePlayerFromTable(s, leaver);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.street).toBe('LOBBY');
+    expect(r.state.players).toEqual(['a']);
+    expect(r.state.stacks.a).toBeGreaterThan(100);
+  });
+
+  it('advances betting after active player leaves without deadlocking', () => {
+    let s = createInitialTableState('leave-act', 'HOLDEM', 100, 57);
+    s = startNewHand({
+      ...s,
+      players: ['a', 'b', 'c'],
+      stacks: { a: 100, b: 100, c: 100 }
+    });
+    const actor = s.players[s.activePlayerIndex]!;
+    let r = applyTableAction(s, { sessionId: 'leave-act', userId: actor, type: 'call', at: 1 });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    s = r.state;
+
+    const activeLeaver = s.players[s.activePlayerIndex]!;
+    r = removePlayerFromTable(s, activeLeaver);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.street).not.toBe('COMPLETE');
+    const next = r.state.players[r.state.activePlayerIndex];
+    expect(next).toBeDefined();
+    expect(r.state.foldedPlayerIds).not.toContain(next);
   });
 });
 

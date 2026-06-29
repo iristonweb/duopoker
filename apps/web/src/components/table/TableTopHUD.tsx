@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
 import { Badge, Button, cn, DpClubMark } from '@duopoker/ui-kit';
-import type { GameMode, GameStreet, JokerHandState, JokerMatchRules } from '@duopoker/shared-types/index';
+import type { GameMode, GameStreet, JokerHandState, JokerMatchRules, SessionState } from '@duopoker/shared-types/index';
 import type { TableLeaderboardEntry } from '@duopoker/table-client';
 import { LanguageSwitch } from '../LanguageSwitch';
-import { PokerChipVisual } from '../cosmetics/PokerChipVisual';
 import { JokerTrumpBadge } from './JokerTrumpBadge';
 import { VoiceChatHudButton } from './VoiceChatPill';
+import { CoachHudButton } from './CoachHudButton';
 import { LeaderboardPodium, type LeaderboardProfile } from './LeaderboardPodium';
 import { TrophyIcon } from './TrophyIcon';
 
@@ -28,13 +27,11 @@ const streetGlowClass = (street: GameStreet): string => {
 
 type Props = {
   mode: GameMode;
-  pot: number;
   street?: GameStreet;
   seatCount: number;
   smallBlind: number;
   bigBlind: number;
   handNumber: number;
-  chipId?: string;
   onLeaveTable?: () => void;
   onMinimizeTable?: () => void;
   leaving?: boolean;
@@ -43,7 +40,9 @@ type Props = {
   leaderboardEntries?: TableLeaderboardEntry[];
   leaderboardProfiles?: Record<string, LeaderboardProfile>;
   heroId?: string;
+  session?: SessionState;
   onOpenLeaderboard?: () => void;
+  hidePodium?: boolean;
   className?: string;
   layoutVariant?: 'desktop' | 'tablet' | 'compact';
 };
@@ -84,9 +83,6 @@ function MetaChipGroup({
         </Badge>
       ) : isJoker && joker ? (
         <>
-          <Badge variant="gold" className="px-2 py-0.5 text-[9px] sm:px-2.5 sm:py-1 sm:text-[10px]">
-            {t('table.jokerPool', { pool: joker.pool, hand: joker.matchHandIndex + 1 })}
-          </Badge>
           {jokerRules?.strictJoker ? (
             <Badge variant="emerald" className="hidden px-2 py-0.5 text-[9px] sm:inline-flex">
               {t('lobby.jokerStrict')}
@@ -119,13 +115,11 @@ function MetaChipGroup({
 
 export function TableTopHUD({
   mode,
-  pot,
   street,
   seatCount,
   smallBlind,
   bigBlind,
   handNumber,
-  chipId = 'chip_classic',
   onLeaveTable,
   onMinimizeTable,
   leaving,
@@ -134,14 +128,14 @@ export function TableTopHUD({
   leaderboardEntries = [],
   leaderboardProfiles = {},
   heroId,
+  session,
   onOpenLeaderboard,
+  hidePodium = false,
   className,
   layoutVariant = 'desktop'
 }: Props) {
   const { t } = useTranslation();
   const isJoker = mode === 'JOKER' && joker ? joker : null;
-  const potLabel = isJoker ? t('table.jokerPoolLabel') : t('table.pot');
-  const potValue = isJoker ? joker.pool : pot;
   const streetLabel = street ? t(`table.street.${street}`, { defaultValue: street }) : null;
   const showStreet = Boolean(street && street !== 'LOBBY' && streetLabel);
 
@@ -198,25 +192,12 @@ export function TableTopHUD({
           ) : null}
           <span className="hidden h-4 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent sm:block" aria-hidden />
           <DpClubMark size="xs" className="hidden max-table-compact:block" />
-          <div className="min-w-0 table-compact:block max-table-compact:hidden">
-            <p className="truncate font-display text-xs font-semibold text-gradient-gold">
+          <div className="min-w-0">
+            <p className="truncate font-display text-xs font-semibold text-gradient-gold sm:text-sm">
               {mode === 'HOLDEM' ? t('table.holdem') : t('table.joker')}
               {handNumber > 0 ? ` · #${handNumber}` : ''}
             </p>
           </div>
-        </div>
-
-        <div className="hidden items-center gap-2 max-table-compact:flex">
-          <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-gold/50">{t('table.liveTable')}</p>
-          <span className="h-3 w-px bg-white/10" aria-hidden />
-          <h1 className="font-display text-sm font-semibold text-gradient-gold">
-            {mode === 'HOLDEM' ? t('table.holdem') : t('table.joker')}
-          </h1>
-          {handNumber > 0 ? (
-            <span className="rounded-full border border-gold/25 bg-gold/[0.08] px-2 py-0.5 font-mono text-[10px] text-gold-light">
-              #{handNumber}
-            </span>
-          ) : null}
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
@@ -231,6 +212,7 @@ export function TableTopHUD({
               <TrophyIcon className="h-4 w-4" />
             </button>
           ) : null}
+          <CoachHudButton session={session} heroId={heroId} />
           <VoiceChatHudButton />
           <LanguageSwitch />
           {onLeaveTable ? (
@@ -247,9 +229,9 @@ export function TableTopHUD({
         </div>
       </div>
 
-      {/* Tier 2: stats strip */}
+      {/* Tier 2: meta + optional mini leaderboard */}
       <div className="mx-auto flex flex-wrap items-center justify-between gap-2 px-3 py-2 table-compact:gap-1 table-compact:py-1 sm:px-5 sm:py-2.5">
-        <div className="hidden min-w-0 flex-1 max-table-compact:block lg:max-w-[34%]">
+        <div className="hidden min-w-0 flex-1 max-table-compact:block lg:max-w-[50%]">
           <MetaChipGroup
             mode={mode}
             isJoker={isJoker}
@@ -265,27 +247,8 @@ export function TableTopHUD({
           />
         </div>
 
-        <motion.div
-          key={typeof potValue === 'number' ? potValue : String(potValue)}
-          initial={{ scale: 1 }}
-          animate={{ scale: [1, 1.04, 1] }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="glass-shine relative mx-auto flex items-center gap-2.5 rounded-2xl border border-gold/45 bg-gradient-to-br from-gold/[0.12] via-white/[0.06] to-transparent px-4 py-2 shadow-[0_0_40px_rgba(232,197,71,0.22),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-glass table-compact:gap-1.5 table-compact:px-2.5 table-compact:py-1 sm:gap-3 sm:px-5 sm:py-2.5"
-        >
-          <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-gold/20 ring-inset" />
-          <PokerChipVisual chipId={chipId} size="sm" className="relative z-[1] sm:scale-110" />
-          <div className="relative z-[1] flex flex-col leading-none">
-            <span className="text-[8px] font-semibold uppercase tracking-[0.34em] text-gold/75 sm:text-[9px]">
-              {potLabel}
-            </span>
-            <span className="text-gradient-gold font-mono text-base font-bold sm:text-xl">
-              {typeof potValue === 'number' ? potValue.toLocaleString() : potValue}
-            </span>
-          </div>
-        </motion.div>
-
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:max-w-[34%]">
-          {leaderboardEntries.length > 0 ? (
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:max-w-[50%]">
+          {!hidePodium && leaderboardEntries.length > 0 ? (
             <LeaderboardPodium
               entries={leaderboardEntries}
               mode={mode}

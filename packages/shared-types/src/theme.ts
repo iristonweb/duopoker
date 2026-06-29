@@ -52,4 +52,18 @@ export const breakpoints = {
   tabletMax: 1279
 } as const;
 
+/** Central overlay stack — keep modals above orientation gate and table HUD. */
+export const zIndex = {
+  felt: 1,
+  hud: 45,
+  chipFlight: 15,
+  banner: 90,
+  pwa: 100,
+  panel: 110,
+  orientation: 115,
+  modal: 120,
+  sheet: 125,
+  fullscreen: 150
+} as const;
+
 export type BrandColors = typeof colors;

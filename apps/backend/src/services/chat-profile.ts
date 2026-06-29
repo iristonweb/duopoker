@@ -1,4 +1,4 @@
-import { decryptProfileRow } from '../lib/profile-privacy.js';
+import { decryptProfileRow } from '@duopoker/server-shared/lib/profile-privacy';
 import { prisma } from './prisma.js';
 
 export async function resolveChatSender(

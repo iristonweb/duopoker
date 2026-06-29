@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authGuard } from '../middleware/auth-guard.js';
-import { normalizeNicknameInput } from '../lib/nickname.js';
+import { normalizeNicknameInput } from '@duopoker/server-shared/lib/nickname';
 import { prisma } from '../services/prisma.js';
 
 export const usersRouter = Router();

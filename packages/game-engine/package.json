@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./index": "./src/index.ts"
+    "./index": "./src/index.ts",
+    "./server-rng": "./src/server-rng.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

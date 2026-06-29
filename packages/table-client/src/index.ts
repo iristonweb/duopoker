@@ -1,3 +1,4 @@
+export { bindTableSocket, detachTableSocket, TABLE_SOCKET_EVENTS, type TableSocketHandlers } from './socket-bindings';
 export { createApiHelpers, type TableClientConfig } from './config';
 export {
   createTableSessionStore,
@@ -28,6 +29,19 @@ export {
 } from './layout/mobile-seat-coordinates';
 
 export { useTableChat } from './hooks/useTableChat';
+export {
+  resolveCoachEligibility,
+  useCoachEligibility,
+  type CoachEligibility,
+  type CoachStatusPayload
+} from './hooks/useCoachEligibility';
+
+export {
+  resolveVoiceEligibility,
+  useVoiceEligibility,
+  type VoiceEligibility,
+  type VoiceStatusPayload
+} from './hooks/useVoiceEligibility';
 
 export * from './session/table-session-steps';
 export {

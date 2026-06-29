@@ -1,4 +1,4 @@
-import type { Card, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
+import type { Card, ClientSessionState, SessionState, SubscriptionTier } from '@duopoker/shared-types/index';
 import { GHOST_BOARD_MIN_TIER, tierMeetsRequirement } from '@duopoker/shared-types';
 
 const HIDDEN: Card[] = [];
@@ -20,7 +20,7 @@ export const sanitizeStateForViewer = (
   state: SessionState,
   viewerId: string | undefined,
   options?: SanitizeViewerOptions
-): SessionState => {
+): ClientSessionState => {
   const revealAll = cardsRevealedToAll(state);
   const playerCards: Record<string, Card[]> = {};
   const tier = options?.subscriptionTier ?? 'FREE';
@@ -39,8 +39,11 @@ export const sanitizeStateForViewer = (
     }
   }
 
+  const { seed, deck, ...publicState } = state;
+  void seed;
+  void deck;
   return {
-    ...state,
+    ...publicState,
     deck: [],
     playerCards,
     ghostCommunityCards:

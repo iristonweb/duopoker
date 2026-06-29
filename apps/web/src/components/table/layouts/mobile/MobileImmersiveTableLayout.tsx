@@ -120,6 +120,7 @@ export function MobileImmersiveTableLayout(p: TableLayoutProps) {
         chipFlights={p.chipFlights}
         potPulseKey={p.potPulseKey}
         sidePots={p.holdemSidePotList}
+        showCenterPot={false}
         showBoardSlots={p.tableView.mode !== 'JOKER'}
         ghostCommunityCards={
           p.ghostBoardVisible && p.canPeekGhostBoard ? (p.tableView.ghostCommunityCards ?? []) : []

@@ -13,4 +13,11 @@ describe('API smoke', () => {
     const res = await app.fetch(new Request('http://localhost/api/notifications/vapid-public-key'));
     expect(res.status).toBe(401);
   });
+
+  it('GET /api/oauth/apple/status returns enabled flag', async () => {
+    const res = await app.fetch(new Request('http://localhost/api/oauth/apple/status'));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { enabled: boolean };
+    expect(typeof body.enabled).toBe('boolean');
+  });
 });

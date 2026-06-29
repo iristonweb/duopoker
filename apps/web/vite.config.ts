@@ -69,6 +69,17 @@ export default defineConfig(({ mode }) => {
         '/api': apiProxy,
         '/health': { ...apiProxy, rewrite: () => '/api/health' }
       }
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/three') || id.includes('@react-three')) return 'three';
+            if (id.includes('livekit-client')) return 'livekit';
+            if (id.includes('framer-motion')) return 'motion';
+          }
+        }
+      }
     }
   };
 });

@@ -51,6 +51,18 @@ export async function loginRequest(email: string, password: string): Promise<Log
   return res.json() as Promise<LoginResponse>;
 }
 
+export async function appleLoginRequest(
+  identityToken: string,
+  fullName?: { givenName?: string | null; familyName?: string | null }
+): Promise<LoginResponse> {
+  const res = await apiFetch('/oauth/apple', {
+    method: 'POST',
+    body: JSON.stringify({ identityToken, fullName })
+  });
+  if (!res.ok) throw new Error('apple_login_failed');
+  return res.json() as Promise<LoginResponse>;
+}
+
 export async function acceptInviteRequest(accessToken: string, code: string) {
   const res = await apiFetch(`/clubs/invite/${encodeURIComponent(code)}/accept`, { method: 'POST' }, accessToken);
   if (!res.ok) throw new Error('accept_failed');

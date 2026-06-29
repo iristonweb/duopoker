@@ -75,8 +75,19 @@ export const config = {
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY?.trim() ?? '',
   vapidSubject: process.env.VAPID_SUBJECT?.trim() || 'mailto:support@duopoker.app',
   backendInternalUrl: process.env.BACKEND_INTERNAL_URL?.trim() ?? (isProduction ? '' : 'http://localhost:4000'),
-  notifyInternalSecret: process.env.NOTIFY_INTERNAL_SECRET?.trim() ?? (isProduction ? '' : 'dev-notify-secret'),
-  pricingVariant: process.env.PRICING_VARIANT?.trim() || 'default'
+  notifyInternalSecret: requireSecret(
+    'NOTIFY_INTERNAL_SECRET',
+    process.env.NOTIFY_INTERNAL_SECRET?.trim(),
+    'dev-notify-secret'
+  ),
+  pricingVariant: process.env.PRICING_VARIANT?.trim() || 'default',
+  googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? '',
+  oauthGoogleEnabled: process.env.OAUTH_GOOGLE_ENABLED !== 'false',
+  appleClientId: process.env.APPLE_CLIENT_ID?.trim() ?? '',
+  oauthAppleEnabled: process.env.OAUTH_APPLE_ENABLED === 'true',
+  revenueCatWebhookSecret: process.env.REVENUECAT_WEBHOOK_SECRET?.trim() ?? '',
+  coachLlmApiKey: process.env.COACH_LLM_API_KEY?.trim() ?? '',
+  coachModel: process.env.COACH_MODEL?.trim() || 'gpt-4o-mini'
 };
 
 export const allowDevMockCheckout = (): boolean =>

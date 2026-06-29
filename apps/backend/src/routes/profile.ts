@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth-guard.js';
-import { isValidNickname, normalizeNicknameInput } from '../lib/nickname.js';
+import { isValidNickname, normalizeNicknameInput } from '@duopoker/server-shared/lib/nickname';
 import { prisma } from '../services/prisma.js';
 
 const profileSchema = z.object({

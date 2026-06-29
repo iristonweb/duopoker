@@ -5,7 +5,7 @@ import {
   type SubscriptionTier
 } from '@duopoker/shared-types';
 import { prisma } from './prisma.js';
-import { decryptField } from '../lib/field-crypto.js';
+import { decryptField } from '@duopoker/server-shared/lib/field-crypto';
 
 const BOT_PREFIX = 'duopoker-bot';
 

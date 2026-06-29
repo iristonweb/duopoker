@@ -1,4 +1,4 @@
-import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import type { Card, DisplaySessionState, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import { computeSidePots, winnersAmongEligible } from '@duopoker/game-engine';
 import { potIndexForChipFlight } from '../holdem/side-pots';
 
@@ -198,7 +198,7 @@ export const buildTableSessionSteps = (
   return steps;
 };
 
-export const initHandDisplay = (target: SessionState, heroId: string): SessionState => {
+export const initHandDisplay = (target: SessionState, heroId: string): DisplaySessionState => {
   const display = structuredClone(target);
   display.communityCards = [];
   display.ghostCommunityCards = [];
@@ -215,11 +215,11 @@ export const initHandDisplay = (target: SessionState, heroId: string): SessionSt
 };
 
 export const applyDisplayStep = (
-  display: SessionState,
+  display: DisplaySessionState,
   target: SessionState,
   step: TableSessionStep,
   heroId: string
-): SessionState => {
+): DisplaySessionState => {
   const next = structuredClone(display);
 
   switch (step.kind) {

@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { registerMobilePushToken } from '../notifications/register';
+import { loginPurchases } from '../lib/purchases';
 import { cleanupTableConnection } from '../lib/table-connection';
-import { API_BASE, loginRequest, registerTokenRefresh, type AuthUser } from '../lib/api';
+import { API_BASE, appleLoginRequest, loginRequest, registerTokenRefresh, type AuthUser } from '../lib/api';
 
 const LS_ACCESS = 'duopoker_mobile_access';
 const LS_REFRESH = 'duopoker_mobile_refresh';
@@ -17,6 +18,10 @@ type MobileStore = {
   authError?: string;
   bootstrap: () => Promise<void>;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithApple: (
+    identityToken: string,
+    fullName?: { givenName?: string | null; familyName?: string | null }
+  ) => Promise<boolean>;
   logout: () => Promise<void>;
   setTokens: (access: string, refresh: string, user: AuthUser) => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -50,6 +55,7 @@ export const useMobileStore = create<MobileStore>((set, get) => ({
       authError: undefined
     });
     void registerMobilePushToken(access);
+    void loginPurchases(user.id);
   },
   refreshAccessToken: async () => {
     const rt = get().refreshToken;
@@ -74,6 +80,17 @@ export const useMobileStore = create<MobileStore>((set, get) => ({
     set({ authError: undefined });
     try {
       const data = await loginRequest(email, password);
+      await get().setTokens(data.accessToken, data.refreshToken, data.user);
+      return true;
+    } catch {
+      set({ authError: 'login_failed' });
+      return false;
+    }
+  },
+  loginWithApple: async (identityToken, fullName) => {
+    set({ authError: undefined });
+    try {
+      const data = await appleLoginRequest(identityToken, fullName);
       await get().setTokens(data.accessToken, data.refreshToken, data.user);
       return true;
     } catch {

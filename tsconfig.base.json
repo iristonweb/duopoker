@@ -12,7 +12,9 @@
     "paths": {
       "@duopoker/shared-types/*": ["packages/shared-types/src/*"],
       "@duopoker/game-engine/*": ["packages/game-engine/src/*"],
-      "@duopoker/ui-kit/*": ["packages/ui-kit/src/*"]
+      "@duopoker/ui-kit/*": ["packages/ui-kit/src/*"],
+      "@duopoker/server-shared/lib/*": ["packages/server-shared/src/lib/*"],
+      "@duopoker/server-shared/services/*": ["packages/server-shared/src/services/*"]
     }
   }
 }

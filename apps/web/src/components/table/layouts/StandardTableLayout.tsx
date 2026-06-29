@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { gameChipId } from '@duopoker/shared-types';
 import { GlassPanel } from '@duopoker/ui-kit';
 import { PokerTable3D } from '../../PokerTable3D';
 import { GameTableShell } from '../GameTableShell';
@@ -7,7 +6,6 @@ import { TableTopHUD } from '../TableTopHUD';
 import { TableActionDock } from '../TableActionDock';
 import { JokerActionDock } from '../JokerActionDock';
 import { HandResultOverlay } from '../HandResultOverlay';
-import { VoiceChatPill } from '../VoiceChatPill';
 import { GameStoryPanel } from '../GameStoryPanel';
 import { JokerNotebookPanel } from '../JokerNotebookPanel';
 import { BustedPlayerOverlay } from '../BustedPlayerOverlay';
@@ -42,13 +40,11 @@ export function StandardTableLayout({
         <div className="relative">
           <TableTopHUD
             mode={p.tableView.mode}
-            pot={p.viewKettle}
             street={p.tableView.street}
             seatCount={p.tableView.players.length}
             smallBlind={p.tableView.smallBlind}
             bigBlind={p.tableView.bigBlind}
             handNumber={p.tableView.handNumber}
-            chipId={gameChipId(p.equipped.chip)}
             joker={p.tableView.mode === 'JOKER' ? p.tableView.joker : null}
             jokerRules={p.session.jokerRules}
             onLeaveTable={p.onLeaveTable}
@@ -57,7 +53,14 @@ export function StandardTableLayout({
             leaderboardEntries={p.leaderboardEntries}
             leaderboardProfiles={p.leaderboardProfiles}
             heroId={p.userId}
+            session={p.session}
             onOpenLeaderboard={() => p.onLeaderboardOpenChange(true)}
+            hidePodium={
+              (p.tableView.street === 'COMPLETE' &&
+                p.session.street === 'COMPLETE' &&
+                !p.showBustedOverlay) ||
+              p.gameOver
+            }
             layoutVariant={isTablet ? 'tablet' : variant === 'classic' ? 'compact' : 'desktop'}
           />
           {onChatOpen ? (
@@ -156,6 +159,11 @@ export function StandardTableLayout({
             <GameStoryPanel
               events={p.feedEvents}
               pulseKey={p.feedPulseKey}
+              suppressHandCompleteDupes={
+                p.tableView.street === 'COMPLETE' &&
+                p.session.street === 'COMPLETE' &&
+                !p.showBustedOverlay
+              }
               soundOn={p.soundOn}
               musicOn={p.musicOn}
               onSoundToggle={p.onSoundToggle}
@@ -187,7 +195,6 @@ export function StandardTableLayout({
                 modeLabel={p.t('table.joker')}
               />
             ) : null}
-            <VoiceChatPill />
             {p.waitingForPlayers ? (
               <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/50 px-6 backdrop-blur-sm">
                 <GlassPanel glow="emerald" className="pointer-events-auto max-w-md border-emerald/20 p-8 text-center">

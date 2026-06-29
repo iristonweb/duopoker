@@ -1,5 +1,7 @@
 import { Redirect, router, Link } from 'expo-router';
 import { useState } from 'react';
+import { Platform } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { colors } from '@duopoker/shared-types';
 import { useMobileStore } from '../src/state/useMobileStore';
 import { strings } from '../src/lib/strings';
@@ -13,6 +15,7 @@ export default function LoginScreen() {
   const accessToken = useMobileStore((s) => s.accessToken);
   const ready = useMobileStore((s) => s.ready);
   const login = useMobileStore((s) => s.login);
+  const loginWithApple = useMobileStore((s) => s.loginWithApple);
   const authError = useMobileStore((s) => s.authError);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +30,28 @@ export default function LoginScreen() {
     const ok = await login(email.trim(), password);
     setBusy(false);
     if (ok) router.replace('/lobby');
+  };
+
+  const onAppleSignIn = async () => {
+    setBusy(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL
+        ]
+      });
+      if (!credential.identityToken) {
+        setBusy(false);
+        return;
+      }
+      const ok = await loginWithApple(credential.identityToken, credential.fullName ?? undefined);
+      if (ok) router.replace('/lobby');
+    } catch {
+      /* user cancelled or unavailable */
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -62,6 +87,15 @@ export default function LoginScreen() {
               <Text style={styles.ctaText}>{strings.login.signIn}</Text>
             )}
           </Pressable>
+          {Platform.OS === 'ios' ? (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={12}
+              style={styles.appleBtn}
+              onPress={() => void onAppleSignIn()}
+            />
+          ) : null}
           <Link href="https://duopoker.ru/register" asChild>
             <Pressable>
               <Text style={styles.link}>{strings.login.createAccount}</Text>
@@ -100,5 +134,6 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   ctaText: { color: colors.background, fontWeight: '700', fontSize: 16 },
+  appleBtn: { width: '100%', height: 48 },
   link: { color: colors.gold, textAlign: 'center', marginTop: s.md, fontSize: 13 }
 });

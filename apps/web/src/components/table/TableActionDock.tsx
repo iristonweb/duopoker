@@ -47,7 +47,6 @@ export function TableActionDock({
   onRaiseAmountChange,
   halfPotRaise,
   potRaise,
-  kettle,
   secondsLeft,
   holeCards,
   deckId,
@@ -154,16 +153,9 @@ export function TableActionDock({
             </div>
           </div>
 
-          {showActions ? (
+          {showActions && need > 0 ? (
             <div className="hidden items-center gap-3 text-xs sm:flex sm:text-sm">
-              <span className="font-mono text-muted">
-                {t('table.pot')}: <span className="font-semibold text-gold-light">{kettle.toLocaleString()}</span>
-              </span>
-              {need > 0 ? (
-                <span className="font-mono text-muted">
-                  {t('table.call', { amount: need })}
-                </span>
-              ) : null}
+              <span className="font-mono text-muted">{t('table.call', { amount: need })}</span>
             </div>
           ) : null}
         </div>

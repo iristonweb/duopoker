@@ -13,6 +13,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'app.duopoker.mobile',
+    usesAppleSignIn: true,
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
       NSMicrophoneUsageDescription:
@@ -23,7 +24,7 @@ const config: ExpoConfig = {
     package: 'app.duopoker.mobile',
     permissions: ['RECORD_AUDIO']
   },
-  plugins: ['expo-router', 'expo-secure-store', 'expo-notifications'],
+  plugins: ['expo-router', 'expo-secure-store', 'expo-notifications', 'expo-apple-authentication'],
   experiments: {
     typedRoutes: true
   },

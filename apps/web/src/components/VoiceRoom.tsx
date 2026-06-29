@@ -5,6 +5,7 @@ import { Room, RoomEvent } from 'livekit-client';
 import { Button } from '@duopoker/ui-kit';
 import { useVoiceEligibility } from '../hooks/useVoiceEligibility';
 import { useAppStore } from '../store/useAppStore';
+import { useTableStore } from '../store/useTableStore';
 
 type VoiceStatus = 'idle' | 'connecting' | 'live' | 'error';
 
@@ -16,7 +17,10 @@ const isMicPermissionError = (err: unknown): boolean => {
 export function VoiceRoom() {
   const { t } = useTranslation();
   const eligibility = useVoiceEligibility();
-  const { session, userId, displayName, apiFetch } = useAppStore();
+  const session = useTableStore((s) => s.session);
+  const userId = useAppStore((s) => s.userId);
+  const displayName = useAppStore((s) => s.displayName);
+  const apiFetch = useAppStore((s) => s.apiFetch);
   const roomRef = useRef<Room | null>(null);
   const [status, setStatus] = useState<VoiceStatus>('idle');
   const [micOn, setMicOn] = useState(false);

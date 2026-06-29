@@ -1,0 +1,17 @@
+{
+  "name": "@duopoker/server-shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./lib/nickname": "./src/lib/nickname.ts",
+    "./lib/field-crypto": "./src/lib/field-crypto.ts",
+    "./lib/profile-privacy": "./src/lib/profile-privacy.ts",
+    "./services/livekit": "./src/services/livekit.ts"
+  },
+  "dependencies": {
+    "@duopoker/shared-types": "workspace:*",
+    "livekit-server-sdk": "^2.15.4",
+    "zod": "^3.24.3"
+  }
+}

@@ -40,3 +40,5 @@ export const decryptField = (stored: string | null | undefined): string | null =
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
 };
+
+export const fieldEncryptionEnabled = (): boolean => getKey() !== null;

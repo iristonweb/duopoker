@@ -30,6 +30,7 @@ import {
   resolveDailyBonusAmount
 } from '../services/monetization.js';
 import { claimWebhookEvent, stripeEventClaimId } from '../services/webhook-dedup.js';
+import { handleRevenueCatWebhook } from '../services/revenuecat-webhook.js';
 import { prisma } from '../lib/prisma.js';
 
 const purchaseSchema = z.object({
@@ -230,6 +231,28 @@ monetizationRoutes.post('/yookassa/webhook', async (c) => {
     return c.json({ received: true, ...result });
   } catch (e) {
     console.error('YooKassa webhook', e);
+    return c.json({ error: 'Handler failed' }, 500);
+  }
+});
+
+monetizationRoutes.post('/revenuecat/webhook', async (c) => {
+  if (!config.revenueCatWebhookSecret) {
+    return c.json({ error: 'RevenueCat not configured' }, 503);
+  }
+  const auth = c.req.header('authorization') ?? '';
+  const token = auth.replace(/^Bearer\s+/i, '');
+  if (!token || token !== config.revenueCatWebhookSecret) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = (await c.req.json().catch(() => null)) as Parameters<typeof handleRevenueCatWebhook>[0] | null;
+  if (!body?.event) {
+    return c.json({ error: 'Invalid payload' }, 400);
+  }
+  try {
+    const result = await handleRevenueCatWebhook(body);
+    return c.json(result);
+  } catch (e) {
+    console.error('RevenueCat webhook', e);
     return c.json({ error: 'Handler failed' }, 500);
   }
 });

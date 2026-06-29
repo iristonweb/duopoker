@@ -20,7 +20,6 @@ export const isLiveKitConfigured = (cfg: LiveKitConfig): boolean => {
   return true;
 };
 
-/** Room name safe for LiveKit (alphanumeric + hyphen). */
 export const voiceRoomName = (sessionId: string): string =>
   `table-${sessionId.replace(/[^a-zA-Z0-9-_]/g, '-').slice(0, 120)}`;
 

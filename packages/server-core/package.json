@@ -1,0 +1,26 @@
+{
+  "name": "@duopoker/server-core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./oauth/apple": "./src/oauth/apple.ts",
+    "./session/persistence": "./src/session/persistence.ts",
+    "./profile/stats": "./src/profile/stats.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@duopoker/session-core": "workspace:*",
+    "@duopoker/shared-types": "workspace:*",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.9"
+  }
+}

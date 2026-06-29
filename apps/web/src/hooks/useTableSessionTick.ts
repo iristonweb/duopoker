@@ -3,6 +3,7 @@ import { useTableSessionTick as useTableSessionTickBase } from '@duopoker/table-
 import type { SessionState } from '@duopoker/shared-types/index';
 import { usesRealtimeSocket } from '../config/api';
 import { useAppStore } from '../store/useAppStore';
+import { useTableStore } from '../store/useTableStore';
 
 /** Nudge server tick when hand-complete timer elapsed or a bot turn appears stuck. */
 export function useTableSessionTick(
@@ -17,20 +18,20 @@ export function useTableSessionTick(
       usesRealtimeSocket,
       reconnectSession: (sid: string) => {
         if (usesRealtimeSocket()) {
-          useAppStore.getState().socket?.emit('reconnectSession', { sessionId: sid });
+          useTableStore.getState().socket?.emit('reconnectSession', { sessionId: sid });
           return;
         }
         void apiFetch(`/game/session/${encodeURIComponent(sid)}`)
           .then((r) => (r.ok ? r.json() : null))
           .then((data: { session?: SessionState | null } | null) => {
             if (data?.session) {
-              useAppStore.setState({ session: data.session, sessionError: undefined });
+              useTableStore.setState({ session: data.session, sessionError: undefined });
             }
           })
           .catch(() => undefined);
       },
       setSession: (s: SessionState) => {
-        useAppStore.setState({ session: s, sessionError: undefined });
+        useTableStore.setState({ session: s, sessionError: undefined });
       }
     }),
     [apiFetch]

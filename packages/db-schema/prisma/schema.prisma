@@ -124,6 +124,7 @@ model User {
   id            String         @id @default(cuid())
   email         String         @unique
   passwordHash  String?
+  appleSub      String?        @unique
   displayName   String
   nickname      String         @unique
   avatar        String?
@@ -194,6 +195,8 @@ model GameSession {
   replayMeta ReplayMeta?
   /** Serialized SessionState snapshot for reconnect / multi-instance recovery */
   gameState  Json?
+  /** Optimistic-lock version for concurrent session updates */
+  gameStateVersion Int @default(0)
   chatMessages TableChatMessage[]
   @@map("game_sessions")
 }

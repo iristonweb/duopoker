@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PointLight } from 'three';
 import type { Card, EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types/index';
-import { resolveEquipped, gameChipId } from '@duopoker/shared-types';
+import { colors, resolveEquipped, gameChipId } from '@duopoker/shared-types';
 import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
@@ -151,7 +151,7 @@ export function PokerTable3D({
         <ambientLight intensity={0.28} />
         <spotLight castShadow position={[0, 11, 2]} angle={0.55} penumbra={0.92} intensity={2.1} color="#fff4cc" />
         <pointLight position={[-4, 4, 3]} intensity={0.22} color="#4ade80" />
-        <pointLight position={[4, 4, 3]} intensity={0.18} color="#e8c547" />
+        <pointLight position={[4, 4, 3]} intensity={0.18} color={colors.gold} />
         {!reduceMotion ? <RimLightSweep color={felt.rimColor} /> : null}
         <Environment preset="night" />
 

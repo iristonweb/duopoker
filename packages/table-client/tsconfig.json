@@ -5,7 +5,12 @@
     "rootDir": "src",
     "declaration": true,
     "declarationMap": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@duopoker/shared-types/*": ["../shared-types/dist/*"],
+      "@duopoker/shared-types/index": ["../shared-types/dist/index"]
+    }
   },
   "include": ["src"]
 }

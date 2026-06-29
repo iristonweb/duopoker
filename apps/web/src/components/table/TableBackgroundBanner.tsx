@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, cn } from '@duopoker/ui-kit';
 import { useAppStore } from '../../store/useAppStore';
+import { useTableStore } from '../../store/useTableStore';
 
 export function TableBackgroundBanner() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const tableMinimized = useAppStore((s) => s.tableMinimized);
-  const session = useAppStore((s) => s.session);
+  const session = useTableStore((s) => s.session);
   const userId = useAppStore((s) => s.userId);
   const resumeTable = useAppStore((s) => s.resumeTable);
   const [now, setNow] = useState(() => Date.now());

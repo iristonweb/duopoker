@@ -181,7 +181,7 @@
       "platinum": [
         "All Gold perks",
         "Platinum deck, chips, frame, and title",
-        "AI coach hints (coming soon)"
+        "AI coach hints at the table"
       ],
       "diamond": [
         "All Platinum perks",
@@ -259,6 +259,7 @@
     "lobbyPreview": "Lobby preview",
     "queueHint": "Queue for a match to begin.",
     "sessionStatus": "Table {{id}} — {{street}}",
+    "sessionStatusCompact": "Table {{id}}",
     "nextHand": "Next hand",
     "subscribe": "Subscribe",
     "stripeNotConfigured": "Payments not configured — set YOOKASSA_* on the server.",
@@ -278,6 +279,13 @@
     "subscriptionsEyebrow": "DP CLUB",
     "subscriptionsTitle": "Subscriptions",
     "subscriptionsDesc": "Pick a tier — tap View details to see the cosmetic bundle and perks.",
+    "subscriptionsTeaser": "Manage plans and cosmetics in your profile.",
+    "subscriptionsTeaserCta": "Upgrade for premium cosmetics, voice chat, and more.",
+    "subscriptionsAllPlans": "All plans",
+    "subscriptionsExpand": "Compare tiers",
+    "subscriptionsCollapse": "Hide tiers",
+    "referralTeaser": "Invite friends and earn bonus chips from your profile.",
+    "inviteFriend": "Invite a friend",
     "subscriptionViewDetails": "View details",
     "subscriptionModalClose": "Close",
     "subscriptionModalPerks": "Perks",
@@ -412,6 +420,12 @@
     "seats": "{{count}} seats",
     "voiceTitle": "Table voice chat",
     "voiceEyebrow": "Voice",
+    "coachAsk": "Ask coach",
+    "coachEyebrow": "AI coach",
+    "coachDisclaimer": "Play-money hints only — not financial or gambling advice.",
+    "coachLoading": "Thinking…",
+    "coachError": "Could not load a hint right now.",
+    "coachTierRequired": "Platinum+ subscription required",
     "timeLeft": "{{seconds}}s",
     "actionError": "Action failed: {{code}}",
     "nextHandAuto": "Next hand in {{seconds}}s…",

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { io, Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
-import { getApiBase, resolveApiUrl, usesRealtimeSocket } from '../config/api';
+import { resolveApiUrl, usesRealtimeSocket } from '../config/api';
+import { useTableStore } from './useTableStore';
 import { readApiError } from '../lib/api-error';
 
 import type { EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types';
@@ -49,7 +49,7 @@ type AppStore = {
   tableVoluntaryLeave: boolean;
   /** Table minimized to lobby — keep session alive in background. */
   tableMinimized: boolean;
-  socket?: Socket;
+  socket?: import('socket.io-client').Socket;
   authError?: string;
   authNotice?: string;
   sessionError?: string;
@@ -301,90 +301,7 @@ export const useAppStore = create<AppStore>((set, get) => {
         return false;
       }
     },
-    connect: () => {
-      if (!usesRealtimeSocket()) return;
-      const base = getApiBase();
-      if (!base) return;
-      const existing = get().socket;
-      if (existing?.connected) return;
-      if (existing) {
-        existing.connect();
-        return;
-      }
-      const token = get().accessToken;
-      const socket = io(base, {
-        auth: token ? { token } : undefined,
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelayMax: 10_000,
-        transports: ['websocket', 'polling']
-      });
-      const shouldAcceptTableState = () => {
-        if (get().tableVoluntaryLeave) return false;
-        if (typeof window === 'undefined') return true;
-        return window.location.pathname.startsWith('/table/') || get().tableMinimized;
-      };
-      socket.on('stateUpdate', (session: SessionState) => {
-        if (!shouldAcceptTableState()) return;
-        set({ session, sessionError: undefined });
-      });
-      socket.on('sessionEvent', (evt: { state?: SessionState }) => {
-        if (!shouldAcceptTableState()) return;
-        if (evt.state) set({ session: evt.state, sessionError: undefined });
-      });
-      socket.on('sessionReconnected', (payload: { snapshot?: SessionState | null }) => {
-        if (!shouldAcceptTableState()) return;
-        if (payload.snapshot) set({ session: payload.snapshot, sessionError: undefined });
-      });
-      socket.on('sessionError', (err: { code?: string }) => {
-        set({ sessionError: err.code ?? 'session_error' });
-      });
-      socket.on('leftTable', () => {
-        get().stopPolling();
-        set({
-          tableVoluntaryLeave: true,
-          tableMinimized: false,
-          session: undefined,
-          sessionError: undefined
-        });
-        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/table/')) {
-          window.location.replace('/lobby');
-        }
-      });
-      socket.on(
-        'tableClosed',
-        (payload: { clubId?: string; tableId?: string; sessionId?: string }) => {
-          const sid = get().session?.sessionId;
-          if (payload.sessionId && sid && payload.sessionId !== sid) return;
-          get().stopPolling();
-          set({
-            tableVoluntaryLeave: true,
-            tableMinimized: false,
-            session: undefined,
-            sessionError: 'table_closed',
-            tableLiveSessions: get().tableLiveSessions.filter(
-              (t) => t.sessionId !== payload.sessionId
-            ),
-            tableInvites: get().tableInvites.filter((t) => t.tableId !== payload.tableId)
-          });
-          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/table/')) {
-            window.location.replace('/lobby');
-          }
-        }
-      );
-      socket.on('connect', () => {
-        const sid = get().session?.sessionId;
-        if (!sid) return;
-        if (
-          typeof window !== 'undefined' &&
-          !window.location.pathname.startsWith('/table/') &&
-          !get().tableMinimized
-        )
-          return;
-        socket.emit('reconnectSession', { sessionId: sid, userId: get().userId });
-      });
-      set({ socket });
-    },
+    connect: () => useTableStore.getState().connect(),
     apiFetch: async (path, init = {}) => {
       const url = resolveApiUrl(path);
       const headers = new Headers(init.headers);
@@ -496,172 +413,42 @@ export const useAppStore = create<AppStore>((set, get) => {
       if (!get().accessToken) return;
       await get().apiFetch('/game/queue', { method: 'DELETE' });
     },
-    resetTableJoin: () => set({ tableVoluntaryLeave: false, tableMinimized: false }),
+    resetTableJoin: () => {
+      useTableStore.getState().resetTableJoin();
+      set({ tableMinimized: false });
+    },
     joinSession: async (sessionId, mode, buyIn = 100) => {
-      if (get().tableVoluntaryLeave) return;
-      if (usesRealtimeSocket()) {
-        get().connect();
-        get().socket?.emit('joinSession', {
-          sessionId,
-          userId: get().userId,
-          mode: mode ?? get().mode,
-          buyIn
-        });
-        return;
-      }
-      const res = await get().apiFetch('/game/join', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId,
-          mode: mode ?? get().mode,
-          buyIn
-        })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        set({ sessionError: (err as { code?: string }).code ?? 'join_failed' });
-        return;
-      }
-      const data = (await res.json()) as { session: SessionState };
-      set({ session: data.session, sessionError: undefined });
+      await useTableStore.getState().joinSession(sessionId, mode, buyIn);
     },
     pollSession: (sessionId) => {
-      if (usesRealtimeSocket() || get().tableVoluntaryLeave) return;
-      get().stopPolling();
-      const tick = async () => {
-        if (get().tableVoluntaryLeave) return;
-        try {
-          const res = await get().apiFetch(`/game/session/${encodeURIComponent(sessionId)}`);
-          if (res.status === 403) {
-            set({ session: undefined, sessionError: 'NOT_SEATED' });
-            return;
-          }
-          if (!res.ok) return;
-          const data = (await res.json()) as { session: SessionState | null };
-          if (data.session) set({ session: data.session, sessionError: undefined });
-        } catch {
-          /* ignore */
-        }
-      };
-      void tick();
-      const pollTimer = setInterval(tick, 900);
-      set({ pollTimer });
+      useTableStore.getState().pollSession(sessionId);
     },
     stopPolling: () => {
-      const t = get().pollTimer;
-      if (t) clearInterval(t);
-      set({ pollTimer: undefined });
+      useTableStore.getState().stopPolling();
     },
-    playerAction: async ({ sessionId, type, amount, card, trumpSuit, declaration }) => {
-      if (usesRealtimeSocket()) {
-        const socket = get().socket;
-        if (!socket?.connected) {
-          set({ sessionError: 'connection_lost' });
-          return;
-        }
-        set({ sessionError: undefined });
-        socket.emit('playerAction', {
-          sessionId,
-          userId: get().userId,
-          type,
-          amount,
-          card,
-          trumpSuit,
-          declaration,
-          at: Date.now()
-        });
-        return;
-      }
-      const res = await get().apiFetch('/game/action', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId,
-          type,
-          amount,
-          card,
-          trumpSuit,
-          declaration,
-          at: Date.now()
-        })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        set({ sessionError: (err as { code?: string }).code ?? 'action_rejected' });
-        return;
-      }
-      const data = (await res.json()) as { session: SessionState };
-      set({ session: data.session, sessionError: undefined });
+    playerAction: async (payload) => {
+      await useTableStore.getState().playerAction(payload);
     },
     readyNextHand: async () => {
-      const sid = get().session?.sessionId;
-      if (!sid) return;
-      if (usesRealtimeSocket()) {
-        get().socket?.emit('readyNextHand', { sessionId: sid, userId: get().userId });
-        return;
-      }
-      const res = await get().apiFetch('/game/ready-next-hand', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId: sid })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        set({ sessionError: (err as { code?: string }).code ?? 'ready_failed' });
-        return;
-      }
-      const data = (await res.json()) as { session: SessionState };
-      set({ session: data.session, sessionError: undefined });
+      await useTableStore.getState().readyNextHand();
     },
     clearTableSession: () => {
-      get().stopPolling();
-      set({
-        tableVoluntaryLeave: true,
-        tableMinimized: false,
-        session: undefined,
-        sessionError: undefined
-      });
+      useTableStore.getState().clearTableSession();
+      set({ tableMinimized: false });
     },
     minimizeTable: () => {
-      const sid = get().session?.sessionId;
+      const sid = useTableStore.getState().session?.sessionId;
       set({ tableMinimized: true });
       if (!usesRealtimeSocket() && sid) {
-        get().pollSession(sid);
+        useTableStore.getState().pollSession(sid);
       }
     },
     resumeTable: () => {
       set({ tableMinimized: false });
     },
     leaveTable: async (sessionId) => {
-      get().stopPolling();
-      set({ tableVoluntaryLeave: true, tableMinimized: false });
-      const clearLocal = () =>
-        set({
-          tableVoluntaryLeave: true,
-          tableMinimized: false,
-          session: undefined,
-          sessionError: undefined
-        });
-      if (usesRealtimeSocket()) {
-        get().connect();
-        get().socket?.emit('leaveTable', { sessionId, userId: get().userId });
-        clearLocal();
-        return { ok: true };
-      }
-      const res = await get().apiFetch('/game/leave', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const reason = (err as { code?: string }).code ?? 'leave_failed';
-        if (reason === 'NOT_SEATED' || reason === 'SESSION_NOT_FOUND') {
-          clearLocal();
-          return { ok: true, reason };
-        }
-        set({ sessionError: reason });
-        return { ok: false, reason };
-      }
-      clearLocal();
-      return { ok: true };
+      set({ tableMinimized: false });
+      return useTableStore.getState().leaveTable(sessionId);
     },
     register: async (email, password, displayName, nickname, referralCode) => {
       set({ authError: undefined, authNotice: undefined });

@@ -10,6 +10,9 @@ export const evaluateHoldem = (hole: Card[], board: Card[] = []): number => {
   return s.reduce((a, n, i) => a + n * 15 ** (7 - i), 0);
 };
 
+/**
+ * @deprecated Legacy 5-card poker scoring — not used by live trick-taking JOKER (Расписной).
+ */
 export const evaluateJoker = (cards: Card[]): number => {
   const s =
     cards.length >= 5

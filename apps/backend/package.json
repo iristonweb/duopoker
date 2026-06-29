@@ -11,8 +11,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@duopoker/server-shared": "workspace:*",
     "@duopoker/db-schema": "workspace:*",
     "@duopoker/game-engine": "workspace:*",
+    "@duopoker/server-core": "workspace:*",
+    "@duopoker/session-core": "workspace:*",
     "@duopoker/shared-types": "workspace:*",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",

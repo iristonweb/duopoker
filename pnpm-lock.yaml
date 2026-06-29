@@ -81,6 +81,15 @@ importers:
       '@duopoker/game-engine':
         specifier: workspace:*
         version: link:../../packages/game-engine
+      '@duopoker/server-core':
+        specifier: workspace:*
+        version: link:../../packages/server-core
+      '@duopoker/server-shared':
+        specifier: workspace:*
+        version: link:../../packages/server-shared
+      '@duopoker/session-core':
+        specifier: workspace:*
+        version: link:../../packages/session-core
       '@duopoker/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -154,6 +163,9 @@ importers:
       expo:
         specifier: ^52.0.0
         version: 52.0.49(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)))(react-native-webview@13.16.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)
+      expo-apple-authentication:
+        specifier: ^7.1.3
+        version: 7.2.4(expo@52.0.49(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)))(react-native-webview@13.16.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))
       expo-av:
         specifier: ^15.0.2
         version: 15.1.7(expo@52.0.49(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)))(react-native-webview@13.16.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)
@@ -202,6 +214,9 @@ importers:
       react-native-gesture-handler:
         specifier: ~2.20.2
         version: 2.20.2(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)
+      react-native-purchases:
+        specifier: ^8.9.1
+        version: 8.12.0(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)
       react-native-reanimated:
         specifier: ^3.17.0
         version: 3.19.5(@babel/core@7.29.0)(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)
@@ -314,6 +329,15 @@ importers:
       '@duopoker/game-engine':
         specifier: workspace:*
         version: link:../game-engine
+      '@duopoker/server-core':
+        specifier: workspace:*
+        version: link:../server-core
+      '@duopoker/server-shared':
+        specifier: workspace:*
+        version: link:../server-shared
+      '@duopoker/session-core':
+        specifier: workspace:*
+        version: link:../session-core
       '@duopoker/shared-types':
         specifier: workspace:*
         version: link:../shared-types
@@ -326,6 +350,9 @@ importers:
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
+      google-auth-library:
+        specifier: ^10.6.2
+        version: 10.6.2
       hono:
         specifier: ^4.7.10
         version: 4.12.23
@@ -389,6 +416,43 @@ importers:
         specifier: ^3.24.3
         version: 3.25.76
 
+  packages/server-core:
+    dependencies:
+      '@duopoker/session-core':
+        specifier: workspace:*
+        version: link:../session-core
+      '@duopoker/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.3
+    devDependencies:
+      '@types/jsonwebtoken':
+        specifier: ^9.0.9
+        version: 9.0.10
+
+  packages/server-shared:
+    dependencies:
+      '@duopoker/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      livekit-server-sdk:
+        specifier: ^2.15.4
+        version: 2.15.4
+      zod:
+        specifier: ^3.24.3
+        version: 3.25.76
+
+  packages/session-core:
+    dependencies:
+      '@duopoker/game-engine':
+        specifier: workspace:*
+        version: link:../game-engine
+      '@duopoker/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+
   packages/shared-types: {}
 
   packages/table-client:
@@ -408,6 +472,10 @@ importers:
       zustand:
         specifier: ^5.0.3
         version: 5.0.12(@types/react@18.3.28)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.20
+        version: 18.3.28
 
   packages/ui-kit:
     dependencies:
@@ -1540,7 +1608,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {node: '>=0.10.0'}
+    engines: {'0': node >=0.10.0}
 
   '@expo/cli@0.22.28':
     resolution: {integrity: sha512-lvt72KNitGuixYD2l3SZmRKVu2G4zJpmg5V7WfUBNpmUU5oODBw/6qmiJ6kSLAlfDozscUk+BBGknBBzxUrwrA==}
@@ -2135,6 +2203,9 @@ packages:
         optional: true
       react-native:
         optional: true
+
+  '@revenuecat/purchases-typescript-internal@14.3.0':
+    resolution: {integrity: sha512-P3IhlWvH4wJAM9ypv8HamdIBMQfnLdU9PbjURw+s7NxHOL8LmPGhKuyv+gBINpka27mt1CAsDoOhNHjkexJhkg==}
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -3672,6 +3743,12 @@ packages:
   expect-type@1.3.0:
     resolution: {integrity: sha512-knvyeauYhqjOYvQ66MznSMs83wmHrCycNEN6Ao+2AeYEfxUIkuiVxdEa1qlGEPK+We3n0THiDciYSsCcgW/DoA==}
     engines: {node: '>=12.0.0'}
+
+  expo-apple-authentication@7.2.4:
+    resolution: {integrity: sha512-T2agaLLPT4Ax97FeXImB7BCCEzEJ0gB+ZwlFa/FXBtbp6WFKcGRlTVKiX2YPYLZzN5QjXcmQ9HHJ17jRthNHMg==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
 
   expo-application@56.0.3:
     resolution: {integrity: sha512-DdGGPlMuM6cSTeKhbvh6OeLr2O/+EI5BHKYrD+Do8sJPYgLwzGrgESELfyjJCpEhFzT+TgKIdmLmWXhNUQnHiw==}
@@ -5708,6 +5785,12 @@ packages:
     resolution: {integrity: sha512-NIXU/iT5+ORyCc7p0z2nnlkouYKX425vuU1OEm6bMMtWWR9yvb+Xg5AZmImTKoF9abxCPqrKC3rOZsKzUYgYZA==}
     peerDependencies:
       react: '*'
+      react-native: '*'
+
+  react-native-purchases@8.12.0:
+    resolution: {integrity: sha512-0T6WtSDN96swsS6iLeTh7GEGLSedBr4FWP5JsGLnP6Ri7Rp754pf3UJ+S0+ZnT1cqUZ4W2z2oB6zTLyyfNfuKw==}
+    peerDependencies:
+      react: '>= 16.6.3'
       react-native: '*'
 
   react-native-reanimated@3.19.5:
@@ -9135,6 +9218,8 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
+  '@revenuecat/purchases-typescript-internal@14.3.0': {}
+
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
   '@rollup/plugin-babel@5.3.1(@babel/core@7.29.0)(@types/babel__core@7.20.5)(rollup@2.80.0)':
@@ -10859,6 +10944,11 @@ snapshots:
       strip-final-newline: 2.0.0
 
   expect-type@1.3.0: {}
+
+  expo-apple-authentication@7.2.4(expo@52.0.49(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)))(react-native-webview@13.16.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)):
+    dependencies:
+      expo: 52.0.49(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)))(react-native-webview@13.16.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)
+      react-native: 0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)
 
   expo-application@56.0.3(expo@52.0.49(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)))(react-native-webview@13.16.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1)):
     dependencies:
@@ -13017,6 +13107,12 @@ snapshots:
 
   react-native-is-edge-to-edge@1.3.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1):
     dependencies:
+      react: 18.3.1
+      react-native: 0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)
+
+  react-native-purchases@8.12.0(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@revenuecat/purchases-typescript-internal': 14.3.0
       react: 18.3.1
       react-native: 0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1)
 

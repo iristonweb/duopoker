@@ -17,7 +17,10 @@ export const computeSidePots = (
   handContributions: Record<string, number>,
   folded: Set<string>
 ): SidePot[] => {
-  const levels = [...new Set(players.map((p) => handContributions[p] ?? 0))]
+  const allContributors = [
+    ...new Set([...players, ...Object.keys(handContributions).filter((id) => (handContributions[id] ?? 0) > 0)])
+  ];
+  const levels = [...new Set(allContributors.map((p) => handContributions[p] ?? 0))]
     .filter((x) => x > 0)
     .sort((a, b) => a - b);
 
@@ -26,7 +29,7 @@ export const computeSidePots = (
   let orphan = 0;
   for (const level of levels) {
     const layer = level - prev;
-    const contributors = players.filter((p) => (handContributions[p] ?? 0) >= level);
+    const contributors = allContributors.filter((p) => (handContributions[p] ?? 0) >= level);
     const amount = layer * contributors.length + orphan;
     const eligible = contributors.filter((p) => !folded.has(p));
     if (amount > 0 && eligible.length > 0) {
@@ -40,6 +43,11 @@ export const computeSidePots = (
   if (orphan > 0 && pots.length > 0) {
     const last = pots[pots.length - 1]!;
     pots[pots.length - 1] = { amount: last.amount + orphan, eligible: last.eligible };
+  } else if (orphan > 0 && players.length > 0) {
+    const eligible = players.filter((p) => !folded.has(p));
+    if (eligible.length > 0) {
+      pots.push({ amount: orphan, eligible });
+    }
   }
   return pots;
 };
@@ -89,18 +97,42 @@ export const winnersAmongEligible = (
   return winners;
 };
 
+/** Order tied winners left of dealer for odd-chip distribution. */
+export const sortWinnersBySeat = (
+  tied: string[],
+  players: string[],
+  dealerIndex: number
+): string[] => {
+  const n = players.length;
+  const leftOfDealer = (pid: string): number => {
+    const seat = players.indexOf(pid);
+    if (seat < 0) return n;
+    return (seat - dealerIndex - 1 + n) % n;
+  };
+  return [...tied].sort((a, b) => leftOfDealer(a) - leftOfDealer(b));
+};
+
 export const distributeSidePots = (
   pots: SidePot[],
   hole: Record<string, Card[]>,
   board: Card[],
-  mode: GameMode
+  mode: GameMode,
+  players: string[],
+  dealerIndex: number
 ): { winners: string[]; winnersShare: Record<string, number> } => {
   const winnersShare: Record<string, number> = {};
   const winnerSet = new Set<string>();
 
   for (const pot of pots) {
-    const tied = winnersAmongEligible(pot.eligible, hole, board, mode);
-    if (tied.length === 0) continue;
+    let tied = sortWinnersBySeat(
+      winnersAmongEligible(pot.eligible, hole, board, mode),
+      players,
+      dealerIndex
+    );
+    if (tied.length === 0) {
+      tied = sortWinnersBySeat(pot.eligible, players, dealerIndex);
+      if (tied.length === 0) continue;
+    }
     const share = Math.floor(pot.amount / tied.length);
     const remainder = pot.amount - share * tied.length;
     tied.forEach((w, i) => {

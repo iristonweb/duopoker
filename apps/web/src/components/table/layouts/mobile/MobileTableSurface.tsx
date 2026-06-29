@@ -28,6 +28,7 @@ type Props = {
   chipFlights: ChipFlight[];
   potPulseKey: number;
   sidePots: number[];
+  showCenterPot?: boolean;
   showBoardSlots?: boolean;
   ghostCommunityCards?: Card[];
   secondsLeft: number | null;
@@ -41,7 +42,6 @@ export function MobileTableSurface({
   communityCards,
   boardCardKeys,
   pot,
-  street,
   players,
   heroDeckId,
   heroChipId,
@@ -50,6 +50,7 @@ export function MobileTableSurface({
   chipFlights,
   potPulseKey,
   sidePots,
+  showCenterPot = true,
   showBoardSlots = true,
   ghostCommunityCards = [],
   secondsLeft,
@@ -68,7 +69,7 @@ export function MobileTableSurface({
   return (
     <div
       data-testid="mobile-table-surface"
-      className={cn('relative min-h-0 w-full flex-1 overflow-visible', className)}
+      className={cn('table-felt-immersive relative min-h-0 w-full flex-1 overflow-visible', className)}
     >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_55%,_#000_100%)]" />
       <div
@@ -122,13 +123,14 @@ export function MobileTableSurface({
         </div>
 
         <div className="absolute left-1/2 top-[58%] -translate-x-1/2">
-          <AnimatedPotDisplay
-            pot={pot}
-            chipId={potChipId}
-            street={street}
-            pulseKey={potPulseKey}
-            sidePots={sidePots}
-          />
+          {showCenterPot ? (
+            <AnimatedPotDisplay
+              pot={pot}
+              chipId={potChipId}
+              pulseKey={potPulseKey}
+              sidePots={sidePots}
+            />
+          ) : null}
         </div>
 
         {players.map((player, index) => {

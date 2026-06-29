@@ -6,10 +6,11 @@ import { AppError } from '../errors.js';
 import { config } from '../config.js';
 import { redis } from '../services/redis.js';
 import { prisma } from '../services/prisma.js';
-import { resolveUniqueNickname } from '../lib/nickname.js';
-import { decryptProfileRow } from '../lib/profile-privacy.js';
+import { resolveUniqueNickname } from '@duopoker/server-shared/lib/nickname';
+import { decryptProfileRow } from '@duopoker/server-shared/lib/profile-privacy';
 import { fetchUserGameStats } from '../services/game-stats.js';
 import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
+import { tierHasPerk } from '@duopoker/shared-types';
 import {
   createVerificationToken,
   sendVerificationEmail,
@@ -235,7 +236,7 @@ authRouter.get('/me', async (req, res, next) => {
     const { subscriptions, inventory, ...profile } = user;
     const effectiveTier = await resolveUserSubscriptionTier(user.id);
     const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
-    const stats = await fetchUserGameStats(user.id);
+    const stats = tierHasPerk(effectiveTier, 'apiStats') ? await fetchUserGameStats(user.id) : null;
     return res.json({
       user: decryptProfileRow(profile),
       subscription: topSub,

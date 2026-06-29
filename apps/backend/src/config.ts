@@ -52,6 +52,7 @@ export const config = {
   oauthGoogleEnabled: process.env.OAUTH_GOOGLE_ENABLED === 'true',
   oauthAppleEnabled: process.env.OAUTH_APPLE_ENABLED === 'true',
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
+  appleClientId: process.env.APPLE_CLIENT_ID ?? '',
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
   /** Optional Stripe Price IDs for subscriptions (Dashboard → Products → Price ID) */
@@ -69,5 +70,9 @@ export const config = {
   livekitApiKey: process.env.LIVEKIT_API_KEY ?? '',
   livekitApiSecret: process.env.LIVEKIT_API_SECRET ?? '',
   livekitUrl: process.env.LIVEKIT_URL ?? '',
-  notifyInternalSecret: process.env.NOTIFY_INTERNAL_SECRET?.trim() ?? 'dev-notify-secret'
+  notifyInternalSecret: requireSecret(
+    'NOTIFY_INTERNAL_SECRET',
+    process.env.NOTIFY_INTERNAL_SECRET?.trim(),
+    'dev-notify-secret'
+  )
 };

@@ -25,7 +25,29 @@ export const assertCanJoinSession = async (
   const table = await getPrivateTableBySessionId(sessionId);
   if (table) return canJoinPrivateSession(sessionId, userId);
 
+  const vipInvite = await prisma.platformDuelInvite.findFirst({
+    where: {
+      userId,
+      status: 'ACCEPTED',
+      duel: { sessionId, status: 'LIVE' }
+    }
+  });
+  if (vipInvite) return { ok: true };
+
   return { ok: false, reason: 'NOT_ASSIGNED' };
+};
+
+export const assertVoiceSessionAccess = assertCanJoinSession;
+
+/** Verify user is seated at an active table session. */
+export const assertSeatedInSession = async (
+  sessionId: string,
+  userId: string
+): Promise<{ ok: true } | { ok: false; reason: string }> => {
+  const snapshot = await loadGameSnapshot(sessionId);
+  if (!snapshot) return { ok: false, reason: 'SESSION_NOT_FOUND' };
+  if (!snapshot.players.includes(userId)) return { ok: false, reason: 'NOT_SEATED' };
+  return { ok: true };
 };
 
 export const newSessionId = (prefix = 'sess'): string => `${prefix}-${randomUUID()}`;

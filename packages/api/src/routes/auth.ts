@@ -22,6 +22,7 @@ import {
 } from '../services/referrals.js';
 import { resolveUserSubscriptionTier } from '../services/subscription-tier.js';
 import { fetchUserGameStats } from '../services/game-stats.js';
+import { canAccessGameStats } from '../lib/profile-stats.js';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -287,7 +288,7 @@ authRoutes.get('/me', async (c) => {
     const { subscriptions, inventory, ...profile } = user;
     const effectiveTier = await resolveUserSubscriptionTier(user.id);
     const topSub = subscriptions.find((s) => s.tier === effectiveTier) ?? subscriptions[0] ?? null;
-    const stats = await fetchUserGameStats(user.id);
+    const stats = canAccessGameStats(effectiveTier) ? await fetchUserGameStats(user.id) : null;
     return c.json({
       user: { ...decryptProfileRow(profile), role },
       subscription: topSub,

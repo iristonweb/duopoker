@@ -5,6 +5,7 @@ import { config } from './config.js';
 import { rateLimit } from './middleware/rate-limit.js';
 import { securityHeaders } from './middleware/security-headers.js';
 import { authRoutes } from './routes/auth.js';
+import { oauthRoutes } from './routes/oauth.js';
 import { clubsRoutes } from './routes/clubs.js';
 import { gameRoutes } from './routes/game.js';
 import { monetizationRoutes } from './routes/monetization.js';
@@ -15,6 +16,7 @@ import { adminRoutes } from './routes/admin.js';
 import { referralRoutes } from './routes/referrals.js';
 import { notificationRoutes } from './routes/notifications.js';
 import { complianceRoutes } from './routes/compliance.js';
+import { coachRoutes } from './routes/coach.js';
 import { correlationId } from './middleware/correlation-id.js';
 
 export const app = new Hono().basePath('/api');
@@ -39,10 +41,12 @@ app.use('*', securityHeaders);
 app.use('*', correlationId);
 app.use('*', rateLimit(120, 60_000));
 app.use('/auth/*', rateLimit(20, 60_000));
+app.use('/oauth/*', rateLimit(20, 60_000));
 
 app.get('/health', (c) => c.json({ status: 'ok', runtime: 'vercel-serverless' }));
 
 app.route('/auth', authRoutes);
+app.route('/oauth', oauthRoutes);
 app.route('/profile', profileRoutes);
 app.route('/users', usersRoutes);
 app.route('/game', gameRoutes);
@@ -53,6 +57,7 @@ app.route('/admin', adminRoutes);
 app.route('/referrals', referralRoutes);
 app.route('/notifications', notificationRoutes);
 app.route('/compliance', complianceRoutes);
+app.route('/coach', coachRoutes);
 
 app.onError((err, c) => {
   console.error(err);

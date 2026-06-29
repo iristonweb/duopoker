@@ -1,54 +1,18 @@
-import { useEffect, useState } from 'react';
-import { tierHasPerk } from '@duopoker/shared-types';
+import { useCallback } from 'react';
+import { useVoiceEligibility as useVoiceEligibilityCore, type VoiceEligibility } from '@duopoker/table-client';
 import { apiFetch } from '../../lib/api';
 import { useMobileStore } from '../../state/useMobileStore';
 import { useTableStore } from '../../state/useTableStore';
 
-export type VoiceEligibility =
-  | 'checking'
-  | 'ready'
-  | 'unavailable'
-  | 'sign_in_required'
-  | 'tier_required';
-
-type VoiceStatusPayload = {
-  livekit?: string;
-  minTier?: 'GOLD' | null;
-};
+export type { VoiceEligibility };
 
 export function useVoiceEligibility(subscriptionTier: string): VoiceEligibility {
   const accessToken = useMobileStore((s) => s.accessToken);
-  const [status, setStatus] = useState<VoiceEligibility>('checking');
-
-  useEffect(() => {
-    let cancelled = false;
-    void apiFetch('/voice/status', {}, accessToken)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: VoiceStatusPayload | null) => {
-        if (cancelled) return;
-        if (data?.livekit !== 'configured') {
-          setStatus('unavailable');
-          return;
-        }
-        if (!accessToken) {
-          setStatus('sign_in_required');
-          return;
-        }
-        if (data.minTier === 'GOLD' && !tierHasPerk(subscriptionTier as never, 'voiceChat')) {
-          setStatus('tier_required');
-          return;
-        }
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('unavailable');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, subscriptionTier]);
-
-  return status;
+  const fetchStatus = useCallback(
+    () => apiFetch('/voice/status', {}, accessToken).then((r) => (r.ok ? r.json() : null)),
+    [accessToken]
+  );
+  return useVoiceEligibilityCore(fetchStatus, accessToken, subscriptionTier);
 }
 
 export function useVoiceSessionId(): string | undefined {

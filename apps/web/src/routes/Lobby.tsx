@@ -36,8 +36,8 @@ import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { PokerTable3D } from '../components/PokerTable3D';
 import { SubscriptionDetailModal } from '../components/subscriptions/SubscriptionDetailModal';
-import { ReferralPanel } from '../components/referrals/ReferralPanel';
 import { useAppStore } from '../store/useAppStore';
+import { useTableStore } from '../store/useTableStore';
 import { PwaInstallHint } from '../components/PwaInstallHint';
 import {
   isAuthReferralWarning,
@@ -320,11 +320,11 @@ export const Lobby = () => {
     connect,
     queue,
     pollQueueStatus,
-    session,
     fetchProfile
   } = useAppStore();
+  const session = useTableStore((s) => s.session);
   const accessToken = useAppStore((s) => s.accessToken);
-  const sessionError = useAppStore((s) => s.sessionError);
+  const sessionError = useTableStore((s) => s.sessionError);
   const subscriptionTier = useAppStore((s) => s.subscriptionTier);
   const equipped = useAppStore((s) => s.equipped);
   const socket = useAppStore((s) => s.socket);
@@ -337,6 +337,7 @@ export const Lobby = () => {
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
   const [detailSubTier, setDetailSubTier] = useState<PaidSubscriptionTier | null>(null);
+  const [subsExpanded, setSubsExpanded] = useState(false);
   const [queueBanner, setQueueBanner] = useState<string | null>(null);
   const [queueBusy, setQueueBusy] = useState(false);
   const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -403,7 +404,7 @@ export const Lobby = () => {
     }
     setQueueBusy(true);
     setQueueBanner(opponentType === 'BOT' ? t('queue.startingBot') : t('queue.searching'));
-    useAppStore.setState({ sessionError: undefined });
+    useTableStore.setState({ sessionError: undefined });
     try {
       const result = await queue();
       if (result.status === 'error') {
@@ -439,7 +440,7 @@ export const Lobby = () => {
       }
     } catch {
       setQueueBanner(null);
-      useAppStore.setState({ sessionError: 'queue_failed' });
+      useTableStore.setState({ sessionError: 'queue_failed' });
     } finally {
       setQueueBusy(false);
     }
@@ -912,7 +913,9 @@ export const Lobby = () => {
                 ) : (
                   <p className="text-sm text-muted">
                     {session
-                      ? t('lobby.sessionStatus', { id: session.sessionId, street: session.street })
+                      ? session.street && session.street !== 'LOBBY'
+                        ? t('lobby.sessionStatusCompact', { id: session.sessionId })
+                        : t('lobby.sessionStatus', { id: session.sessionId, street: session.street })
                       : t('lobby.queueHint')}
                   </p>
                 )}
@@ -925,11 +928,25 @@ export const Lobby = () => {
               </p>
             ) : null}
             <div id="subscriptions" className="mb-6">
-              <SectionHeader
-                eyebrow={t('lobby.subscriptionsEyebrow')}
-                title={t('lobby.subscriptionsTitle')}
-                description={t('lobby.subscriptionsDesc')}
-              />
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <SectionHeader
+                  eyebrow={t('lobby.subscriptionsEyebrow')}
+                  title={t('lobby.subscriptionsTitle')}
+                  description={subsExpanded ? t('lobby.subscriptionsDesc') : t('lobby.subscriptionsTeaser')}
+                  className="mb-0 flex-1"
+                />
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Link to="/profile#subscriptions">
+                    <Button variant="ghost" size="sm">
+                      {t('lobby.subscriptionsAllPlans')}
+                    </Button>
+                  </Link>
+                  <Button variant="secondary" size="sm" onClick={() => setSubsExpanded((v) => !v)}>
+                    {subsExpanded ? t('lobby.subscriptionsCollapse') : t('lobby.subscriptionsExpand')}
+                  </Button>
+                </div>
+              </div>
+              {subsExpanded ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PAID_TIERS.map((tier) => {
                   const active = subscriptionTier === tier;
@@ -963,7 +980,34 @@ export const Lobby = () => {
                   );
                 })}
               </div>
-              {detailSubTier ? (
+              ) : (
+                <GlassPanel className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-display text-lg font-semibold text-gradient-gold">
+                      {t(`subscriptions.${(subscriptionTier === 'FREE' ? 'gold' : subscriptionTier.toLowerCase())}`)}
+                    </p>
+                    <p className="mt-1 text-sm text-muted">{t('lobby.subscriptionsTeaserCta')}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link to="/profile#subscriptions">
+                      <Button variant="primary" size="sm">
+                        {t('lobby.subscriptionsAllPlans')}
+                      </Button>
+                    </Link>
+                    {subscriptionTier === 'FREE' ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={checkoutBusy === 'GOLD'}
+                        onClick={() => void startSubscription('GOLD')}
+                      >
+                        {checkoutBusy === 'GOLD' ? t('lobby.subscribing') : t('lobby.subscribe')}
+                      </Button>
+                    ) : null}
+                  </div>
+                </GlassPanel>
+              )}
+              {subsExpanded && detailSubTier ? (
                 <SubscriptionDetailModal
                   tier={detailSubTier}
                   open={Boolean(detailSubTier)}
@@ -1016,7 +1060,19 @@ export const Lobby = () => {
         </motion.div>
 
         <motion.div className="mt-10" variants={reduceMotion ? undefined : section} custom={3}>
-          <ReferralPanel variant="lobby" />
+          <GlassPanel className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/80">
+                {t('referral.eyebrow')}
+              </p>
+              <p className="mt-1 text-sm text-muted">{t('lobby.referralTeaser')}</p>
+            </div>
+            <Link to="/profile#referrals" className="shrink-0">
+              <Button variant="secondary" size="sm">
+                {t('lobby.inviteFriend')}
+              </Button>
+            </Link>
+          </GlassPanel>
         </motion.div>
 
         <motion.footer className="mt-8" variants={reduceMotion ? undefined : section} custom={4}>

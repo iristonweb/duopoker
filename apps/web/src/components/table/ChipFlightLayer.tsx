@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { mobileSeatCoordinates, seatCoordinates } from '@duopoker/table-client';
 import type { SeatAnchor } from '@duopoker/table-client';
 import { PokerChipVisual } from '../cosmetics/PokerChipVisual';
@@ -45,10 +45,11 @@ export function ChipFlightLayer({
   chipId,
   layout = 'ring'
 }: Props) {
+  const reduceMotion = useReducedMotion();
   const potCount = Math.max(1, ...flights.map((f) => (f.potIndex ?? 0) + 1));
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[15]">
+    <div className="chip-flight-layer pointer-events-none absolute inset-0 z-chipFlight">
       <AnimatePresence>
         {flights.map((flight) => {
           const seatIdx = playerIndex.get(flight.userId);
@@ -58,6 +59,8 @@ export function ChipFlightLayer({
           const toPot = flight.kind === 'toPot';
           const fromPt = toPot ? from : pot;
           const toPt = toPot ? pot : from;
+          const deltaX = toPt.x - fromPt.x;
+          const deltaY = toPt.y - fromPt.y;
 
           return (
             <motion.div
@@ -70,16 +73,19 @@ export function ChipFlightLayer({
                 x: '-50%',
                 y: anchorOffset(fromPt.anchor)
               }}
-              animate={{
-                opacity: [0, 1, 1, 0.85, 0],
-                scale: [0.45, 1, 1, 0.85, 0.5],
-                left: [`${fromPt.x}%`, `${toPt.x}%`],
-                top: [`${fromPt.y}%`, `${toPt.y}%`],
-                y: [anchorOffset(fromPt.anchor), anchorOffset(toPt.anchor)]
-              }}
+              animate={
+                reduceMotion
+                  ? { opacity: 0.85, scale: 1, x: '-50%', y: anchorOffset(fromPt.anchor) }
+                  : {
+                      opacity: [0, 1, 1, 0.85, 0],
+                      scale: [0.45, 1, 1, 0.85, 0.5],
+                      x: [`-50%`, `calc(-50% + ${deltaX}%)`],
+                      y: [anchorOffset(fromPt.anchor), `calc(${anchorOffset(toPt.anchor)} + ${deltaY}%)`]
+                    }
+              }
               exit={{ opacity: 0, scale: 0.4 }}
-              transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute"
+              transition={{ duration: reduceMotion ? 0.01 : 0.72, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute will-change-transform"
             >
               <PokerChipVisual
                 chipId={chipId}

@@ -138,6 +138,9 @@ export default function LobbyScreen() {
             </Text>
           </Pressable>
           {status ? <Text style={styles.status}>{status}</Text> : null}
+          <Pressable onPress={() => router.push('/shop')} style={styles.shopLink}>
+            <Text style={styles.shopLinkText}>Shop</Text>
+          </Pressable>
           <Pressable onPress={() => void logout()} style={styles.logout}>
             <Text style={styles.logoutText}>{strings.lobby.signOut}</Text>
           </Pressable>
@@ -182,6 +185,8 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: colors.background, fontWeight: '700', fontSize: 16 },
   status: { color: colors.emerald, fontSize: 13 },
+  shopLink: { alignItems: 'center', marginTop: s.sm },
+  shopLinkText: { color: colors.gold, fontSize: 14, fontWeight: '600' },
   logout: { marginTop: s.xl, alignItems: 'center' },
   logoutText: { color: colors.textSubtle, fontSize: 13 }
 });

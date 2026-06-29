@@ -1,0 +1,39 @@
+/* AUTO-GENERATED — do not edit. Run: node scripts/generate-theme-css.mjs */
+:root {
+  --color-background: #050508;
+  --color-surface: #0c0c12;
+  --color-surface-elevated: #14141f;
+  --color-gold: #e8c547;
+  --color-gold-light: #f5e6a8;
+  --color-gold-muted: #b8942e;
+  --color-emerald: #4ade80;
+  --color-emerald-muted: #22c55e;
+  --color-ivory: #faf8f2;
+  --color-text: #f4f4f5;
+  --color-text-muted: #a1a1aa;
+  --color-text-subtle: #71717a;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(232, 197, 71, 0.35);
+  --color-glass: rgba(255, 255, 255, 0.05);
+  --color-danger: #f87171;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
+  --shadow-glow-gold: 0 0 40px rgba(232, 197, 71, 0.18);
+  --shadow-glow-emerald: 0 0 32px rgba(74, 222, 128, 0.14);
+  --shadow-panel: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --z-felt: 1;
+  --z-hud: 45;
+  --z-chip-flight: 15;
+  --z-banner: 90;
+  --z-pwa: 100;
+  --z-panel: 110;
+  --z-orientation: 115;
+  --z-modal: 120;
+  --z-sheet: 125;
+  --z-fullscreen: 150;
+}

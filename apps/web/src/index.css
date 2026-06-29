@@ -1,4 +1,6 @@
-/* Mirror of packages/shared-types/src/theme.ts — keep hex values in sync. */
+/* Design tokens: generated from packages/shared-types/src/theme.ts */
+@import './theme-vars.generated.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,6 +17,11 @@
     --color-text-muted: #a1a1aa;
     --color-border: rgba(255, 255, 255, 0.1);
     --focus-ring: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-gold);
+    --color-danger: #f87171;
+    --z-modal: 120;
+    --z-sheet: 125;
+    --z-fullscreen: 150;
+    --z-orientation: 115;
   }
 
   html {
@@ -361,16 +368,17 @@
   width: clamp(80px, 22vw, 100px);
 }
 
-body.table-mobile-immersive * {
+body.table-mobile-immersive .table-felt-immersive,
+body.table-mobile-immersive .table-felt-immersive * {
   backdrop-filter: none !important;
 }
 
-body.table-mobile-immersive .glass-shine {
+body.table-mobile-immersive .glass-shine:not(.glass-modal-root *) {
   background: rgba(12, 12, 18, 0.95);
 }
 
-body.table-mobile-immersive [class*='shadow-glow'],
-body.table-mobile-immersive [class*='blur-'] {
+body.table-mobile-immersive .table-felt-immersive [class*='shadow-glow'],
+body.table-mobile-immersive .table-felt-immersive [class*='blur-'] {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
 }
 
@@ -388,6 +396,15 @@ body.table-mobile-immersive [class*='blur-'] {
   .table-felt-void::after {
     animation: none;
     opacity: 0.7;
+  }
+
+  .action-dock-pulse {
+    animation: none !important;
+  }
+
+  .chip-flight-layer * {
+    transition: none !important;
+    animation: none !important;
   }
 
   html:focus-within {

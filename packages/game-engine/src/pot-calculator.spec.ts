@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeSidePots, distributeSidePots, winnersAmongEligible } from './pot-calculator';
+import { computeSidePots, distributeSidePots, sortWinnersBySeat, winnersAmongEligible } from './pot-calculator';
 
 describe('computeSidePots', () => {
   it('merges orphan chips when all contributors at a level folded', () => {
@@ -25,8 +25,30 @@ describe('distributeSidePots', () => {
       c: ['2S', '3S']
     };
     const board = ['QS', 'JS', 'TS', '9H', '8H'];
-    const { winnersShare } = distributeSidePots(pots, hole, board, 'HOLDEM');
+    const { winnersShare } = distributeSidePots(pots, hole, board, 'HOLDEM', ['a', 'b', 'c'], 0);
     expect((winnersShare.b ?? 0) + (winnersShare.a ?? 0) + (winnersShare.c ?? 0)).toBe(500);
+  });
+
+  it('awards odd chip to winner left of dealer', () => {
+    const players = ['a', 'b', 'c'];
+    const pots = [{ amount: 101, eligible: ['a', 'b', 'c'] }];
+    const hole = {
+      a: ['2S', '3S'],
+      b: ['2H', '3H'],
+      c: ['2D', '3D']
+    };
+    const board = ['AS', 'KS', 'QS', 'JS', 'TS'];
+    const { winnersShare } = distributeSidePots(pots, hole, board, 'HOLDEM', players, 0);
+    expect(winnersShare.b).toBe(34);
+    expect(winnersShare.c).toBe(34);
+    expect(winnersShare.a).toBe(33);
+  });
+});
+
+describe('sortWinnersBySeat', () => {
+  it('orders winners starting left of dealer', () => {
+    const players = ['a', 'b', 'c', 'd'];
+    expect(sortWinnersBySeat(['c', 'a', 'd'], players, 1)).toEqual(['c', 'd', 'a']);
   });
 });
 

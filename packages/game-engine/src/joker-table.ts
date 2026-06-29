@@ -18,7 +18,12 @@ import {
   trickWinnerIndex
 } from './joker-trick';
 import { shuffle } from './cards';
-import type { SeededRng } from './rng';
+import { SeededRng } from './rng';
+
+const botRng = (state: SessionState, userId: string): SeededRng => {
+  const salt = userId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return new SeededRng(state.seed + state.handNumber * 997 + salt);
+};
 
 const nextSeat = (n: number, from: number): number => (from + 1) % n;
 
@@ -504,13 +509,15 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
 
   if (state.street === 'TRUMP_CHOICE') {
     const suits: (Suit | null)[] = ['S', 'H', 'D', 'C', null];
-    const trumpSuit = suits[Math.floor(Math.random() * suits.length)] ?? null;
+    const rng = botRng(state, userId);
+    const trumpSuit = suits[rng.nextInt(suits.length)] ?? null;
     return { ...base, type: 'chooseTrump', trumpSuit };
   }
 
   if (state.street === 'BIDDING') {
     const max = maxBid(j.cardsThisDeal);
-    let bid = Math.floor(Math.random() * (max + 1));
+    const rng = botRng(state, userId);
+    let bid = rng.nextInt(max + 1);
     const dealerId = state.players[state.dealerIndex]!;
     if (userId === dealerId) {
       bid = correctDealerBidForBot(bid, j.bids, state.players, state.dealerIndex, j.cardsThisDeal);

@@ -332,7 +332,16 @@ export function JokerActionDock({
             {!showActions && !lastActionText ? (
               <p className="text-center text-sm text-subtle">{t('table.waitingOpponent')}</p>
             ) : null}
-            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+            <div className="relative">
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-6 bg-gradient-to-r from-surface to-transparent"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-6 bg-gradient-to-l from-surface to-transparent"
+                aria-hidden
+              />
+              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
               {holeCards.length === 0 ? (
                 <p className="text-sm text-muted">{t('table.jokerNoCards')}</p>
               ) : (
@@ -376,6 +385,7 @@ export function JokerActionDock({
                   );
                 })
               )}
+            </div>
             </div>
           </div>
         ) : null}

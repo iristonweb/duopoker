@@ -46,6 +46,8 @@ type Props = {
   openLabel: string;
   closeLabel: string;
   emptyLabel: string;
+  /** Hide winner/hand events when the hand-result overlay already shows them. */
+  suppressHandCompleteDupes?: boolean;
   className?: string;
 };
 
@@ -163,16 +165,20 @@ export function GameStoryPanel({
   openLabel,
   closeLabel,
   emptyLabel,
+  suppressHandCompleteDupes = false,
   className
 }: Props) {
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const visibleEvents = suppressHandCompleteDupes
+    ? events.filter((ev) => ev.kind !== 'winner' && ev.kind !== 'hand')
+    : events;
 
   useEffect(() => {
     if (open && listRef.current) {
       listRef.current.scrollTop = 0;
     }
-  }, [open, events.length]);
+  }, [open, visibleEvents.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -188,7 +194,7 @@ export function GameStoryPanel({
     };
   }, [open]);
 
-  const latest = events[0];
+  const latest = visibleEvents[0];
 
   const mobileSheet =
     typeof document !== 'undefined'
@@ -231,7 +237,7 @@ export function GameStoryPanel({
                         {closeLabel}
                       </button>
                     </div>
-                    <FeedList events={events} emptyLabel={emptyLabel} listRef={listRef} />
+                    <FeedList events={visibleEvents} emptyLabel={emptyLabel} listRef={listRef} />
                   </GlassPanel>
                 </motion.div>
               </motion.div>
@@ -284,9 +290,9 @@ export function GameStoryPanel({
             )}
           >
             {open ? closeLabel : openLabel}
-            {!open && events.length > 0 ? (
+            {!open && visibleEvents.length > 0 ? (
               <span className="ml-1.5 rounded-full bg-gold/20 px-1.5 py-0.5 text-[9px] text-gold-light">
-                {events.length}
+                {visibleEvents.length}
               </span>
             ) : null}
           </button>
@@ -315,7 +321,7 @@ export function GameStoryPanel({
                 <div className="border-b border-white/10 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{title}</p>
                 </div>
-                <FeedList events={events} emptyLabel={emptyLabel} listRef={listRef} />
+                <FeedList events={visibleEvents} emptyLabel={emptyLabel} listRef={listRef} />
               </GlassPanel>
             </motion.div>
           ) : null}
@@ -351,9 +357,9 @@ export function GameStoryPanel({
           >
             <FeedIcon className="h-3.5 w-3.5 shrink-0 opacity-80" />
             <span className="max-w-[5rem] truncate">{open ? closeLabel : openLabel}</span>
-            {!open && events.length > 0 ? (
+            {!open && visibleEvents.length > 0 ? (
               <span className="rounded-full bg-gold/25 px-1.5 py-0.5 text-[8px] font-mono text-gold-light">
-                {events.length}
+                {visibleEvents.length}
               </span>
             ) : null}
           </button>

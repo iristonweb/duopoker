@@ -35,6 +35,7 @@
     "build:vercel": "node scripts/vercel-build.mjs",
     "build:vercel-api": "node scripts/bundle-vercel-api.mjs",
     "crop:decks": "node scripts/crop-deck-backs.mjs",
+    "generate:theme-css": "tsx scripts/generate-theme-css.mjs",
     "fix:game-alpha": "node scripts/fix-game-asset-alpha.mjs"
   },
   "dependencies": {

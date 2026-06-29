@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import type { DisplaySessionState, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import {
   TABLE_STEP_MS,
   applyDisplayStep,
@@ -15,14 +15,14 @@ export function useTableDisplayState(
   heroId: string,
   formatAction: (action: PlayerAction) => string,
   reduceMotion: boolean
-): SessionState | undefined {
-  const [display, setDisplay] = useState<SessionState | undefined>(session);
+): SessionState | DisplaySessionState | undefined {
+  const [display, setDisplay] = useState<SessionState | DisplaySessionState | undefined>(session);
   const prevRef = useRef<SessionSnap | null>(null);
   const targetRef = useRef<SessionState | undefined>(session);
   const queueRef = useRef<TableSessionStep[]>([]);
   const processingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const displayRef = useRef<SessionState | undefined>(session);
+  const displayRef = useRef<SessionState | DisplaySessionState | undefined>(session);
 
   const drain = useCallback(async () => {
     if (processingRef.current) return;

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { clubTableMaxPlayers, normalizeGameMode, organizerPlanBanners } from '@duopoker/shared-types';
 import { authGuard } from '../middleware/auth-guard.js';
-import { normalizeNicknameInput } from '../lib/nickname.js';
+import { normalizeNicknameInput } from '@duopoker/server-shared/lib/nickname';
 import { config } from '../config.js';
 import { prisma } from '../services/prisma.js';
 import {
@@ -463,7 +463,7 @@ clubsRouter.post('/:clubId/private-tables/:tableId/start', async (req, res) => {
   await prisma.gameSession.create({
     data: { id: sessionId, mode: table.mode, status: 'LOBBY', players: [], buyIn: table.virtualBuyIn, rake: 0 }
   });
-  joinTable(sessionId, table.hostUserId, table.mode, table.virtualBuyIn);
+  await joinTable(sessionId, table.hostUserId, table.mode, table.virtualBuyIn);
   await prisma.privateTableSeat.updateMany({
     where: { tableId, userId: table.hostUserId },
     data: { status: 'SEATED' }
@@ -497,7 +497,7 @@ clubsRouter.post('/:clubId/private-tables/:tableId/join', async (req, res) => {
     return res.status(403).json({ error: 'Invite required to join this table' });
   }
 
-  const state = joinTable(table.sessionId, userId, table.mode, table.virtualBuyIn);
+  const state = await joinTable(table.sessionId, userId, table.mode, table.virtualBuyIn);
   if (seat) {
     await prisma.privateTableSeat.update({ where: { id: seat.id }, data: { status: 'SEATED' } });
   }

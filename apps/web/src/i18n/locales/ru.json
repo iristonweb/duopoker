@@ -181,7 +181,7 @@
       "platinum": [
         "Все привилегии Gold",
         "Platinum deck, фишки, рамка и титул",
-        "AI-тренер: подсказки по игре (скоро)"
+        "AI-тренер: подсказки за столом"
       ],
       "diamond": [
         "Все привилегии Platinum",
@@ -259,6 +259,7 @@
     "lobbyPreview": "Превью лобби",
     "queueHint": "Войдите в очередь, чтобы начать матч.",
     "sessionStatus": "Стол {{id}} — {{street}}",
+    "sessionStatusCompact": "Стол {{id}}",
     "nextHand": "Следующая раздача",
     "subscribe": "Подписаться",
     "stripeNotConfigured": "Оплата не настроена — добавьте YOOKASSA_* на сервере.",
@@ -278,6 +279,13 @@
     "subscriptionsEyebrow": "DP CLUB",
     "subscriptionsTitle": "Подписки",
     "subscriptionsDesc": "Выберите тариф — нажмите «Подробнее», чтобы увидеть набор косметики и привилегии.",
+    "subscriptionsTeaser": "Тарифы и косметика — в профиле.",
+    "subscriptionsTeaserCta": "Апгрейд открывает премиум-косметику, голосовой чат и другое.",
+    "subscriptionsAllPlans": "Все тарифы",
+    "subscriptionsExpand": "Сравнить тарифы",
+    "subscriptionsCollapse": "Скрыть тарифы",
+    "referralTeaser": "Приглашайте друзей и получайте бонусные фишки из профиля.",
+    "inviteFriend": "Пригласить друга",
     "subscriptionViewDetails": "Подробнее",
     "subscriptionModalClose": "Закрыть",
     "subscriptionModalPerks": "Привилегии",
@@ -412,6 +420,12 @@
     "seats": "{{count}} мест",
     "voiceTitle": "Голосовой чат за столом",
     "voiceEyebrow": "Голос",
+    "coachAsk": "Спросить тренера",
+    "coachEyebrow": "AI-тренер",
+    "coachDisclaimer": "Только подсказки для игры на виртуальные фишки — не финансовый совет.",
+    "coachLoading": "Думаю…",
+    "coachError": "Не удалось получить подсказку.",
+    "coachTierRequired": "Нужна подписка Platinum+",
     "timeLeft": "{{seconds}}с",
     "actionError": "Ошибка действия: {{code}}",
     "nextHandAuto": "Следующая раздача через {{seconds}}с…",

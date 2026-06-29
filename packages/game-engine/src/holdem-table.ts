@@ -1,312 +1,38 @@
-import type { Card, GameStreet, PlayerAction, SessionState } from '@duopoker/shared-types/index';
-import { JOKER_RECOMMENDED_PLAYERS } from '@duopoker/shared-types/index';
+import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/index';import { JOKER_RECOMMENDED_PLAYERS } from '@duopoker/shared-types/index';
 import { isAutomatedPlayer } from './bot-actions';
 import { createDeck, shuffle } from './cards';
 import { applyJokerAction, isJokerMatchComplete, jokerTimeoutAction, startJokerHand } from './joker-table';
 import { peekGhostCommunityFromDeck } from './ghost-board';
-import {
-  computeSidePots,
-  distributeSidePots,
-  uncalledRoundBet
-} from './pot-calculator';
 import { SeededRng } from './rng';
+import {
+  activeNonFolded,
+  addContribution,
+  canStillAct,
+  emptyActed,
+  firstPreflopActor,
+  markActed,
+  markAllIn,
+  maxRoundBet,
+  resetActedExcept,
+  rotateTurn,
+  sbBbIndices,
+  toCall,
+  totalInKettle,
+  withHandComplete
+} from './holdem/helpers';
+import { removePlayerFromTable } from './holdem/player-lifecycle';
+import { applyUncalledReturn } from './holdem/showdown';
+import {
+  advanceStreetDeck,
+  bettingComplete,
+  commitRoundToPot,
+  resetToLobbyAfterGame,
+  resolveShowdownHoldem,
+  runOutToRiver,
+  shouldRunOutBoard
+} from './holdem/street-machine';
 
-/** Committed from prior streets + current street bets (full kettle). */
-export const totalInKettle = (state: SessionState): number =>
-  state.pot +
-  state.players.reduce((sum, p) => sum + (state.playerRoundBet[p] ?? 0), 0);
-
-export const sbBbIndices = (
-  numPlayers: number,
-  dealerIndex: number
-): { sb: number; bb: number } => {
-  if (numPlayers < 2) throw new Error('need 2+ players');
-  if (numPlayers === 2) {
-    return { sb: dealerIndex, bb: (dealerIndex + 1) % 2 };
-  }
-  return {
-    sb: (dealerIndex + 1) % numPlayers,
-    bb: (dealerIndex + 2) % numPlayers
-  };
-};
-
-const firstPreflopActor = (numPlayers: number, dealerIndex: number): number => {
-  if (numPlayers === 2) return dealerIndex;
-  const { bb } = sbBbIndices(numPlayers, dealerIndex);
-  return (bb + 1) % numPlayers;
-};
-
-const nextSeat = (numPlayers: number, from: number): number => (from + 1) % numPlayers;
-
-const activeNonFolded = (state: SessionState): string[] =>
-  state.players.filter((p) => !state.foldedPlayerIds.includes(p));
-
-const maxRoundBet = (state: SessionState): number =>
-  state.players.reduce((m, p) => Math.max(m, state.playerRoundBet[p] ?? 0), 0);
-
-const toCall = (state: SessionState, userId: string): number =>
-  Math.max(0, maxRoundBet(state) - (state.playerRoundBet[userId] ?? 0));
-
-const emptyActed = (players: string[]): Record<string, boolean> =>
-  Object.fromEntries(players.map((p) => [p, false]));
-
-const canStillAct = (state: SessionState, pid: string): boolean =>
-  !state.foldedPlayerIds.includes(pid) && (state.stacks[pid] ?? 0) > 0;
-
-const markAllIn = (state: SessionState, userId: string): SessionState => {
-  if ((state.stacks[userId] ?? 0) > 0) return state;
-  if (state.allInPlayerIds.includes(userId)) return state;
-  return { ...state, allInPlayerIds: [...state.allInPlayerIds, userId] };
-};
-
-const addContribution = (state: SessionState, userId: string, amount: number): SessionState => ({
-  ...state,
-  handContributions: {
-    ...state.handContributions,
-    [userId]: (state.handContributions[userId] ?? 0) + amount
-  }
-});
-
-const resetActedExcept = (state: SessionState, except: string): SessionState => ({
-  ...state,
-  actedThisRound: Object.fromEntries(state.players.map((p) => [p, p === except]))
-});
-
-const markActed = (state: SessionState, userId: string): SessionState => ({
-  ...state,
-  actedThisRound: { ...state.actedThisRound, [userId]: true }
-});
-
-const bettingComplete = (state: SessionState): boolean => {
-  const active = activeNonFolded(state);
-  if (active.length <= 1) return true;
-  const mx = maxRoundBet(state);
-
-  for (const p of active) {
-    const bet = state.playerRoundBet[p] ?? 0;
-    if (bet < mx && (state.stacks[p] ?? 0) > 0) return false;
-  }
-
-  for (const p of active) {
-    if (!canStillAct(state, p)) continue;
-    if (!state.actedThisRound[p]) return false;
-  }
-  return true;
-};
-
-const shouldRunOutBoard = (state: SessionState): boolean => {
-  const active = activeNonFolded(state);
-  if (active.length <= 1) return false;
-  const withChips = active.filter((p) => (state.stacks[p] ?? 0) > 0);
-  return withChips.length <= 1;
-};
-
-const advanceStreetDeck = (state: SessionState): SessionState => {
-  let deck = [...state.deck];
-  const burn = () => {
-    if (deck.length) deck = deck.slice(1);
-  };
-  const take = (n: number): Card[] => {
-    const out: Card[] = [];
-    for (let i = 0; i < n && deck.length; i += 1) {
-      out.push(deck[0]!);
-      deck = deck.slice(1);
-    }
-    return out;
-  };
-
-  let community = [...state.communityCards];
-  let street: GameStreet = state.street;
-
-  if (street === 'PREFLOP') {
-    burn();
-    community = [...community, ...take(3)];
-    street = 'FLOP';
-  } else if (street === 'FLOP') {
-    burn();
-    community = [...community, ...take(1)];
-    street = 'TURN';
-  } else if (street === 'TURN') {
-    burn();
-    community = [...community, ...take(1)];
-    street = 'RIVER';
-  } else {
-    return state;
-  }
-
-  const resetBets: Record<string, number> = {};
-  state.players.forEach((p) => {
-    resetBets[p] = 0;
-  });
-
-  const first = firstPostFlopActor(state);
-  return {
-    ...state,
-    deck,
-    communityCards: community,
-    street,
-    phase: mapStreetToPhase(street),
-    currentBet: 0,
-    playerRoundBet: resetBets,
-    lastAggressor: null,
-    lastRaiseSize: state.bigBlind,
-    actedThisRound: emptyActed(state.players),
-    activePlayerIndex: first
-  };
-};
-
-const runOutToRiver = (state: SessionState): SessionState => {
-  let s = state;
-  while (s.street === 'PREFLOP' || s.street === 'FLOP' || s.street === 'TURN') {
-    s = advanceStreetDeck(s);
-  }
-  return s;
-};
-
-const firstPostFlopActor = (state: SessionState): number => {
-  const { sb } = sbBbIndices(state.players.length, state.dealerIndex);
-  let idx = sb;
-  for (let i = 0; i < state.players.length; i += 1) {
-    const p = state.players[idx];
-    if (p && !state.foldedPlayerIds.includes(p) && canStillAct(state, p)) return idx;
-    idx = nextSeat(state.players.length, idx);
-  }
-  return nextActiveIndex(state, state.dealerIndex);
-};
-
-const mapStreetToPhase = (s: GameStreet): SessionState['phase'] => {
-  switch (s) {
-    case 'LOBBY':
-      return 'DEAL';
-    case 'PREFLOP':
-      return 'PRE_FLOP';
-    case 'FLOP':
-      return 'FLOP';
-    case 'TURN':
-      return 'TURN';
-    case 'RIVER':
-      return 'RIVER';
-    case 'SHOWDOWN':
-      return 'SHOWDOWN';
-    case 'COMPLETE':
-      return 'SHOWDOWN';
-    default:
-      return 'DEAL';
-  }
-};
-
-const commitRoundToPot = (state: SessionState): SessionState => {
-  let add = 0;
-  const reset: Record<string, number> = {};
-  state.players.forEach((p) => {
-    const v = state.playerRoundBet[p] ?? 0;
-    add += v;
-    reset[p] = 0;
-  });
-  return {
-    ...state,
-    pot: state.pot + add,
-    playerRoundBet: reset,
-    currentBet: 0
-  };
-};
-
-const applyUncalledReturn = (state: SessionState): SessionState => {
-  const uncalled = uncalledRoundBet(state);
-  if (!uncalled) return state;
-  const stacks = { ...state.stacks };
-  stacks[uncalled.playerId] = (stacks[uncalled.playerId] ?? 0) + uncalled.amount;
-  const playerRoundBet = {
-    ...state.playerRoundBet,
-    [uncalled.playerId]: (state.playerRoundBet[uncalled.playerId] ?? 0) - uncalled.amount
-  };
-  const handContributions = {
-    ...state.handContributions,
-    [uncalled.playerId]: Math.max(
-      0,
-      (state.handContributions[uncalled.playerId] ?? 0) - uncalled.amount
-    )
-  };
-  return { ...state, stacks, playerRoundBet, handContributions };
-};
-
-const withHandComplete = (state: SessionState): SessionState => ({
-  ...state,
-  handCompletedAt: state.handCompletedAt ?? Date.now()
-});
-
-const resetToLobbyAfterGame = (state: SessionState): SessionState => ({
-  ...state,
-  street: 'LOBBY',
-  phase: 'DEAL',
-  pot: 0,
-  currentBet: 0,
-  communityCards: [],
-  playerRoundBet: Object.fromEntries(state.players.map((p) => [p, 0])),
-  foldedPlayerIds: [],
-  readyForNextHand: [],
-  winners: undefined,
-  winnersShare: undefined,
-  handCompletedAt: undefined,
-  actionDeadlineAt: undefined,
-  actionLog: []
-});
-
-const finalizeShowdown = (state: SessionState): SessionState => {
-  const folded = new Set(state.foldedPlayerIds);
-  const committed = commitRoundToPot(state);
-  const pots = computeSidePots(committed.players, committed.handContributions, folded);
-  const { winners, winnersShare } = distributeSidePots(
-    pots,
-    committed.playerCards,
-    committed.communityCards,
-    committed.mode
-  );
-  const stacks = { ...committed.stacks };
-  for (const [pid, share] of Object.entries(winnersShare)) {
-    stacks[pid] = (stacks[pid] ?? 0) + share;
-  }
-  return withHandComplete({
-    ...committed,
-    street: 'COMPLETE',
-    phase: 'SHOWDOWN',
-    pot: 0,
-    playerRoundBet: Object.fromEntries(committed.players.map((p) => [p, 0])),
-    stacks,
-    winners,
-    winnersShare,
-    readyForNextHand: [],
-    activePlayerIndex: committed.dealerIndex
-  });
-};
-
-const resolveShowdownHoldem = (state: SessionState): SessionState => {
-  const folded = new Set(state.foldedPlayerIds);
-  const alive = state.players.filter((p) => !folded.has(p));
-  if (alive.length === 1) {
-    const w = alive[0]!;
-    const ns = applyUncalledReturn(state);
-    const won = totalInKettle(ns);
-    const stacks = { ...ns.stacks };
-    stacks[w] = (stacks[w] ?? 0) + won;
-    return withHandComplete({
-      ...ns,
-      street: 'COMPLETE',
-      phase: 'SHOWDOWN',
-      pot: 0,
-      playerRoundBet: Object.fromEntries(ns.players.map((p) => [p, 0])),
-      stacks,
-      winners: [w],
-      winnersShare: { [w]: won },
-      readyForNextHand: [],
-      activePlayerIndex: ns.dealerIndex
-    });
-  }
-  return finalizeShowdown(state);
-};
-
-export { resetToLobbyAfterGame };
-
+export { totalInKettle, sbBbIndices, resetToLobbyAfterGame, removePlayerFromTable };
 export const createInitialTableState = (
   sessionId: string,
   mode: SessionState['mode'],
@@ -441,23 +167,6 @@ export const startNewHand = (state: SessionState): SessionState => {
   }
 
   return state;
-};
-
-const nextActiveIndex = (state: SessionState, from: number): number => {
-  let i = from;
-  for (let k = 0; k < state.players.length; k += 1) {
-    const p = state.players[i];
-    if (p && !state.foldedPlayerIds.includes(p) && canStillAct(state, p)) return i;
-    i = nextSeat(state.players.length, i);
-  }
-  return from;
-};
-
-const rotateTurn = (state: SessionState): SessionState => {
-  const start = nextSeat(state.players.length, state.activePlayerIndex);
-  const idx = nextActiveIndex(state, start);
-  const pid = state.players[idx];
-  return { ...state, activePlayerIndex: idx, activePlayerId: pid };
 };
 
 export const applyTableAction = (
@@ -693,104 +402,4 @@ export const autoFoldActivePlayer = (
     type: 'fold',
     at: Date.now()
   });
-};
-
-const awardSingleWinner = (state: SessionState, winnerId: string): SessionState => {
-  const awarded = applyUncalledReturn(state);
-  const won = totalInKettle(awarded);
-  const stacks = { ...awarded.stacks };
-  stacks[winnerId] = (stacks[winnerId] ?? 0) + won;
-  return withHandComplete({
-    ...awarded,
-    street: 'COMPLETE',
-    phase: 'SHOWDOWN',
-    pot: 0,
-    currentBet: 0,
-    playerRoundBet: Object.fromEntries(awarded.players.map((p) => [p, 0])),
-    stacks,
-    winners: [winnerId],
-    winnersShare: { [winnerId]: won },
-    readyForNextHand: [],
-    activePlayerIndex: awarded.players.indexOf(winnerId),
-    activePlayerId: winnerId
-  });
-};
-
-const omitPlayerKey = <T>(rec: Record<string, T>, userId: string): Record<string, T> => {
-  const next = { ...rec };
-  delete next[userId];
-  return next;
-};
-
-/** Remove a seated player (leave table). Folds active hand if needed. */
-export const removePlayerFromTable = (
-  state: SessionState,
-  userId: string
-): { ok: true; state: SessionState } | { ok: false; reason: string } => {
-  if (!state.players.includes(userId)) {
-    return { ok: false, reason: 'NOT_SEATED' };
-  }
-
-  let ns = state;
-
-  if (ns.street !== 'LOBBY' && ns.street !== 'COMPLETE' && !ns.foldedPlayerIds.includes(userId)) {
-    ns = { ...ns, foldedPlayerIds: [...ns.foldedPlayerIds, userId] };
-    const alive = activeNonFolded(ns);
-    if (alive.length === 1) {
-      ns = awardSingleWinner(ns, alive[0]!);
-    } else if (ns.players[ns.activePlayerIndex] === userId) {
-      ns = rotateTurn(ns);
-    }
-  }
-
-  const idx = ns.players.indexOf(userId);
-  const players = ns.players.filter((p) => p !== userId);
-
-  let dealerIndex = ns.dealerIndex;
-  if (idx < dealerIndex) dealerIndex -= 1;
-  else if (dealerIndex >= players.length) dealerIndex = Math.max(0, players.length - 1);
-
-  let activePlayerIndex = ns.activePlayerIndex;
-  if (idx < activePlayerIndex) activePlayerIndex -= 1;
-  else if (idx === activePlayerIndex) activePlayerIndex = 0;
-  if (players.length && activePlayerIndex >= players.length) activePlayerIndex = 0;
-
-  ns = {
-    ...ns,
-    players,
-    dealerIndex,
-    activePlayerIndex,
-    activePlayerId: players[activePlayerIndex],
-    foldedPlayerIds: ns.foldedPlayerIds.filter((id) => id !== userId),
-    readyForNextHand: ns.readyForNextHand.filter((id) => id !== userId),
-    allInPlayerIds: ns.allInPlayerIds.filter((id) => id !== userId),
-    stacks: omitPlayerKey(ns.stacks, userId),
-    playerRoundBet: omitPlayerKey(ns.playerRoundBet, userId),
-    playerCards: omitPlayerKey(ns.playerCards, userId),
-    handContributions: omitPlayerKey(ns.handContributions, userId),
-    actedThisRound: omitPlayerKey(ns.actedThisRound, userId)
-  };
-
-  if (players.length < 2) {
-    ns = {
-      ...ns,
-      street: 'LOBBY',
-      phase: 'DEAL',
-      pot: 0,
-      currentBet: 0,
-      communityCards: [],
-      playerRoundBet: Object.fromEntries(players.map((p) => [p, 0])),
-      foldedPlayerIds: [],
-      readyForNextHand: [],
-      winners: undefined,
-      winnersShare: undefined,
-      handCompletedAt: undefined,
-      actionDeadlineAt: undefined,
-      actionLog: [],
-      activePlayerIndex: 0,
-      activePlayerId: players[0]
-    };
-  }
-
-  return { ok: true, state: ns };
 };

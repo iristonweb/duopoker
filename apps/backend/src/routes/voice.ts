@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { TIER_RANK } from '@duopoker/shared-types';
 import { verifyAccessToken } from '../auth/jwt.js';
 import { config } from '../config.js';
-import { createVoiceRoomToken, isLiveKitConfigured } from '../services/livekit.js';
+import { createVoiceRoomToken, isLiveKitConfigured } from '@duopoker/server-shared/services/livekit';
 import { getUserSubscriptionTier } from '../services/subscription-tier.js';
+import { assertVoiceSessionAccess } from '../services/session-access.js';
 
 const tokenSchema = z.object({
   sessionId: z.string().min(1),
@@ -24,7 +25,7 @@ voiceRouter.get('/status', (_req, res) => {
   res.json({
     livekit: configured ? 'configured' : 'missing',
     minTier: config.mockCheckout ? null : 'GOLD',
-    requiresAuth: false,
+    requiresAuth: true,
     checks: {
       apiKey: Boolean(cfg.apiKey),
       apiSecret: Boolean(cfg.apiSecret),
@@ -41,15 +42,22 @@ voiceRouter.post('/token', async (req, res) => {
 
   const authHeader = req.headers.authorization ?? '';
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (bearer) {
-    try {
-      const payload = verifyAccessToken(bearer);
-      if (payload.userId !== parsed.data.userId) {
-        return res.status(403).json({ error: 'userId mismatch' });
-      }
-    } catch {
-      return res.status(401).json({ error: 'Unauthorized' });
+  if (!bearer) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const payload = verifyAccessToken(bearer);
+    if (payload.userId !== parsed.data.userId) {
+      return res.status(403).json({ error: 'userId mismatch' });
     }
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const access = await assertVoiceSessionAccess(parsed.data.sessionId, parsed.data.userId);
+  if (!access.ok) {
+    return res.status(403).json({ error: access.reason, code: access.reason });
   }
 
   const cfg = {

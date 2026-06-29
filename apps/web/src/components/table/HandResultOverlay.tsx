@@ -73,6 +73,8 @@ export function HandResultOverlay({
         >
           <GlassPanel
             glow="gold"
+            aria-live="polite"
+            aria-atomic="true"
             className={cn(
               'relative max-w-lg overflow-hidden px-4 py-3 text-center text-sm shadow-[0_0_48px_rgba(232,197,71,0.2)] sm:px-6 sm:py-4 sm:text-base',
               gameOver && 'ring-1 ring-gold/30'

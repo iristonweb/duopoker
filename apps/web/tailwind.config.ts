@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss';
-import { colors } from '@duopoker/shared-types';
+import { colors, zIndex } from '@duopoker/shared-types';
 
 export default {
   content: [
@@ -77,6 +77,18 @@ export default {
       },
       borderRadius: {
         '4xl': '2rem'
+      },
+      zIndex: {
+        felt: String(zIndex.felt),
+        hud: String(zIndex.hud),
+        chipFlight: String(zIndex.chipFlight),
+        banner: String(zIndex.banner),
+        pwa: String(zIndex.pwa),
+        panel: String(zIndex.panel),
+        orientation: String(zIndex.orientation),
+        modal: String(zIndex.modal),
+        sheet: String(zIndex.sheet),
+        fullscreen: String(zIndex.fullscreen)
       }
     }
   },
