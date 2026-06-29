@@ -57,6 +57,7 @@ test('clubs SPA route does not 404', async ({ page }) => {
 test('lobby shows subscriptions section', async ({ page }) => {
   await page.goto('http://127.0.0.1:5180/lobby');
   await expect(page.getByRole('heading', { name: /Подписки/i })).toBeVisible();
+  await page.getByRole('button', { name: /Сравнить тарифы/i }).click();
   await expect(page.getByRole('button', { name: /Подробнее/i }).first()).toBeVisible();
 });
 

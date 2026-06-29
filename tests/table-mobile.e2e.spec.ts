@@ -136,15 +136,19 @@ test.describe('mobile table layout', () => {
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible({ timeout: 10_000 });
   });
 
-  test('portrait table shows rotate overlay when immersive off', async ({ page }) => {
+  test('portrait table uses classic layout when immersive off', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.emulateMedia({ orientation: 'portrait' });
     await page.addInitScript(() => {
       localStorage.setItem('duopoker_mobile_immersive_table', '0');
     });
     await page.goto(`${BASE}/table/smoke-test-session`);
-    await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/Поверните телефон|Rotate your phone/i)).toBeVisible();
+    await expect(page.locator('body')).toHaveAttribute(
+      'data-table-layout-mode',
+      'mobile-classic',
+      { timeout: 10_000 }
+    );
+    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
   });
 
   test('landscape table route has no horizontal overflow', async ({ page }) => {
