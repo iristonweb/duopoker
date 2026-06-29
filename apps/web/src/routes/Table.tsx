@@ -41,6 +41,7 @@ import { holdemSidePotAmounts, holdemSidePotSummary } from '../lib/holdem-side-p
 import { PwaInstallHint } from '../components/PwaInstallHint';
 import {
   buildTableLeaderboard,
+  computeHeroBustState,
   formatTableError,
   leaderboardLeaders,
   useTableChat
@@ -255,7 +256,7 @@ export const Table = () => {
       streetSounds: false
     }
   );
-  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers } =
+  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers, deckShuffling } =
     useTableAnimationQueue(session, userId, label, t, soundOn, reduceMotion);
   useCommunityCardSounds(viewSession?.communityCards?.length ?? 0, false);
   useTableMusic(musicOn);
@@ -317,6 +318,8 @@ export const Table = () => {
         isActive: uid === visualActiveId,
         isFolded: folded,
         isAllIn: session.allInPlayerIds?.includes(uid) ?? false,
+        isWinner:
+          viewSession.street === 'COMPLETE' && (viewSession.winners ?? []).includes(uid),
         isHero: hero,
         tricksWon:
           viewSession.mode === 'JOKER' &&
@@ -562,10 +565,24 @@ export const Table = () => {
     ? jokerMatchOver
     : session.street === 'COMPLETE' && playersWithStack.length < 2;
   const heroStack = session.stacks[userId] ?? 0;
-  const heroBusted = !isJoker && session.players.includes(userId) && heroStack <= 0;
-  const heroSpectating = heroBusted && playersWithStack.length >= 2;
-  const showBustedOverlay = heroBusted && !bustedDismissed;
+  const bustState = computeHeroBustState({
+    isJoker,
+    userId,
+    sessionPlayers: session.players,
+    heroStack,
+    sessionStreet: session.street,
+    viewStreet: viewSession?.street,
+    foldedPlayerIds: session.foldedPlayerIds,
+    bustedDismissed,
+    reduceMotion,
+    playersWithStackCount: playersWithStack.length
+  });
+  const { showBustedOverlay, showAllInRunoutBanner, heroSpectating } = bustState;
   const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay;
+  const activeSecondsLeft =
+    activeId && session.actionDeadlineAt && session.street !== 'LOBBY' && session.street !== 'COMPLETE'
+      ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
+      : null;
 
   const kettle =
     session.pot +
@@ -647,14 +664,12 @@ export const Table = () => {
     });
   };
 
-  const showDesktopChat = layoutMode !== 'mobile-immersive';
-
   return (
     <>
       <TableLayoutRouter
         mode={layoutMode}
-        overlay={layoutMode === 'mobile-immersive' ? undefined : <PwaInstallHint />}
-        onChatOpen={showDesktopChat ? chat.openDrawer : undefined}
+        overlay={<PwaInstallHint />}
+        onChatOpen={chat.openDrawer}
         chatUnread={chat.unread}
         session={session}
         tableView={tableView}
@@ -705,6 +720,7 @@ export const Table = () => {
         showGhostUpsell={showGhostUpsell}
         onToggleGhostBoard={() => setGhostBoardVisible((v) => !v)}
         showBustedOverlay={showBustedOverlay}
+        showAllInRunoutBanner={showAllInRunoutBanner}
         onBustedWatch={() => setBustedDismissed(true)}
         waitingForPlayers={waitingForPlayers}
         isJoker={isJoker}
@@ -722,6 +738,9 @@ export const Table = () => {
         secondsLeft={secondsLeft}
         activeLabel={activeLabel}
         lastActionText={lastActionText}
+        activeSecondsLeft={activeSecondsLeft}
+        activeUserId={activeId}
+        deckShuffling={deckShuffling}
         heroSpectating={heroSpectating}
         holeCards={holeCards}
         raiseAmount={raiseAmount}
@@ -752,8 +771,7 @@ export const Table = () => {
         sessionId={sid}
         realtimeSocket={usesRealtimeSocket()}
       />
-      {showDesktopChat ? (
-        <TableChatDrawer
+      <TableChatDrawer
           open={chat.drawerOpen}
           onClose={chat.closeDrawer}
           messages={chat.messages}
@@ -765,7 +783,6 @@ export const Table = () => {
           heroId={userId}
           error={chat.chatError ? formatTableError(chat.chatError, t) : null}
         />
-      ) : null}
     </>
   );
 };

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DisplaySessionState, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import {
-  TABLE_STEP_MS,
   applyDisplayStep,
   buildTableSessionSteps,
   initHandDisplay,
   sessionSnap,
+  stepDurationMs,
   type SessionSnap,
   type TableSessionStep
 } from '../session/table-session-steps';
@@ -36,7 +36,7 @@ export function useTableDisplayState(
         setDisplay(next);
       }
       await new Promise<void>((resolve) => {
-        timerRef.current = setTimeout(resolve, TABLE_STEP_MS);
+        timerRef.current = setTimeout(resolve, stepDurationMs(step));
       });
     }
     const target = targetRef.current;

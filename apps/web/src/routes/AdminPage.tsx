@@ -412,7 +412,7 @@ export function AdminPage() {
 
   return (
     <PageShell
-      maxWidth="5xl"
+      maxWidth="7xl"
       back={
         <Link to="/lobby" className="premium-link text-sm">
           {t('nav.backLobby')}

@@ -1,35 +1,27 @@
-import { gameChipId } from '@duopoker/shared-types';
 import { Badge, cn } from '@duopoker/ui-kit';
 import type { GameMode, GameStreet, JokerHandState } from '@duopoker/shared-types/index';
-import { PokerChipVisual } from '../../../cosmetics/PokerChipVisual';
 import { JokerTrumpBadge } from '../../JokerTrumpBadge';
 import { TurnTimer } from '../../TurnTimer';
 
 type Props = {
   mode: GameMode;
-  pot: number;
   street?: GameStreet;
   handNumber: number;
-  chipId?: string;
   joker?: JokerHandState | null;
   secondsLeft: number | null;
   isHeroTurn: boolean;
   className?: string;
-  potLabel: string;
   streetLabel: string | null;
 };
 
 export function MobileTableTopBar({
   mode,
-  pot,
   street,
   handNumber,
-  chipId = 'chip_classic',
   joker,
   secondsLeft,
   isHeroTurn,
   className,
-  potLabel,
   streetLabel
 }: Props) {
   const isJoker = mode === 'JOKER' && joker;
@@ -43,13 +35,7 @@ export function MobileTableTopBar({
       )}
       style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <PokerChipVisual chipId={gameChipId(chipId)} size="xs" className="shrink-0" />
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/60">{potLabel}</p>
-          <p className="font-mono text-base font-bold tabular-nums text-gold-light">{pot}</p>
-        </div>
-      </div>
+      <div className="w-10 shrink-0" aria-hidden />
 
       <div className="flex flex-wrap items-center justify-center gap-1.5">
         {handNumber > 0 ? (

@@ -67,7 +67,7 @@ export const ClubOnboarding = () => {
 
   return (
     <PageShell
-      maxWidth="lg"
+      maxWidth="4xl"
       back={
         <Link to="/clubs" className="premium-link text-sm">
           {t('clubs.back')}
@@ -94,7 +94,7 @@ export const ClubOnboarding = () => {
         )}
 
         {step === 2 && clubId && (
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid items-start gap-4 sm:grid-cols-3">
             <OrganizerPlanCard tier="BASIC" price={formatPlanPrice(0)} description="Free tier" bannerUrl={organizerPlanBanners.BASIC}>
               <Button variant="secondary" size="sm" className="w-full" onClick={onSkipPlan}>
                 Continue free

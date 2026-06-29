@@ -23,11 +23,11 @@ export function PlayerCountSelector({
   return (
     <div
       className={cn(
-        'rounded-2xl border border-white/10 bg-gradient-to-b from-black/40 to-black/20 p-4 shadow-inner',
+        'rounded-xl border border-white/10 bg-gradient-to-b from-black/40 to-black/20 p-3.5 shadow-inner',
         className
       )}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
         <div className="min-w-0">
           {label ? (
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald/80">{label}</p>
@@ -57,7 +57,7 @@ export function PlayerCountSelector({
               aria-checked={active}
               onClick={() => onChange(count)}
               className={cn(
-                'relative rounded-lg px-1 py-3 text-sm font-semibold tabular-nums transition-all duration-200',
+                'relative rounded-lg px-1 py-2 text-sm font-semibold tabular-nums transition-all duration-200',
                 active
                   ? 'bg-gradient-to-b from-emerald/35 to-emerald/10 text-emerald shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_20px_rgba(74,222,128,0.2)] ring-1 ring-emerald/40'
                   : 'text-muted hover:bg-white/[0.04] hover:text-zinc-200'

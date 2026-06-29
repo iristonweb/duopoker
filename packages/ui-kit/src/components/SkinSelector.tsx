@@ -176,7 +176,7 @@ export function SkinSelector({
       {!embedded ? <SectionHeader eyebrow={eyebrow} title={title} description={description} /> : null}
       {headerExtra}
       <TabGroup tabs={slotTabs} value={slot} onChange={setSlot} className="mb-3" />
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 items-start gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => {
           const unlocked = canEquipCosmetic(item.id, subscriptionTier, inventory);
           const isEquipped =
@@ -209,14 +209,14 @@ export function SkinSelector({
 
               <CosmeticPreview slot={slot} itemId={item.id} imageUrl={item.imageUrl} />
 
-              <div className="flex flex-1 flex-col gap-1 px-2 pb-2.5 pt-2">
+              <div className="flex flex-col gap-1 px-2 pb-2.5 pt-2">
                 <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-zinc-100">{item.name}</span>
                 <span className="text-[8px] font-medium uppercase tracking-[0.14em] text-gold/70">{item.rarity}</span>
                 {unlocked && onEquip ? (
                   <button
                     type="button"
                     className={cn(
-                      'mt-auto rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-wide transition-colors',
+                      'mt-2 rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-wide transition-colors',
                       isEquipped
                         ? 'border-gold/40 bg-gold/20 text-gold-light'
                         : 'border-white/15 bg-white/5 text-muted hover:border-gold/30 hover:text-gold'
@@ -229,7 +229,7 @@ export function SkinSelector({
                 {!unlocked && item.chipCost && onBuy ? (
                   <button
                     type="button"
-                    className="mt-auto rounded-md border border-emerald/30 bg-emerald/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-emerald hover:bg-emerald/20"
+                    className="mt-2 rounded-md border border-emerald/30 bg-emerald/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-emerald hover:bg-emerald/20"
                     onClick={() => onBuy(item.id)}
                   >
                     {buyLabel}

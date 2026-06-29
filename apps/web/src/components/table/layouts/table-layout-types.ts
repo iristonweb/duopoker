@@ -55,6 +55,7 @@ export type TableLayoutProps = {
   showGhostUpsell: boolean;
   onToggleGhostBoard: () => void;
   showBustedOverlay: boolean;
+  showAllInRunoutBanner: boolean;
   onBustedWatch: () => void;
   waitingForPlayers: boolean;
   isJoker: boolean;
@@ -72,6 +73,9 @@ export type TableLayoutProps = {
   secondsLeft: number | null;
   activeLabel: string;
   lastActionText?: string;
+  activeSecondsLeft: number | null;
+  activeUserId?: string;
+  deckShuffling: boolean;
   heroSpectating: boolean;
   holeCards: Card[];
   raiseAmount: number;

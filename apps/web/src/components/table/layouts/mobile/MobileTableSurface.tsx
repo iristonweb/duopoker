@@ -31,8 +31,11 @@ type Props = {
   showCenterPot?: boolean;
   showBoardSlots?: boolean;
   ghostCommunityCards?: Card[];
-  secondsLeft: number | null;
+  foldingUsers?: string[];
+  checkRippleUsers?: string[];
   activeUserId?: string;
+  secondsLeft?: number | null;
+  deckShuffling?: boolean;
   onAvatarTap?: (userId: string) => void;
   reduceMotion?: boolean;
   className?: string;
@@ -53,8 +56,11 @@ export function MobileTableSurface({
   showCenterPot = true,
   showBoardSlots = true,
   ghostCommunityCards = [],
-  secondsLeft,
+  secondsLeft = null,
   activeUserId,
+  deckShuffling = false,
+  foldingUsers = [],
+  checkRippleUsers = [],
   onAvatarTap,
   reduceMotion,
   className
@@ -65,6 +71,8 @@ export function MobileTableSurface({
   const boardCards = showGhostBoard ? ghostCommunityCards : communityCards;
   const bubbleByUser = new Map(seatBubbles.map((b) => [b.userId, b]));
   const playerIndex = new Map(players.map((p, i) => [p.userId, i]));
+  const foldingSet = new Set(foldingUsers);
+  const rippleSet = new Set(checkRippleUsers);
 
   return (
     <div
@@ -88,6 +96,20 @@ export function MobileTableSurface({
       />
 
       <div className="absolute left-1/2 top-[22%] h-[42%] w-[78%] max-w-[20rem] -translate-x-1/2">
+        {deckShuffling && !reduceMotion ? (
+          <div className="pointer-events-none absolute left-1/2 top-[8%] z-[6] -translate-x-1/2">
+            <div className="relative animate-pulse">
+              <PlayingCard faceUp={false} size="sm" deckId={heroDeckId} />
+              <PlayingCard
+                faceUp={false}
+                size="sm"
+                deckId={heroDeckId}
+                className="absolute left-1 top-0.5 -rotate-6"
+              />
+            </div>
+          </div>
+        ) : null}
+
         <ChipFlightLayer
           flights={chipFlights}
           playerIndex={playerIndex}
@@ -96,14 +118,15 @@ export function MobileTableSurface({
           layout="mobile-arc"
         />
 
-        <div className="absolute left-1/2 top-[32%] flex -translate-x-1/2 gap-1">
+        <div className="absolute left-[44%] top-[38%] flex -translate-x-1/2 gap-1">
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
                 <motion.div
                   key={boardCardKeys?.[i] ?? `board-${i}-${c}`}
-                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: showGhostBoard ? 0.75 : 1, y: 0 }}
+                  initial={reduceMotion ? false : { opacity: 0, y: -28, scale: 0.55 }}
+                  animate={{ opacity: showGhostBoard ? 0.75 : 1, y: 0, scale: 1 }}
+                  transition={{ delay: i * 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <PlayingCard card={c} faceUp size="sm" deckId={heroDeckId} />
                 </motion.div>
@@ -122,13 +145,14 @@ export function MobileTableSurface({
           ) : null}
         </div>
 
-        <div className="absolute left-1/2 top-[58%] -translate-x-1/2">
+        <div className="absolute left-1/2 top-[8%] z-[12] -translate-x-1/2">
           {showCenterPot ? (
             <AnimatedPotDisplay
               pot={pot}
               chipId={potChipId}
               pulseKey={potPulseKey}
               sidePots={sidePots}
+              className="scale-90"
             />
           ) : null}
         </div>
@@ -147,12 +171,19 @@ export function MobileTableSurface({
                 };
           const seatSeconds =
             player.isActive && player.userId === activeUserId ? secondsLeft : null;
+          const isFolding = foldingSet.has(player.userId);
+          const hasRipple = rippleSet.has(player.userId);
 
           return (
             <div
               key={player.userId}
               style={mobileSeatPositionStyle(index, players.length)}
-              className="absolute z-10"
+              className={cn(
+                'absolute z-10',
+                player.isWinner && 'z-[12]',
+                isFolding && 'opacity-60',
+                hasRipple && 'ring-2 ring-emerald/40 rounded-full'
+              )}
             >
               <MobileSeatNode
                 player={player}
@@ -160,15 +191,9 @@ export function MobileTableSurface({
                 bubbleOffset={mobileBubbleOffset(index, players.length)}
                 secondsLeft={seatSeconds}
                 chipId={gameChipId(equipped.chip)}
+                deckId={equipped.deck}
                 onAvatarTap={onAvatarTap}
               />
-              {!player.revealCards && (player.hiddenCardCount ?? 0) > 0 ? (
-                <div className="mt-1 flex justify-center gap-0.5">
-                  {Array.from({ length: Math.min(player.hiddenCardCount ?? 0, 2) }).map((_, i) => (
-                    <PlayingCard key={i} faceUp={false} size="xs" deckId={equipped.deck} />
-                  ))}
-                </div>
-              ) : null}
             </div>
           );
         })}

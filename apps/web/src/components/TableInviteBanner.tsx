@@ -32,31 +32,35 @@ export function TableInviteBanner() {
         className="border-emerald-500/30 p-4"
         data-testid="table-invite-live"
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-300">
-          {t('tableInvite.liveEyebrow')}
-        </p>
-        <p className="mt-1 font-display text-lg font-semibold text-ivory">{live.tableName}</p>
-        <p className="mt-1 text-sm text-muted">
-          {t('tableInvite.from', {
-            name: live.host.displayName,
-            nick: live.host.nickname
-          })}
-        </p>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          data-testid="table-invite-join"
-          className="mt-4"
-          onClick={() => {
-            useAppStore.getState().resetTableJoin();
-            void joinSession(live.sessionId, live.mode as 'HOLDEM' | 'JOKER', live.buyIn).then(() =>
-              navigate(`/table/${live.sessionId}`)
-            );
-          }}
-        >
-          {t('tableInvite.joinTable')}
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-300">
+              {t('tableInvite.liveEyebrow')}
+            </p>
+            <p className="mt-1 font-display text-base font-semibold text-ivory sm:text-lg">{live.tableName}</p>
+            <p className="mt-1 text-sm text-muted">
+              {t('tableInvite.from', {
+                name: live.host.displayName,
+                nick: live.host.nickname
+              })}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            data-testid="table-invite-join"
+            className="shrink-0"
+            onClick={() => {
+              useAppStore.getState().resetTableJoin();
+              void joinSession(live.sessionId, live.mode as 'HOLDEM' | 'JOKER', live.buyIn).then(() =>
+                navigate(`/table/${live.sessionId}`)
+              );
+            }}
+          >
+            {t('tableInvite.joinTable')}
+          </Button>
+        </div>
       </GlassPanel>
     );
   }
@@ -92,46 +96,50 @@ export function TableInviteBanner() {
 
   return (
     <GlassPanel glow="gold" className="border-gold/30 p-4" data-testid="table-invite-pending">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold-light">
-        {t('tableInvite.eyebrow')}
-      </p>
-      <p className="mt-1 font-display text-lg font-semibold text-ivory">{invite.tableName}</p>
-      <p className="mt-1 text-sm text-muted">
-        {invite.clubName} · @{invite.host.nickname}
-      </p>
-      <p className="mt-1 text-xs text-subtle">
-        {invite.mode} · {invite.virtualBuyIn.toLocaleString()} {t('admin.chips')}
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          data-testid="table-invite-accept"
-          disabled={busy !== null}
-          onClick={() => void onAccept()}
-        >
-          {busy === 'accept' ? t('tableInvite.accepting') : t('tableInvite.accept')}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="table-invite-decline"
-          disabled={busy !== null}
-          onClick={() => void onDecline()}
-        >
-          {busy === 'decline' ? t('tableInvite.declining') : t('tableInvite.decline')}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="table-invite-view"
-          onClick={() => navigate(`/invite/${invite.inviteCode}`)}
-        >
-          {t('tableInvite.view')}
-        </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold-light">
+            {t('tableInvite.eyebrow')}
+          </p>
+          <p className="mt-1 font-display text-base font-semibold text-ivory sm:text-lg">{invite.tableName}</p>
+          <p className="mt-1 text-sm text-muted">
+            {invite.clubName} · @{invite.host.nickname}
+          </p>
+          <p className="mt-1 text-xs text-subtle">
+            {invite.mode} · {invite.virtualBuyIn.toLocaleString()} {t('admin.chips')}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            data-testid="table-invite-accept"
+            disabled={busy !== null}
+            onClick={() => void onAccept()}
+          >
+            {busy === 'accept' ? t('tableInvite.accepting') : t('tableInvite.accept')}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="table-invite-decline"
+            disabled={busy !== null}
+            onClick={() => void onDecline()}
+          >
+            {busy === 'decline' ? t('tableInvite.declining') : t('tableInvite.decline')}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="table-invite-view"
+            onClick={() => navigate(`/invite/${invite.inviteCode}`)}
+          >
+            {t('tableInvite.view')}
+          </Button>
+        </div>
       </div>
       {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
     </GlassPanel>

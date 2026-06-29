@@ -9,6 +9,8 @@ import { HandResultOverlay } from '../HandResultOverlay';
 import { GameStoryPanel } from '../GameStoryPanel';
 import { JokerNotebookPanel } from '../JokerNotebookPanel';
 import { BustedPlayerOverlay } from '../BustedPlayerOverlay';
+import { AllInRunoutBanner } from '../AllInRunoutBanner';
+import { TableActionTicker } from '../TableActionTicker';
 import { TuzovanieTableOverlay } from '../TuzovanieTableOverlay';
 import { TableLeaderboardPanel } from '../TableLeaderboardPanel';
 import { TableChatHudButton } from '../chat/TableChatHudButton';
@@ -56,10 +58,7 @@ export function StandardTableLayout({
             session={p.session}
             onOpenLeaderboard={() => p.onLeaderboardOpenChange(true)}
             hidePodium={
-              (p.tableView.street === 'COMPLETE' &&
-                p.session.street === 'COMPLETE' &&
-                !p.showBustedOverlay) ||
-              p.gameOver
+              (p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE') || p.gameOver
             }
             layoutVariant={isTablet ? 'tablet' : variant === 'classic' ? 'compact' : 'desktop'}
           />
@@ -106,14 +105,15 @@ export function StandardTableLayout({
               sidePots={p.holdemSidePotList}
               foldingUsers={p.foldingUsers}
               checkRippleUsers={p.checkRippleUsers}
+              activeUserId={p.activeUserId}
+              activeSecondsLeft={p.activeSecondsLeft}
+              deckShuffling={p.deckShuffling}
               className="h-full"
             />
+            <AllInRunoutBanner visible={p.showAllInRunoutBanner} />
+            <TableActionTicker events={p.feedEvents} pulseKey={p.feedPulseKey} />
             <HandResultOverlay
-              visible={
-                p.tableView.street === 'COMPLETE' &&
-                p.session.street === 'COMPLETE' &&
-                !p.showBustedOverlay
-              }
+              visible={p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'}
               winners={p.isJoker || p.holdemPayoutSummary ? undefined : p.winnerNames}
               summaryText={
                 p.isJoker && p.jokerHandSummary
@@ -160,9 +160,7 @@ export function StandardTableLayout({
               events={p.feedEvents}
               pulseKey={p.feedPulseKey}
               suppressHandCompleteDupes={
-                p.tableView.street === 'COMPLETE' &&
-                p.session.street === 'COMPLETE' &&
-                !p.showBustedOverlay
+                p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'
               }
               soundOn={p.soundOn}
               musicOn={p.musicOn}

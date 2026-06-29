@@ -22,6 +22,7 @@ import {
 import {
   amountToCall,
   buildTableLeaderboard,
+  computeHeroBustState,
   computeRaiseBounds,
   formatCardLabel,
   formatJokerPlayLine,
@@ -47,8 +48,10 @@ import { useTableStore, usesRealtimeSocket } from '../state/useTableStore';
 import { cleanupTableConnection } from '../lib/table-connection';
 import { mobileTheme } from '../theme';
 import { useReduceMotion } from './hooks/useReduceMotion';
+import { useTableOrientation } from './hooks/useTableOrientation';
 import { loadTableMusicPref, loadTableSfxPref, saveTableMusicPref, saveTableSfxPref } from './lib/table-prefs';
 import {
+  AllInRunoutBanner,
   BustedPlayerOverlay,
   GameStoryPanel,
   GameTableShell,
@@ -57,7 +60,9 @@ import {
   JokerNotebookPanel,
   PokerTableSurface,
   TableActionDock,
+  TableActionTicker,
   TableLeaderboardPanel,
+  TableOrientationGate,
   TableTopHUD,
   TuzovanieTableOverlay,
   playTableSound,
@@ -118,6 +123,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
   const [ghostBoardVisible, setGhostBoardVisible] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const reduceMotion = useReduceMotion();
+  const orientation = useTableOrientation();
 
   useEffect(() => {
     void loadTableSfxPref().then(setSoundOn);
@@ -321,7 +327,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
     soundOn ? (k) => playTableSound(k) : undefined
   );
 
-  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers } =
+  const { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers, deckShuffling } =
     useTableAnimationQueue(
     session,
     userId,
@@ -400,6 +406,8 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
         isActive: uid === visualActiveId,
         isFolded: folded,
         isAllIn: session.allInPlayerIds?.includes(uid) ?? false,
+        isWinner:
+          viewSession.street === 'COMPLETE' && (viewSession.winners ?? []).includes(uid),
         isHero: hero,
         tricksWon:
           viewSession.mode === 'JOKER' &&
@@ -530,9 +538,24 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
     (session.joker?.matchHandIndex ?? 0) >= JOKER_TOTAL_HANDS - 1;
   const gameOver = isJoker ? jokerMatchOver : session.street === 'COMPLETE' && playersWithStack.length < 2;
   const heroStack = session.stacks[userId] ?? 0;
-  const heroBusted = !isJoker && session.players.includes(userId) && heroStack <= 0;
-  const showBustedOverlay = heroBusted && !bustedDismissed;
+  const bustState = computeHeroBustState({
+    isJoker,
+    userId,
+    sessionPlayers: session.players,
+    heroStack,
+    sessionStreet: session.street,
+    viewStreet: viewSession?.street,
+    foldedPlayerIds: session.foldedPlayerIds,
+    bustedDismissed,
+    reduceMotion,
+    playersWithStackCount: playersWithStack.length
+  });
+  const { showBustedOverlay, showAllInRunoutBanner, heroSpectating } = bustState;
   const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay;
+  const activeSecondsLeft =
+    activeId && session.actionDeadlineAt && session.street !== 'LOBBY' && session.street !== 'COMPLETE'
+      ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
+      : null;
   const kettle = sessionKettle(session);
   const viewKettle = sessionKettle(tableView);
   const { minTotal, maxTotal, canRaise, roundBet } = raiseBounds;
@@ -604,7 +627,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <SafeAreaView style={styles.flex} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.flex} edges={orientation.isLandscape ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
       <GameTableShell
         hud={
           <TableTopHUD
@@ -637,6 +660,8 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
                 label={label}
                 reduceMotion={reduceMotion}
               />
+              <AllInRunoutBanner visible={showAllInRunoutBanner} />
+              <TableActionTicker events={feedEvents} pulseKey={feedPulseKey} />
               <PokerTableSurface
                 communityCards={jokerBoardCards}
                 boardCardKeys={jokerBoardKeys}
@@ -658,9 +683,16 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
                 sidePots={holdemSidePotList}
                 foldingUsers={foldingUsers}
                 checkRippleUsers={checkRippleUsers}
+                activeUserId={activeId}
+                activeSecondsLeft={activeSecondsLeft}
+                deckShuffling={deckShuffling}
+                isLandscape={orientation.isLandscape}
               />
+              <TableOrientationGate visible={orientation.showOrientationGate} />
               <HandResultOverlay
-                visible={tableView.street === 'COMPLETE' && !showBustedOverlay}
+                visible={
+                  tableView.street === 'COMPLETE' && session.street === 'COMPLETE'
+                }
                 winners={isJoker || holdemPayoutSummary ? undefined : winnerNames}
                 summaryText={
                   isJoker && jokerHandSummary
@@ -791,7 +823,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
               activeLabel={activeLabel}
               isHeroActive={activeId === userId}
               lastActionText={lastActionText}
-              heroSpectating={heroBusted && playersWithStack.length >= 2}
+              heroSpectating={heroSpectating}
               street={session.street}
               sessionError={sessionError}
               onFold={() => playerAction({ sessionId: sid, type: 'fold' })}

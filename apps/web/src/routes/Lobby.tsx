@@ -14,7 +14,6 @@ import {
   AppBackground,
   Button,
   cn,
-  DpClubMark,
   GlassPanel,
   Input,
   LegalDisclaimer,
@@ -583,7 +582,7 @@ export const Lobby = () => {
       <AppBackground />
 
       <motion.div
-        className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8"
+        className="relative z-10 mx-auto flex max-w-6xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8 xl:max-w-7xl"
         initial={false}
         animate={reduceMotion ? undefined : 'show'}
         variants={reduceMotion ? undefined : container}
@@ -670,9 +669,9 @@ export const Lobby = () => {
           </div>
         </motion.div>
 
-        <div className="grid flex-1 grid-cols-1 gap-8 lg:grid-cols-12">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
           <motion.div
-            className="flex flex-col gap-4 lg:col-span-5"
+            className="flex flex-col gap-4"
             variants={reduceMotion ? undefined : section}
             custom={1}
           >
@@ -730,44 +729,24 @@ export const Lobby = () => {
             >
               <div
                 className={cn(
-                  'h-1.5 w-full',
+                  'h-1 w-full',
                   opponentType === 'BOT'
                     ? 'bg-gradient-to-r from-transparent via-emerald to-transparent'
                     : 'bg-gradient-to-r from-transparent via-gold to-transparent'
                 )}
               />
-              <div className="relative border-b border-white/10 bg-gradient-to-br from-black/50 via-black/30 to-black/50 px-4 py-5 sm:px-6">
-                <div
-                  className="pointer-events-none absolute -right-8 top-0 h-32 w-32 rounded-full blur-3xl"
-                  style={{
-                    background:
-                      opponentType === 'BOT'
-                        ? 'radial-gradient(circle, rgba(74,222,128,0.12), transparent 70%)'
-                        : 'radial-gradient(circle, rgba(232,197,71,0.14), transparent 70%)'
-                  }}
-                  aria-hidden
+              <div className="border-b border-white/10 bg-black/30 px-4 py-3.5 sm:px-5">
+                <SectionHeader
+                  compact
+                  className="mb-0"
+                  eyebrow={t('lobby.opponentEyebrow')}
+                  title={t('lobby.opponentTitle')}
+                  description={t('lobby.opponentDesc')}
                 />
-                <div className="relative flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
-                      {t('lobby.opponentEyebrow')}
-                    </p>
-                    <h3 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">
-                      {t('lobby.opponentTitle')}
-                    </h3>
-                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-subtle">
-                      {t('lobby.opponentDesc')}
-                    </p>
-                  </div>
-                  <DpClubMark
-                    size="md"
-                    variant={opponentType === 'BOT' ? 'emerald' : 'gold'}
-                    className="shrink-0"
-                  />
-                </div>
               </div>
-              <div className="space-y-4 bg-black/15 p-4 sm:p-6">
+              <div className="space-y-3 bg-black/15 p-4 sm:p-5">
                 <OpponentSelector
+                  showBrand={false}
                   value={opponentType}
                   onChange={setOpponentType}
                   selectedLabel={t('modes.selected')}
@@ -843,7 +822,7 @@ export const Lobby = () => {
           </motion.div>
 
           <motion.div
-            className="flex flex-col gap-4 lg:col-span-7"
+            className="flex flex-col gap-4"
             variants={reduceMotion ? undefined : section}
             custom={2}
           >
@@ -877,14 +856,16 @@ export const Lobby = () => {
                       ) : null}
                     </div>
                   ) : (
-                    <PokerTable3D
-                      communityCards={session.communityCards ?? []}
-                      pot={kettle}
-                      street={session.street}
-                      heroDeckId={equipped.deck}
-                      heroChipId={equipped.chip}
-                      heroTableFeltId={equipped.table}
-                    />
+                    <div className="aspect-video w-full overflow-hidden rounded-2xl">
+                      <PokerTable3D
+                        communityCards={session.communityCards ?? []}
+                        pot={kettle}
+                        street={session.street}
+                        heroDeckId={equipped.deck}
+                        heroChipId={equipped.chip}
+                        heroTableFeltId={equipped.table}
+                      />
+                    </div>
                   )}
                 </div>
               ) : null}
@@ -927,6 +908,49 @@ export const Lobby = () => {
                 {checkoutMsg}
               </p>
             ) : null}
+
+            <div className="glass-shine relative overflow-hidden rounded-3xl border border-white/10 shadow-panel ring-1 ring-white/5">
+              <img
+                src={clubsBannerUrl}
+                alt=""
+                className="block h-36 w-full object-cover object-center sm:h-40"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/55 via-background/15 to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/85 via-background/25 to-transparent" />
+              <div className="absolute bottom-0 left-0 flex w-full flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/80">
+                    {t('lobby.clubsEyebrow')}
+                  </p>
+                  <h2 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">
+                    {t('lobby.clubsTitle')}
+                  </h2>
+                  <p className="mt-2 max-w-lg text-sm text-muted">{t('lobby.clubsDesc')}</p>
+                </div>
+                <Link to="/clubs" className="shrink-0">
+                  <Button variant="primary" size="lg">
+                    {t('lobby.myClubs')}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            <GlassPanel className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/80">
+                  {t('referral.eyebrow')}
+                </p>
+                <p className="mt-1 text-sm text-muted">{t('lobby.referralTeaser')}</p>
+              </div>
+              <Link to="/profile#referrals" className="shrink-0">
+                <Button variant="secondary" size="sm">
+                  {t('lobby.inviteFriend')}
+                </Button>
+              </Link>
+            </GlassPanel>
+
             <div id="subscriptions" className="mb-6">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <SectionHeader
@@ -947,7 +971,7 @@ export const Lobby = () => {
                 </div>
               </div>
               {subsExpanded ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PAID_TIERS.map((tier) => {
                   const active = subscriptionTier === tier;
                   return (
@@ -1026,54 +1050,6 @@ export const Lobby = () => {
             </div>
           </motion.div>
         </div>
-
-        <motion.div
-          className="glass-shine relative mt-12 overflow-hidden rounded-3xl border border-white/10 shadow-panel ring-1 ring-white/5"
-          variants={reduceMotion ? undefined : section}
-          custom={2.5}
-        >
-          <img
-            src={clubsBannerUrl}
-            alt=""
-            className="block h-44 w-full object-cover object-center sm:h-52"
-            loading="lazy"
-            decoding="async"
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/55 via-background/15 to-transparent" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/85 via-background/25 to-transparent" />
-          <div className="absolute bottom-0 left-0 flex w-full flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-8">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/80">
-                {t('lobby.clubsEyebrow')}
-              </p>
-              <h2 className="mt-1 font-display text-xl font-semibold text-ivory sm:text-2xl">
-                {t('lobby.clubsTitle')}
-              </h2>
-              <p className="mt-2 max-w-lg text-sm text-muted">{t('lobby.clubsDesc')}</p>
-            </div>
-            <Link to="/clubs" className="shrink-0">
-              <Button variant="primary" size="lg">
-                {t('lobby.myClubs')}
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
-
-        <motion.div className="mt-10" variants={reduceMotion ? undefined : section} custom={3}>
-          <GlassPanel className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/80">
-                {t('referral.eyebrow')}
-              </p>
-              <p className="mt-1 text-sm text-muted">{t('lobby.referralTeaser')}</p>
-            </div>
-            <Link to="/profile#referrals" className="shrink-0">
-              <Button variant="secondary" size="sm">
-                {t('lobby.inviteFriend')}
-              </Button>
-            </Link>
-          </GlassPanel>
-        </motion.div>
 
         <motion.footer className="mt-8" variants={reduceMotion ? undefined : section} custom={4}>
           <LegalDisclaimer text={t('legal.disclaimer')} />

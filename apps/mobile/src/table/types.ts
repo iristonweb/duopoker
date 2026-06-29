@@ -18,6 +18,7 @@ export type TablePlayerVisual = {
   isActive?: boolean;
   isFolded?: boolean;
   isAllIn?: boolean;
+  isWinner?: boolean;
   isHero?: boolean;
   /** JOKER: tricks won this hand */
   tricksWon?: number;

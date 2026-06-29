@@ -9,18 +9,6 @@ export function PushSettingsPanel() {
     usePushNotifications();
   const [msg, setMsg] = useState<string | null>(null);
 
-  if (!supported) {
-    return (
-      <GlassPanel className="border-white/10 p-5">
-        <SectionHeader
-          eyebrow={t('profile.pushEyebrow')}
-          title={t('profile.pushTitle')}
-          description={t('profile.pushUnsupported')}
-        />
-      </GlassPanel>
-    );
-  }
-
   const onEnable = async () => {
     setMsg(null);
     const result = await subscribe();
@@ -36,33 +24,42 @@ export function PushSettingsPanel() {
     setMsg(ok ? t('profile.pushDisabled') : t('profile.pushFailed'));
   };
 
+  const actionButton = supported ? (
+    subscribed || permission === 'granted' ? (
+      <Button variant="secondary" size="md" disabled={busy} onClick={() => void onDisable()}>
+        {busy ? t('profile.pushBusy') : t('profile.pushDisable')}
+      </Button>
+    ) : (
+      <Button
+        variant="primary"
+        size="md"
+        disabled={busy || vapidConfigured === false}
+        onClick={() => void onEnable()}
+      >
+        {busy ? t('profile.pushBusy') : t('profile.pushEnable')}
+      </Button>
+    )
+  ) : null;
+
   return (
-    <GlassPanel glow="gold" className="border-gold/20 p-5">
-      <SectionHeader
-        eyebrow={t('profile.pushEyebrow')}
-        title={t('profile.pushTitle')}
-        description={t('profile.pushDesc')}
-      />
-      {vapidConfigured === false ? (
-        <p className="mt-3 text-xs text-amber-200/90">{t('profile.pushVapidMissing')}</p>
-      ) : null}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {subscribed || permission === 'granted' ? (
-          <Button variant="secondary" size="md" disabled={busy} onClick={() => void onDisable()}>
-            {busy ? t('profile.pushBusy') : t('profile.pushDisable')}
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            size="md"
-            disabled={busy || vapidConfigured === false}
-            onClick={() => void onEnable()}
-          >
-            {busy ? t('profile.pushBusy') : t('profile.pushEnable')}
-          </Button>
-        )}
+    <GlassPanel
+      glow={supported ? 'gold' : 'none'}
+      className="self-start w-full border-white/10 p-4 sm:border-gold/20"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+        <SectionHeader
+          compact
+          className="mb-0 min-w-0 sm:flex-1"
+          eyebrow={t('profile.pushEyebrow')}
+          title={t('profile.pushTitle')}
+          description={supported ? t('profile.pushDesc') : t('profile.pushUnsupported')}
+        />
+        {actionButton ? <div className="shrink-0 sm:pt-0.5">{actionButton}</div> : null}
       </div>
-      {msg ? <p className="mt-3 text-xs text-gold-light">{msg}</p> : null}
+      {supported && vapidConfigured === false ? (
+        <p className="mt-2 text-xs text-amber-200/90">{t('profile.pushVapidMissing')}</p>
+      ) : null}
+      {msg ? <p className="mt-2 text-xs text-gold-light">{msg}</p> : null}
     </GlassPanel>
   );
 }

@@ -3,9 +3,9 @@ import type { Card, PlayerAction, SessionState } from '@duopoker/shared-types/in
 import { formatCardLabel } from '../joker/labels';
 import { formatSeatActionShort, type SeatActionKind } from '../feed/seat-action-format';
 import {
-  TABLE_STEP_MS,
   buildTableSessionSteps,
   sessionSnap,
+  stepDurationMs,
   type SessionSnap,
   type TableSessionStep
 } from '../session/table-session-steps';
@@ -33,6 +33,8 @@ export type JokerCardFlight = {
 };
 
 const BUBBLE_MS = 3800;
+const FOLD_FX_MS = 700;
+const CHECK_RIPPLE_MS = 700;
 
 const formatActionText = (
   action: PlayerAction,
@@ -91,6 +93,7 @@ export function useTableAnimationQueue(
   const [potPulseKey, setPotPulseKey] = useState(0);
   const [foldingUsers, setFoldingUsers] = useState<string[]>([]);
   const [checkRippleUsers, setCheckRippleUsers] = useState<string[]>([]);
+  const [deckShuffling, setDeckShuffling] = useState(false);
 
   const cardFmt = (c: Card) => formatCardLabel(c, t);
 
@@ -130,11 +133,11 @@ export function useTableAnimationQueue(
         if (step.action.type === 'fold') {
           haptic?.(step.userId === heroId ? 'error' : 'light');
           setFoldingUsers((prev) => [...prev, step.userId]);
-          setTimeout(() => setFoldingUsers((prev) => prev.filter((u) => u !== step.userId)), 450);
+          setTimeout(() => setFoldingUsers((prev) => prev.filter((u) => u !== step.userId)), FOLD_FX_MS);
         }
         if (step.action.type === 'check') {
           setCheckRippleUsers((prev) => [...prev, step.userId]);
-          setTimeout(() => setCheckRippleUsers((prev) => prev.filter((u) => u !== step.userId)), 600);
+          setTimeout(() => setCheckRippleUsers((prev) => prev.filter((u) => u !== step.userId)), CHECK_RIPPLE_MS);
         }
         if (step.action.type === 'bid') {
           haptic?.(step.userId === heroId ? 'light' : 'light');
@@ -164,6 +167,11 @@ export function useTableAnimationQueue(
       case 'collectBets':
         setPotPulseKey((k) => k + 1);
         if (soundOn) playSound?.('chip');
+        break;
+      case 'shuffle':
+        setDeckShuffling(true);
+        if (soundOn) playSound?.('shuffle');
+        setTimeout(() => setDeckShuffling(false), stepDurationMs(step));
         break;
       case 'dealHole':
         if (!dealSoundPlayedRef.current) {
@@ -216,7 +224,7 @@ export function useTableAnimationQueue(
       const step = queueRef.current.shift()!;
       applyStep(step);
       await new Promise<void>((resolve) => {
-        timerRef.current = setTimeout(resolve, TABLE_STEP_MS);
+        timerRef.current = setTimeout(resolve, stepDurationMs(step));
       });
     }
     processingRef.current = false;
@@ -263,5 +271,5 @@ export function useTableAnimationQueue(
     []
   );
 
-  return { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers };
+  return { seatBubbles, chipFlights, jokerFlights, potPulseKey, foldingUsers, checkRippleUsers, deckShuffling };
 }

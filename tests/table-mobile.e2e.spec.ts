@@ -86,7 +86,7 @@ test.describe('mobile table layout', () => {
     { width: 390, height: 844 },
     { width: 430, height: 932 }
   ]) {
-    test(`portrait table selects immersive layout without overflow at ${viewport.width}x${viewport.height}`, async ({
+    test(`portrait table uses horizontal ring layout at ${viewport.width}x${viewport.height}`, async ({
       page
     }) => {
       await page.setViewportSize(viewport);
@@ -98,12 +98,12 @@ test.describe('mobile table layout', () => {
       await page.goto(`${BASE}/table/smoke-test-session`);
       await expect(page.locator('body')).toHaveAttribute(
         'data-table-layout-mode',
-        'mobile-immersive',
+        'mobile-classic',
         {
           timeout: 10_000
         }
       );
-      await expectNoHorizontalOverflow(page);
+      await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
     });
   }
 
@@ -119,7 +119,7 @@ test.describe('mobile table layout', () => {
     await expect(hint).not.toBeVisible();
   });
 
-  test('portrait table hides orientation gate when immersive on', async ({ page }) => {
+  test('portrait table shows orientation gate for horizontal play', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.emulateMedia({ orientation: 'portrait' });
     await page.addInitScript(() => {
@@ -128,15 +128,15 @@ test.describe('mobile table layout', () => {
     await page.goto(`${BASE}/table/smoke-test-session`);
     await expect(page.locator('body')).toHaveAttribute(
       'data-table-layout-mode',
-      'mobile-immersive',
+      'mobile-classic',
       {
         timeout: 10_000
       }
     );
-    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
   });
 
-  test('portrait table uses classic layout when immersive off', async ({ page }) => {
+  test('portrait table uses classic layout regardless of immersive pref', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.emulateMedia({ orientation: 'portrait' });
     await page.addInitScript(() => {
@@ -148,7 +148,7 @@ test.describe('mobile table layout', () => {
       'mobile-classic',
       { timeout: 10_000 }
     );
-    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
+    await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
   });
 
   test('landscape table route has no horizontal overflow', async ({ page }) => {
@@ -156,9 +156,36 @@ test.describe('mobile table layout', () => {
     await page.emulateMedia({ orientation: 'landscape' });
     await page.goto(`${BASE}/table/smoke-test-session`);
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  for (const viewport of [
+    { width: 932, height: 430, label: 'iPhone Pro Max landscape' },
+    { width: 360, height: 640, label: 'small Android landscape' },
+    { width: 812, height: 375, label: 'iPhone X landscape' }
+  ]) {
+    test(`${viewport.label} (${viewport.width}x${viewport.height}) shows ring table without gate`, async ({
+      page
+    }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.emulateMedia({ orientation: 'landscape' });
+      await page.goto(`${BASE}/table/smoke-test-session`);
+      await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-classic', {
+        timeout: 10_000
+      });
+      await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
+      await expectNoHorizontalOverflow(page);
+    });
+  }
+
+  test('iPad portrait uses tablet layout without orientation gate', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.emulateMedia({ orientation: 'portrait' });
+    await page.goto(`${BASE}/table/smoke-test-session`);
+    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'tablet', {
+      timeout: 10_000
+    });
+    await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
   });
 
   test('phone landscape picks classic layout when width exceeds tablet breakpoint', async ({
@@ -208,28 +235,27 @@ test.describe('mobile table layout', () => {
     p1.disconnect();
     p2.disconnect();
 
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.emulateMedia({ orientation: 'landscape' });
     await page.addInitScript((uid) => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
+      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
-    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('mobile-table-top-bar')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('mobile-table-surface')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('mobile-hero-card-fan')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('mobile-action-dock')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-classic', {
+      timeout: 15_000
+    });
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('table-action-dock')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
     await expectNoHorizontalOverflow(page);
-    await expectBoxesDoNotOverlap(
-      page.getByTestId('mobile-hero-card-fan'),
-      page.getByTestId('mobile-action-dock')
-    );
   });
 
-  test('live Joker session renders immersive dock on mobile', async ({
+  test('live Joker session renders classic dock on mobile landscape', async ({
     page,
     request
   }, testInfo) => {
@@ -263,7 +289,8 @@ test.describe('mobile table layout', () => {
     }
     sockets.forEach((socket) => socket.disconnect());
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.emulateMedia({ orientation: 'landscape' });
     await page.addInitScript((uid) => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
@@ -272,15 +299,13 @@ test.describe('mobile table layout', () => {
     }, userIds[0]);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
-    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('mobile-table-surface')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('mobile-joker-action-dock')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('mobile-hero-card-fan')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-classic', {
+      timeout: 15_000
+    });
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('table-action-dock')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
     await expectNoHorizontalOverflow(page);
-    await expectBoxesDoNotOverlap(
-      page.getByTestId('mobile-hero-card-fan'),
-      page.getByTestId('mobile-joker-action-dock')
-    );
   });
 
   test('minimize table shows return banner in lobby', async ({ page, request }, testInfo) => {

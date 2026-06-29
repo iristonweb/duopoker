@@ -154,7 +154,11 @@ export function JokerActionDock({
         showActions ? 'border-gradient-gold border-gold/35 shadow-glow-gold table-action-segment-active' : 'border-white/10',
         className
       )}
-      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      style={{
+        paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)'
+      }}
     >
       {showActions ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />

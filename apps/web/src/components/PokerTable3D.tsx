@@ -2,18 +2,21 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { ContactShadows, Environment } from '@react-three/drei';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { PointLight } from 'three';
 import type { Card, EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types/index';
 import { colors, resolveEquipped, gameChipId } from '@duopoker/shared-types';
 import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
-import { PokerChipStack, PokerChipVisual } from './cosmetics/PokerChipVisual';
+import { PokerChipVisual } from './cosmetics/PokerChipVisual';
 import { isBotUserId, bubbleOffset, seatPositionStyle, feltPlayAreaClass } from '../lib/table-layout';
 import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 import { JokerTrickPile } from './table/JokerTrickPile';
 import { SeatActionBubble } from './table/SeatActionBubble';
+import { SeatStatusOverlay } from './table/SeatStatusOverlay';
+import { SeatStackPill } from './table/SeatStackPill';
+import { HoleCardsPeek } from './table/HoleCardsPeek';
+import { TurnTimer } from './table/TurnTimer';
 import { ChipFlightLayer } from './table/ChipFlightLayer';
 import { tableFeltVisual } from '../lib/cosmetics-client';
 import type { ChipFlight, JokerCardFlight, SeatActionBubble as SeatBubble } from '../hooks/useTableAnimationQueue';
@@ -36,6 +39,7 @@ export type TablePlayerVisual = {
   isActive?: boolean;
   isFolded?: boolean;
   isAllIn?: boolean;
+  isWinner?: boolean;
   isHero?: boolean;
   /** JOKER: tricks won this hand */
   tricksWon?: number;
@@ -60,6 +64,9 @@ type Props = {
   sidePots?: number[];
   foldingUsers?: string[];
   checkRippleUsers?: string[];
+  activeUserId?: string;
+  activeSecondsLeft?: number | null;
+  deckShuffling?: boolean;
   className?: string;
 };
 
@@ -92,9 +99,11 @@ export function PokerTable3D({
   sidePots = [],
   foldingUsers = [],
   checkRippleUsers = [],
+  activeUserId,
+  activeSecondsLeft = null,
+  deckShuffling = false,
   className
 }: Props) {
-  const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const felt = tableFeltVisual(heroTableFeltId);
   const potChipId = gameChipId(heroChipId);
@@ -191,15 +200,25 @@ export function PokerTable3D({
         <div className="absolute inset-0 rounded-[50%] bg-[radial-gradient(ellipse_at_center,_transparent_35%,_rgba(0,0,0,0.42)_100%)]" />
       </div>
 
-      {/* Virtual deck position for deal animation origin */}
+      {/* Virtual deck — shuffle + deal origin */}
       <motion.div
-        key={`deck-${handNumber}`}
-        className="pointer-events-none absolute left-1/2 top-[22%] z-[5] -translate-x-1/2 opacity-0"
-        initial={reduceMotion ? false : { opacity: 0.6, scale: 1 }}
-        animate={{ opacity: 0, scale: 0.8 }}
-        transition={{ duration: 0.35 }}
+        className="pointer-events-none absolute left-1/2 top-[22%] z-[6] -translate-x-1/2"
+        animate={
+          deckShuffling && !reduceMotion
+            ? { rotate: [0, -8, 8, -6, 6, 0], scale: [1, 1.08, 0.95, 1.05, 1], opacity: 1 }
+            : { opacity: deckShuffling ? 0.85 : 0, scale: deckShuffling ? 1 : 0.8 }
+        }
+        transition={{ duration: deckShuffling ? 0.6 : 0.35, ease: 'easeInOut' }}
       >
-        <PlayingCard faceUp={false} size="sm" deckId={heroDeckId} />
+        <div className="relative">
+          <PlayingCard faceUp={false} size="sm" deckId={heroDeckId} className="shadow-[0_8px_24px_rgba(0,0,0,0.6)]" />
+          <PlayingCard
+            faceUp={false}
+            size="sm"
+            deckId={heroDeckId}
+            className="absolute left-1 top-0.5 -rotate-6 shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+          />
+        </div>
       </motion.div>
 
       <div className={cn('pointer-events-none z-10', feltPlayAreaClass)}>
@@ -210,7 +229,7 @@ export function PokerTable3D({
           chipId={potChipId}
         />
 
-        <div className="absolute left-1/2 top-[38%] flex -translate-x-1/2 gap-0.5 max-table-compact:top-[40%] max-table-compact:gap-2">
+        <div className="absolute left-[44%] top-[36%] flex -translate-x-1/2 gap-0.5 max-table-compact:top-[38%] max-table-compact:gap-2">
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
@@ -220,11 +239,15 @@ export function PokerTable3D({
                   initial={
                     reduceMotion
                       ? { opacity: 1, y: 0, scale: 1, rotateY: 0 }
-                      : false
+                      : { opacity: 0, y: -36, scale: 0.55, rotateY: 0 }
                   }
                   animate={{ opacity: showGhostBoard ? 0.72 : 1, y: 0, scale: 1, rotateY: 0 }}
                   exit={{ opacity: 0, y: 12, scale: 0.85, transition: { duration: 0.22 } }}
-                  transition={{ delay: motionDelay ?? i * 0.06, duration: 0.32, ease: 'easeOut' }}
+                  transition={{
+                    delay: motionDelay ?? i * 0.1,
+                    duration: reduceMotion ? 0.01 : 0.42,
+                    ease: [0.22, 1, 0.36, 1]
+                  }}
                 >
                   <PlayingCard
                     card={c}
@@ -252,13 +275,14 @@ export function PokerTable3D({
           ) : null}
         </div>
 
-        <div className="absolute left-1/2 top-[52%] hidden -translate-x-1/2 md:block">
+        <div className="absolute left-1/2 top-[26%] z-[12] -translate-x-1/2 max-table-compact:top-[28%]">
           <AnimatedPotDisplay
             pot={pot}
             chipId={potChipId}
             street={street}
             pulseKey={potPulseKey}
             sidePots={sidePots}
+            className="scale-95 sm:scale-100"
           />
         </div>
 
@@ -284,6 +308,12 @@ export function PokerTable3D({
           const isFolding = foldingSet.has(player.userId);
           const hasCheckRipple = checkRippleUsers.includes(player.userId);
 
+          const showTimer =
+            player.isActive &&
+            activeUserId === player.userId &&
+            activeSecondsLeft !== null &&
+            activeSecondsLeft > 0;
+
           return (
             <div
               key={player.userId}
@@ -291,9 +321,13 @@ export function PokerTable3D({
               className={cn(
                 'absolute flex max-w-[5.5rem] flex-col items-center gap-0.5 transition-all duration-300 max-table-compact:max-w-none max-table-compact:gap-1',
                 player.isActive && 'z-20 scale-[1.03] max-table-compact:scale-[1.05]',
-                player.isFolded && 'opacity-50 grayscale-[0.4]'
+                player.isFolded && 'opacity-50 grayscale-[0.4]',
+                player.isWinner && 'z-[22]'
               )}
             >
+              {player.isWinner ? (
+                <span className="absolute -inset-3 rounded-3xl border-2 border-gold/70 bg-gold/10 shadow-[0_0_40px_rgba(232,197,71,0.55)] max-table-compact:-inset-4" />
+              ) : null}
               {player.isActive ? (
                 <>
                   <span className="absolute -inset-2 animate-pulse-glow rounded-3xl border-2 border-emerald/55 bg-emerald/[0.08] shadow-[0_0_32px_rgba(74,222,128,0.4)] max-table-compact:-inset-5" />
@@ -320,15 +354,37 @@ export function PokerTable3D({
                 />
               ) : null}
 
-              {player.isFolded ? (
-                <span className="absolute -bottom-1 z-[4] rounded-full border border-rose/40 bg-rose/20 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-rose sm:text-[9px]">
-                  {t('table.seatOut')}
-                </span>
-              ) : player.isAllIn ? (
-                <span className="absolute -bottom-1 z-[4] rounded-full border border-rose/50 bg-rose/25 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-rose sm:text-[9px]">
-                  {t('table.seatAllIn')}
-                </span>
-              ) : null}
+              <div className="relative">
+                <SeatStatusOverlay folded={player.isFolded} allIn={!player.isFolded && player.isAllIn} />
+                {!isHeroSeat && (cards.length > 0 || hiddenCount > 0) ? (
+                  <HoleCardsPeek
+                    cards={cards}
+                    hiddenCount={hiddenCount}
+                    revealCards={player.revealCards}
+                    deckId={deckId}
+                    side="right"
+                  />
+                ) : null}
+
+                <PlayerAvatar
+                  name={player.name}
+                  avatarUrl={player.avatar}
+                  tableStatus={player.tableStatus}
+                  frameId={equipped.frame}
+                  tier={tier}
+                  active={player.isActive}
+                  folded={player.isFolded}
+                  isBot={isBotUserId(player.userId)}
+                  size={isHeroSeat ? 'md' : 'sm'}
+                  className={cn(
+                    isHeroSeat && 'max-table-compact:scale-110',
+                    !isHeroSeat && 'table-compact:[&_.seat-status]:hidden'
+                  )}
+                  titleId={equipped.title}
+                  showTier={tier === 'BLACK' || tier === 'DIAMOND' || tier === 'PLATINUM'}
+                  hideName
+                />
+              </div>
 
               {player.isDealer ? (
                 <span className="absolute -right-1 -top-1 z-[2] flex h-4 w-4 items-center justify-center rounded-full border border-gold/40 bg-gold/20 text-[8px] font-bold text-gold-light shadow-glow-gold sm:h-5 sm:w-5 sm:text-[10px]">
@@ -344,29 +400,20 @@ export function PokerTable3D({
                 />
               ) : null}
 
-              <PlayerAvatar
-                name={player.name}
-                avatarUrl={player.avatar}
-                tableStatus={player.tableStatus}
-                frameId={equipped.frame}
-                tier={tier}
-                active={player.isActive}
-                folded={player.isFolded}
-                isBot={isBotUserId(player.userId)}
-                size={isHeroSeat ? 'md' : 'sm'}
-                className={cn(
-                  isHeroSeat && 'max-table-compact:scale-110',
-                  !isHeroSeat &&
-                    'table-compact:[&_.seat-name]:hidden table-compact:[&_.seat-status]:hidden table-compact:[&_img[alt=""]]:mt-0'
-                )}
-                titleId={equipped.title}
-                showTier={tier === 'BLACK' || tier === 'DIAMOND' || tier === 'PLATINUM'}
-              />
+              {showTimer ? (
+                <div className="absolute -inset-3 z-[3] max-table-compact:-inset-4">
+                  <TurnTimer secondsLeft={activeSecondsLeft!} size={52} className="opacity-95" />
+                </div>
+              ) : null}
 
-              <div className="glass-shine relative z-[1] flex items-center gap-1 rounded-xl border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5 shadow-panel backdrop-blur-glass max-sm:px-1.5 sm:gap-1.5 sm:px-2.5 sm:py-1">
-                <PokerChipStack chipId={seatChipId} count={Math.min(4, 2 + Math.floor(player.stack / 5000))} />
-                <span className="font-mono text-[8px] font-semibold text-emerald sm:text-[10px]">{player.stack.toLocaleString()}</span>
-              </div>
+              <SeatStackPill
+                name={player.name}
+                stack={player.stack}
+                chipId={seatChipId}
+                showName={!isHeroSeat}
+                compact={!isHeroSeat}
+                className={cn(isHeroSeat && 'max-table-compact:hidden')}
+              />
 
               {roundBet > 0 ? (
                 <motion.div
@@ -377,60 +424,50 @@ export function PokerTable3D({
                   className="glass-shine relative z-[1] flex items-center gap-1 rounded-full border border-gold/30 bg-white/[0.04] px-2 py-0.5 shadow-glow-gold backdrop-blur-glass"
                 >
                   <PokerChipVisual chipId={seatChipId} size="sm" className="scale-75" />
-                  <span className="font-mono text-[9px] font-bold text-gold-light">{roundBet.toLocaleString()}</span>
+                  <span className="font-mono text-[9px] font-bold text-gold-light sm:text-[10px]">{roundBet.toLocaleString()}</span>
                 </motion.div>
               ) : null}
 
-              {cards.length || hiddenCount > 0 ? (
-                <>
-                  {!isHeroSeat && !cards.length && hiddenCount > 0 ? (
-                    <div className="relative z-[1] hidden table-compact:flex">
-                      <span className="rounded-full border border-white/15 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold text-gold-light backdrop-blur-sm">
-                        {t('table.hiddenCards', { count: hiddenCount })}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div
-                    className={cn(
-                      'relative z-[1] flex gap-0.5 max-table-compact:gap-1',
-                      isHeroSeat && 'max-table-compact:hidden',
-                      !isHeroSeat && !cards.length && hiddenCount > 0 && 'hidden max-table-compact:flex'
-                    )}
-                  >
+              {isHeroSeat && (cards.length || hiddenCount > 0) ? (
+                <div className="relative z-[1] flex gap-0.5 max-table-compact:hidden">
                   <AnimatePresence mode="popLayout">
-                    {(cards.length ? cards : Array.from({ length: hiddenCount })).map((c, ci) => (
-                      <motion.div
-                        key={`seat-${player.userId}-${ci}`}
-                        layout
-                        initial={
-                          reduceMotion
-                            ? { opacity: 1, y: 0, scale: 1 }
-                            : false
-                        }
-                        animate={{ opacity: 1, y: 0, x: 0, scale: 1, rotate: 0 }}
-                        exit={
-                          isFolding
-                            ? { opacity: 0, y: 28, scale: 0.6, rotate: 12, transition: { duration: 0.4 } }
-                            : { opacity: 0, y: -18, scale: 0.7, transition: { duration: 0.25 } }
-                        }
-                        transition={{ delay: motionDelay ?? ci * 0.05, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                        className={cn(
-                          isHeroSeat && ci === 0 && '-rotate-[8deg]',
-                          isHeroSeat && ci === 1 && 'rotate-[8deg]'
-                        )}
-                      >
-                        <PlayingCard
-                          card={typeof c === 'object' && c ? c : undefined}
-                          faceUp={Boolean(player.revealCards && typeof c === 'object' && c)}
-                          deckId={deckId}
-                          size="sm"
-                          className="scale-[0.85] shadow-[0_8px_24px_rgba(0,0,0,0.5)] max-table-compact:scale-100"
-                        />
-                      </motion.div>
-                    ))}
+                    {(cards.length ? cards : Array.from({ length: hiddenCount })).map((c, ci) => {
+                      const faceUp = Boolean(player.revealCards && typeof c === 'object' && c);
+                      return (
+                        <motion.div
+                          key={`seat-${player.userId}-${ci}-${faceUp ? 'up' : 'down'}`}
+                          layout
+                          initial={
+                            reduceMotion
+                              ? { opacity: 1, y: 0, scale: 1, rotateY: faceUp ? 0 : 180 }
+                              : { opacity: 0, y: -32, scale: 0.5, rotateY: faceUp ? 0 : 180 }
+                          }
+                          animate={{ opacity: 1, y: 0, x: 0, scale: 1, rotate: 0, rotateY: faceUp ? 0 : 180 }}
+                          exit={
+                            isFolding
+                              ? { opacity: 0, y: 28, scale: 0.6, rotate: 12, transition: { duration: 0.4 } }
+                              : { opacity: 0, y: -18, scale: 0.7, transition: { duration: 0.25 } }
+                          }
+                          transition={{
+                            delay: motionDelay ?? ci * 0.08,
+                            duration: reduceMotion ? 0.01 : 0.42,
+                            ease: [0.22, 1, 0.36, 1]
+                          }}
+                          style={{ transformStyle: 'preserve-3d' }}
+                          className={cn(ci === 0 && '-rotate-[8deg]', ci === 1 && 'rotate-[8deg]')}
+                        >
+                          <PlayingCard
+                            card={typeof c === 'object' && c ? c : undefined}
+                            faceUp={faceUp}
+                            deckId={deckId}
+                            size="sm"
+                            className="scale-[0.85] shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+                          />
+                        </motion.div>
+                      );
+                    })}
                   </AnimatePresence>
-                  </div>
-                </>
+                </div>
               ) : null}
             </div>
           );

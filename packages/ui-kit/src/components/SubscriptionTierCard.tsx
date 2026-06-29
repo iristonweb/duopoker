@@ -103,7 +103,7 @@ export function SubscriptionTierCard({
         className
       )}
     >
-      <div className="relative aspect-[21/9] w-full overflow-hidden bg-[#050508]">
+      <div className="relative aspect-[2/1] w-full overflow-hidden bg-[#050508]">
         {bannerUrl ? (
           <img
             src={bannerUrl}
@@ -137,7 +137,7 @@ export function SubscriptionTierCard({
           ) : null}
         </div>
       </div>
-      <div className="p-4 sm:p-5">
+      <div className="p-4">
         <div className="flex items-baseline justify-between gap-4">
           <h3 className={cn('font-display text-lg font-semibold tracking-wide sm:text-xl', tierLabel[tier])}>
             {label}

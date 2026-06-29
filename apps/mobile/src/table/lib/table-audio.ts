@@ -1,6 +1,6 @@
 import { Audio, type AVPlaybackStatus } from 'expo-av';
 
-export type TableSoundKind = 'chip' | 'card' | 'fold' | 'win' | 'check' | 'blind' | 'street' | 'raise';
+export type TableSoundKind = 'chip' | 'card' | 'fold' | 'win' | 'check' | 'blind' | 'street' | 'raise' | 'shuffle';
 
 let audioReady = false;
 const uriCache = new Map<string, string>();
@@ -103,6 +103,11 @@ export async function playTableSound(kind: TableSoundKind) {
       await playTableSound('chip');
       setTimeout(() => void playTableSound('chip'), 80);
       break;
+    case 'shuffle': {
+      const freqs = [280, 340, 420, 360, 300];
+      freqs.forEach((f, i) => setTimeout(() => void playTone(f, 55, 0.1), i * 45));
+      break;
+    }
     default:
       break;
   }

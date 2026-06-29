@@ -2,7 +2,6 @@ import type { TableLayoutKind } from '../../../hooks/useTableLayoutMode';
 import { DesktopTableLayout } from './DesktopTableLayout';
 import { TabletTableLayout } from './TabletTableLayout';
 import { ClassicWebTableLayout } from './ClassicWebTableLayout';
-import { MobileImmersiveTableLayout } from './mobile/MobileImmersiveTableLayout';
 import type { TableLayoutProps } from './table-layout-types';
 
 type Props = TableLayoutProps & {
@@ -14,8 +13,6 @@ type Props = TableLayoutProps & {
 
 export function TableLayoutRouter({ mode, ...props }: Props) {
   switch (mode) {
-    case 'mobile-immersive':
-      return <MobileImmersiveTableLayout {...props} />;
     case 'mobile-classic':
       return <ClassicWebTableLayout {...props} />;
     case 'tablet':

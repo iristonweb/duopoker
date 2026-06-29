@@ -1,0 +1,21 @@
+# Never upload local secrets or dev env into Vercel builds
+.env
+.env.*
+!.env.example
+!.env.vercel.example
+**/.env
+**/.env.local
+**/.env.*.local
+.env.production.local
+.env.preview.local
+.env.development.local
+packages/api/.env
+packages/db-schema/.env
+apps/backend/.env
+apps/web/.env
+apps/mobile/.env
+.cursor/
+temp-agent-skills/
+node_modules/
+**/node_modules/
+.git/

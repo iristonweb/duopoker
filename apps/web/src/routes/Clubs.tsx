@@ -30,7 +30,7 @@ export const Clubs = () => {
 
   return (
     <PageShell
-      maxWidth="3xl"
+      maxWidth="6xl"
       back={
         <Link to="/lobby" className="premium-link text-sm">
           {t('nav.backLobby')}
@@ -92,7 +92,7 @@ export const Clubs = () => {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {clubs.map((c) => (
             <Link key={c.id} to={`/clubs/${c.id}`} className="group block">
               <GlassPanel className="border-white/10 p-5 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-gold/25 group-hover:shadow-glow-gold">

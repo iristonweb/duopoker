@@ -8,7 +8,8 @@ import {
   playCardSound,
   playCheckSound,
   playChipSound,
-  playFoldSound
+  playFoldSound,
+  playShuffleSound
 } from '../lib/table-sounds';
 import { tableHaptic } from '../lib/table-haptics';
 
@@ -42,6 +43,9 @@ export function useTableAnimationQueue(
             break;
           case 'blind':
             playBlindSound();
+            break;
+          case 'shuffle':
+            playShuffleSound();
             break;
           default:
             break;

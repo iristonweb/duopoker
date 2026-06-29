@@ -3,6 +3,7 @@ import './index.css';
 import * as Sentry from '@sentry/react';
 import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
+import { Analytics } from '@vercel/analytics/react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { LoadingSkeleton } from '@duopoker/ui-kit';
 import { MatchRedirect } from './components/MatchRedirect';
@@ -75,5 +76,6 @@ const App = () => (
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
+    <Analytics />
   </React.StrictMode>
 );

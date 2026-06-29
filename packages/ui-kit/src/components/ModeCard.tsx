@@ -50,7 +50,7 @@ export function ModeCard({
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-gold/10 via-transparent to-emerald/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         </div>
       ) : null}
-      <div className="relative p-5 sm:p-6">
+      <div className="relative p-4 sm:p-5">
         <div className="relative flex flex-col gap-3">
           {icon && (
             <div

@@ -8,6 +8,11 @@ node_modules
 !.env.vercel.example
 !**/.env.example
 !**/.env.vercel.example
+.env.vercel.local
+.env.production.local
+scripts/_tmp-*
+scripts/_*.json
+.cursor/plans/
 dist
 **/dist/
 apps/web/dist

@@ -47,7 +47,7 @@ export function AnimatedPotDisplay({ pot, chipId, pulseKey = 0, sidePots = [], c
       </motion.div>
       <PokerChipVisual chipId={chipId} size="sm" />
       <div className="flex flex-col items-start leading-tight">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-gold/75">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-gold/90 sm:text-[10px]">
           {t('table.potLabel')}
         </span>
         <motion.span
@@ -55,7 +55,7 @@ export function AnimatedPotDisplay({ pot, chipId, pulseKey = 0, sidePots = [], c
           initial={{ scale: 1.25, opacity: 0.6 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-          className="text-gradient-gold font-mono text-base font-bold sm:text-lg"
+          className="text-gradient-gold font-mono text-lg font-bold sm:text-xl"
         >
           {pot.toLocaleString()}
         </motion.span>

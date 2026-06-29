@@ -17,6 +17,7 @@
     "@react-three/drei": "^9.120.4",
     "@react-three/fiber": "^8.17.14",
     "@sentry/react": "^10.49.0",
+    "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.7.4",
     "i18next": "^26.3.1",

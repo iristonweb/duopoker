@@ -1,61 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
-import { loadTableImmersivePref } from '../lib/table-layout-prefs';
+import {
+  getViewportSize,
+  isPhoneLandscapeViewport,
+  PHONE_MAX_SHORT,
+  subscribeViewportChange
+} from '../lib/table-viewport';
 
-export type TableLayoutKind = 'desktop' | 'tablet' | 'mobile-immersive' | 'mobile-classic';
+export type TableLayoutKind = 'desktop' | 'tablet' | 'mobile-classic';
 
 const DESKTOP_MIN = 1280;
 const TABLET_MIN = 768;
 
-export function resolveTableLayoutKind(
-  width: number,
-  height: number,
-  immersivePref: boolean
-): TableLayoutKind {
+/**
+ * Web table layout: desktop/tablet use ring table; phones always use horizontal
+ * ring table (mobile-classic). Portrait phones see orientation gate separately.
+ */
+export function resolveTableLayoutKind(width: number, height: number): TableLayoutKind {
   const shortSide = Math.min(width, height);
-  const isPhone = shortSide <= 767;
-  const isLandscape = width > height;
+  const isPhone = shortSide <= PHONE_MAX_SHORT;
 
   if (width >= DESKTOP_MIN) return 'desktop';
-  // Phone landscape: ring table (PokerTable3D compact) — immersive UI is portrait-only.
-  if (isPhone && isLandscape) return 'mobile-classic';
-  if (isPhone) return immersivePref ? 'mobile-immersive' : 'mobile-classic';
+  if (isPhone) return 'mobile-classic';
   if (width >= TABLET_MIN) return 'tablet';
-  return immersivePref ? 'mobile-immersive' : 'mobile-classic';
+  return 'mobile-classic';
 }
 
 export function useTableLayoutMode(): TableLayoutKind {
   const [mode, setMode] = useState<TableLayoutKind>(() =>
     typeof window === 'undefined'
       ? 'desktop'
-      : resolveTableLayoutKind(
-          window.innerWidth,
-          window.innerHeight,
-          loadTableImmersivePref()
-        )
+      : resolveTableLayoutKind(getViewportSize().width, getViewportSize().height)
   );
 
   const sync = useCallback(() => {
-    setMode(
-      resolveTableLayoutKind(
-        window.innerWidth,
-        window.innerHeight,
-        loadTableImmersivePref()
-      )
-    );
+    const { width, height } = getViewportSize();
+    setMode(resolveTableLayoutKind(width, height));
   }, []);
 
   useEffect(() => {
     sync();
-    window.addEventListener('resize', sync);
-    window.addEventListener('orientationchange', sync);
-    window.addEventListener('storage', sync);
-    window.addEventListener('duopoker:table-layout-pref', sync);
-    return () => {
-      window.removeEventListener('resize', sync);
-      window.removeEventListener('orientationchange', sync);
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('duopoker:table-layout-pref', sync);
-    };
+    const unsubViewport = subscribeViewportChange(sync);
+    return unsubViewport;
   }, [sync]);
 
   useEffect(() => {
@@ -68,6 +53,6 @@ export function useTableLayoutMode(): TableLayoutKind {
   return mode;
 }
 
-export function notifyTableLayoutPrefChange() {
-  window.dispatchEvent(new Event('duopoker:table-layout-pref'));
+export function isPhoneLandscape(width: number, height: number): boolean {
+  return isPhoneLandscapeViewport(width, height);
 }

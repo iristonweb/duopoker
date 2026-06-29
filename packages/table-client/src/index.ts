@@ -43,6 +43,8 @@ export {
   type VoiceStatusPayload
 } from './hooks/useVoiceEligibility';
 
+export { computeHeroBustState, type HeroBustInput, type HeroBustState } from './session/hero-bust-state';
+
 export * from './session/table-session-steps';
 export {
   formatTableError,

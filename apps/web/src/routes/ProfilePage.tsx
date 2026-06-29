@@ -8,7 +8,6 @@ import {
   type SubscriptionTier
 } from '@duopoker/shared-types';
 import {
-  AppBackground,
   Badge,
   Button,
   DpClubMark,
@@ -25,8 +24,6 @@ import { PlayerAvatar } from '../components/cosmetics/PlayerAvatar';
 import { PokerChipVisual } from '../components/cosmetics/PokerChipVisual';
 import { useAppStore } from '../store/useAppStore';
 import { resolveApiUrl } from '../config/api';
-import { loadTableImmersivePref, saveTableImmersivePref } from '../lib/table-layout-prefs';
-import { notifyTableLayoutPrefChange } from '../hooks/useTableLayoutMode';
 
 const fade = {
   hidden: { opacity: 0, y: 16 },
@@ -57,7 +54,6 @@ export const ProfilePage = () => {
   const [shopMsg, setShopMsg] = useState<string | null>(null);
   const [bonusMsg, setBonusMsg] = useState<string | null>(null);
   const [bonusBusy, setBonusBusy] = useState(false);
-  const [immersiveTable, setImmersiveTable] = useState(() => loadTableImmersivePref());
 
   useEffect(() => {
     void fetchProfile();
@@ -106,16 +102,14 @@ export const ProfilePage = () => {
   };
 
   return (
-    <div className="relative min-h-screen">
-      <AppBackground />
-      <PageShell
-        maxWidth="4xl"
-        back={
-          <Link to="/lobby" className="premium-link text-sm">
-            {t('nav.backLobby')}
-          </Link>
-        }
-      >
+    <PageShell
+      maxWidth="6xl"
+      back={
+        <Link to="/lobby" className="premium-link text-sm">
+          {t('nav.backLobby')}
+        </Link>
+      }
+    >
         <motion.div
           initial={reduceMotion ? false : 'hidden'}
           animate="show"
@@ -188,34 +182,7 @@ export const ProfilePage = () => {
           initial={reduceMotion ? false : 'hidden'}
           animate="show"
           variants={reduceMotion ? undefined : fade}
-          className="mb-8"
-        >
-          <GlassPanel className="border-white/10 p-5 sm:p-6">
-            <label className="flex cursor-pointer items-start justify-between gap-4">
-              <div>
-                <p className="font-medium text-ivory">{t('profile.mobileImmersiveTable')}</p>
-                <p className="mt-1 text-sm text-muted">{t('profile.mobileImmersiveTableHint')}</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={immersiveTable}
-                onChange={(e) => {
-                  const on = e.target.checked;
-                  setImmersiveTable(on);
-                  saveTableImmersivePref(on);
-                  notifyTableLayoutPrefChange();
-                }}
-                className="mt-1 h-5 w-5 shrink-0 accent-gold"
-              />
-            </label>
-          </GlassPanel>
-        </motion.div>
-
-        <motion.div
-          initial={reduceMotion ? false : 'hidden'}
-          animate="show"
-          variants={reduceMotion ? undefined : fade}
-          className="mb-8 grid grid-cols-3 gap-3 sm:gap-4"
+          className="mb-8 grid grid-cols-3 items-start gap-3 sm:gap-4"
         >
           <GlassPanel className="border-white/10 p-4 text-center sm:p-5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">{t('profile.statsPlayed')}</p>
@@ -235,7 +202,7 @@ export const ProfilePage = () => {
           initial={reduceMotion ? false : 'hidden'}
           animate="show"
           variants={reduceMotion ? undefined : fade}
-          className="mb-8 grid gap-4 lg:grid-cols-2"
+          className="mb-8 grid items-start gap-4 lg:grid-cols-2"
         >
           <ReferralPanel />
           <PushSettingsPanel />
@@ -247,13 +214,15 @@ export const ProfilePage = () => {
           variants={reduceMotion ? undefined : fade}
           className="mb-8"
         >
-          <GlassPanel glow="emerald" className="flex flex-col justify-between border-emerald/20 p-5">
+          <GlassPanel glow="emerald" className="flex flex-col gap-3 border-emerald/20 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
             <SectionHeader
+              compact
+              className="mb-0 min-w-0 sm:flex-1"
               eyebrow={t('profile.dailyBonusEyebrow')}
               title={t('profile.dailyBonusTitle')}
               description={t('profile.dailyBonusDesc')}
             />
-            <div className="mt-4">
+            <div className="shrink-0">
               <Button variant="primary" size="md" disabled={bonusBusy} onClick={() => void claimDailyBonus()}>
                 {bonusBusy ? t('profile.dailyBonusClaiming') : t('profile.dailyBonusClaim')}
               </Button>
@@ -284,6 +253,8 @@ export const ProfilePage = () => {
                 ) : null}
                 <div className="min-w-0 flex-1">
                   <SectionHeader
+                    compact
+                    className="mb-3"
                     eyebrow={t('profile.subscriptionBlockEyebrow')}
                     title={t('profile.subscriptionBlockTitle')}
                     description={t('profile.subscriptionBlockDesc')}
@@ -353,6 +324,5 @@ export const ProfilePage = () => {
           </GlassPanel>
         </motion.div>
       </PageShell>
-    </div>
   );
 };

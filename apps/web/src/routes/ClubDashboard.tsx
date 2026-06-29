@@ -68,7 +68,7 @@ export const ClubDashboard = () => {
 
   return (
     <PageShell
-      maxWidth="4xl"
+      maxWidth="6xl"
       back={
         <Link to="/clubs" className="premium-link text-sm">
           {t('clubs.back')}
@@ -141,7 +141,7 @@ export const ClubDashboard = () => {
                 title={t('clubs.plansTitle')}
                 description={t('clubs.plansDesc')}
               />
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <OrganizerPlanCard
                   tier="BASIC"
                   price={formatPlanPrice(0)}
@@ -187,7 +187,8 @@ export const ClubDashboard = () => {
             </GlassPanel>
           )}
 
-          <GlassPanel className="mb-6 border-white/10 p-5">
+          <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+          <GlassPanel className="mb-6 border-white/10 p-5 lg:mb-0">
             <SectionHeader eyebrow="People" title={t('clubs.members')} className="mb-4" />
             <ul className="space-y-2">
               {club.members?.map((m) => (
@@ -353,6 +354,7 @@ export const ClubDashboard = () => {
               </div>
             )}
           </GlassPanel>
+          </div>
 
           {msg ? (
             <p className="mt-4 rounded-lg border border-emerald/20 bg-emerald/10 px-3 py-2 text-sm text-emerald">

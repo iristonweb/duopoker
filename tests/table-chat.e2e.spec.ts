@@ -27,7 +27,7 @@ const waitForState = (
   });
 
 test.describe('table chat', () => {
-  test('player can send and see own chat message on mobile immersive table', async ({
+  test('player can send and see own chat message on mobile landscape table', async ({
     page,
     request
   }, testInfo) => {
@@ -60,18 +60,22 @@ test.describe('table chat', () => {
     p1.disconnect();
     p2.disconnect();
 
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.emulateMedia({ orientation: 'landscape' });
     await page.addInitScript((uid) => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
-      localStorage.setItem('duopoker_mobile_immersive_table', '1');
       sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
-    await expect(page.getByTestId('mobile-immersive-table')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-classic', {
+      timeout: 15_000
+    });
+    await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('table-chat-hud-button')).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole('button', { name: /^(Чат|Chat)$/i }).click();
+    await page.getByTestId('table-chat-hud-button').click();
     await expect(page.getByTestId('table-chat-drawer')).toBeVisible();
 
     const message = `hello-${Date.now()}`;

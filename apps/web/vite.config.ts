@@ -57,7 +57,14 @@ export default defineConfig(({ mode }) => {
         },
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,svg,webmanifest,png,webp,jpg,jpeg}'],
-          globIgnores: ['**/assets/cosmetics/**/_sources/**', '**/assets/**/_sources/**'],
+          globIgnores: [
+            '**/assets/cosmetics/**',
+            '**/assets/**/_sources/**',
+            '**/assets/subscriptions/**',
+            '**/assets/modes/**',
+            '**/assets/banners/**',
+            '**/assets/table-felt.png'
+          ],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
         }
       })

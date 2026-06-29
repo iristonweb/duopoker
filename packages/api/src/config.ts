@@ -67,7 +67,11 @@ export const config = {
   livekitApiKey: process.env.LIVEKIT_API_KEY ?? '',
   livekitApiSecret: process.env.LIVEKIT_API_SECRET ?? '',
   livekitUrl: process.env.LIVEKIT_URL ?? '',
-  dataEncryptionKey: process.env.DATA_ENCRYPTION_KEY?.trim() ?? '',
+  dataEncryptionKey: requireSecret(
+    'DATA_ENCRYPTION_KEY',
+    process.env.DATA_ENCRYPTION_KEY?.trim(),
+    'dev-data-encryption-key-32bytes-min!!'
+  ),
   dailyBonusChips: 500,
   founderGrantSecret: process.env.FOUNDER_GRANT_SECRET?.trim() ?? '',
   founderEmail: (process.env.FOUNDER_EMAIL?.trim() || 'iristonweb@gmail.com').toLowerCase(),

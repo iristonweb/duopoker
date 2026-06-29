@@ -49,7 +49,7 @@ export function OrganizerPlanCard({
       ) : (
         <div className={cn('h-24 bg-gradient-to-br opacity-90', tierAccent[tier])} aria-hidden />
       )}
-      <div className="p-5">
+      <div className="p-4">
         <div className="flex items-baseline justify-between gap-4">
           <h3 className={cn('font-display text-xl font-semibold tracking-wide', tierLabel[tier])}>{tier}</h3>
           <p className="text-lg font-semibold text-gold">{price}</p>

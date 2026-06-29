@@ -149,7 +149,7 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
   if (!accessToken) {
     if (!isLobby) return null;
     return (
-      <GlassPanel glow="gold" className="flex h-full flex-col justify-between border-gold/15 p-6">
+      <GlassPanel glow="gold" className="flex flex-col gap-4 border-gold/15 p-6">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">
             {t('referral.eyebrow')}
@@ -170,12 +170,13 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
 
   if (isLobby) {
     return (
-      <GlassPanel glow="gold" className="flex h-full flex-col border-gold/15 p-6">
+      <GlassPanel glow="gold" className="flex flex-col gap-3 border-gold/15 p-6">
         <SectionHeader
+          compact
+          className="mb-4"
           eyebrow={t('referral.eyebrow')}
           title={t('referral.title')}
           description={t('referral.lobbyDesc')}
-          className="mb-4"
         />
 
         {data ? (
@@ -242,7 +243,7 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
 
         <p className="mb-4 text-[11px] text-muted">{t('referral.activeRule')}</p>
 
-        <Link to="/profile" className="mt-auto">
+        <Link to="/profile">
           <Button variant="secondary" size="md" className="w-full">
             {t('referral.openProfile')}
           </Button>
@@ -253,12 +254,13 @@ export function ReferralPanel({ variant = 'full' }: ReferralPanelProps) {
   }
 
   return (
-    <GlassPanel className="border-white/10 p-5">
+    <GlassPanel className="self-start w-full border-white/10 p-4">
       <SectionHeader
+        compact
+        className="mb-4"
         eyebrow={t('referral.eyebrow')}
         title={t('referral.title')}
         description={t('referral.desc')}
-        className="mb-4"
       />
 
       {data ? (

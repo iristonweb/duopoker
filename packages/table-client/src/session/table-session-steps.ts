@@ -3,8 +3,12 @@ import { computeSidePots, winnersAmongEligible } from '@duopoker/game-engine';
 import { potIndexForChipFlight } from '../holdem/side-pots';
 
 export const TABLE_STEP_MS = 300;
+export const TABLE_DEAL_STEP_MS = 450;
+export const TABLE_BOARD_STEP_MS = 400;
+export const TABLE_SHUFFLE_MS = 600;
 
 export type TableSessionStep =
+  | { kind: 'shuffle' }
   | { kind: 'action'; userId: string; text: string; action: PlayerAction; potIndex?: number }
   | { kind: 'postBlind'; userId: string; amount: number; blindType: 'SB' | 'BB'; text: string }
   | { kind: 'collectBets' }
@@ -13,6 +17,19 @@ export type TableSessionStep =
   | { kind: 'jokerPlay'; userId: string; card: Card }
   | { kind: 'winnerChips'; userId: string; amount: number; handNumber: number; potIndex?: number }
   | { kind: 'potPulse' };
+
+export const stepDurationMs = (step: TableSessionStep): number => {
+  switch (step.kind) {
+    case 'shuffle':
+      return TABLE_SHUFFLE_MS;
+    case 'dealHole':
+      return TABLE_DEAL_STEP_MS;
+    case 'dealBoard':
+      return TABLE_BOARD_STEP_MS;
+    default:
+      return TABLE_STEP_MS;
+  }
+};
 
 export type SessionSnap = {
   handNumber: number;
@@ -44,6 +61,9 @@ export const buildTableSessionSteps = (
 ): TableSessionStep[] => {
   if (!prev) {
     const steps: TableSessionStep[] = [];
+    if (session.mode !== 'JOKER') {
+      steps.push({ kind: 'shuffle' });
+    }
     for (const uid of session.players) {
       const count =
         (session.playerCards[uid] ?? []).length ||
@@ -59,6 +79,9 @@ export const buildTableSessionSteps = (
   const snap = sessionSnap(session);
 
   if (prev.handNumber !== snap.handNumber) {
+    if (session.mode !== 'JOKER') {
+      steps.push({ kind: 'shuffle' });
+    }
     const dealTargets = session.players;
     for (const uid of dealTargets) {
       const count = (session.playerCards[uid] ?? []).length || 2;
@@ -223,6 +246,8 @@ export const applyDisplayStep = (
   const next = structuredClone(display);
 
   switch (step.kind) {
+    case 'shuffle':
+      break;
     case 'dealHole': {
       const all = target.playerCards[step.userId] ?? [];
       const dealt = all.slice(0, step.cardIndex + 1);

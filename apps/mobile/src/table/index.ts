@@ -7,7 +7,10 @@ export { playTableSound, setTableMusicEnabled, type TableSoundKind } from './lib
 export { PlayingCard } from './components/PlayingCard';
 export { PlayerAvatar } from './components/PlayerAvatar';
 export { PokerChip, PokerChipStack } from './components/PokerChip';
+export { TableActionTicker } from './components/TableActionTicker';
+export { TableOrientationGate } from './components/TableOrientationGate';
 export { TurnTimer } from './components/TurnTimer';
+export { useTableOrientation } from './hooks/useTableOrientation';
 export { SeatActionBubble } from './components/SeatActionBubble';
 export { PotDisplay } from './components/PotDisplay';
 export { TableTopHUD } from './components/TableTopHUD';
@@ -18,6 +21,7 @@ export { PokerTableSurface } from './components/PokerTableSurface';
 export { TableActionDock } from './components/TableActionDock';
 export { JokerActionDock } from './components/JokerActionDock';
 export { HandResultOverlay } from './components/HandResultOverlay';
+export { AllInRunoutBanner } from './components/AllInRunoutBanner';
 export { BustedPlayerOverlay } from './components/BustedPlayerOverlay';
 export { TuzovanieTableOverlay } from './components/TuzovanieTableOverlay';
 export { GameStoryPanel } from './components/GameStoryPanel';

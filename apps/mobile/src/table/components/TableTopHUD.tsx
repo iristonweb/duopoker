@@ -3,7 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import type { GameMode, GameStreet, JokerHandState, JokerMatchRules, SubscriptionTier } from '@duopoker/shared-types/index';
 import type { TableLeaderboardEntry } from '@duopoker/table-client';
-import { PokerChip } from './PokerChip';
 import { VoiceChatPill } from './VoiceChatPill';
 import { JokerTrumpBadge } from './JokerTrumpBadge';
 import { LeaderboardPodium, type LeaderboardProfile } from './LeaderboardPodium';
@@ -104,13 +103,11 @@ function MetaChips({
 
 export function TableTopHUD({
   mode,
-  pot,
   street,
   seatCount,
   smallBlind,
   bigBlind,
   handNumber,
-  chipId = 'chip_classic',
   onLeaveTable,
   leaving,
   joker,
@@ -124,8 +121,6 @@ export function TableTopHUD({
 }: Props) {
   const { t } = useTranslation();
   const isJoker = mode === 'JOKER' && joker;
-  const potLabel = isJoker ? t('table.jokerPoolLabel') : t('table.pot');
-  const potValue = isJoker ? joker.pool : pot;
   const streetLabel = street ? t(`table.street.${street}`, { defaultValue: street }) : null;
   const showStreet = street && street !== 'LOBBY' && streetLabel;
   const streetStyle = street ? streetColor(street) : null;
@@ -167,15 +162,6 @@ export function TableTopHUD({
       </View>
 
       <View style={styles.statsRow}>
-        <View style={styles.potHero}>
-          <PokerChip chipId={chipId} size="sm" />
-          <View>
-            <Text style={styles.potLabel}>{potLabel}</Text>
-            <Text style={styles.potValue}>
-              {typeof potValue === 'number' ? potValue.toLocaleString() : potValue}
-            </Text>
-          </View>
-        </View>
         {leaderboardEntries.length > 0 ? (
           <LeaderboardPodium
             entries={leaderboardEntries}
@@ -185,7 +171,9 @@ export function TableTopHUD({
             onPress={onOpenLeaderboard}
             compact
           />
-        ) : null}
+        ) : (
+          <View style={styles.statsSpacer} />
+        )}
       </View>
 
       <MetaChips
@@ -261,36 +249,12 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: 12,
     paddingBottom: 8,
     gap: 8
   },
-  potHero: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(232,197,71,0.45)',
-    backgroundColor: 'rgba(232,197,71,0.1)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 6
-  },
-  potLabel: {
-    fontSize: 8,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    color: 'rgba(232,197,71,0.75)'
-  },
-  potValue: { fontSize: 18, fontWeight: '800', color: colors.goldLight, fontVariant: ['tabular-nums'] },
+  statsSpacer: { flex: 1 },
   metaWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -55,3 +55,8 @@ export const playBlindSound = () => {
   playChipSound();
   setTimeout(() => playChipSound(), 80);
 };
+
+export const playShuffleSound = () => {
+  const freqs = [280, 340, 420, 360, 300];
+  freqs.forEach((f, i) => setTimeout(() => tone(f, 55, 'triangle', 0.035), i * 45));
+};

@@ -25,6 +25,6 @@
   "rewrites": [
     { "source": "/health", "destination": "/api/health" },
     { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/((?!api/|assets/|icons/|robots\\.txt|sitemap\\.xml|favicon\\.png|apple-touch-icon\\.png|manifest\\.webmanifest|sw\\.js|workbox-).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|assets/|icons/|robots\\.txt|sitemap\\.xml|favicon\\.png|apple-touch-icon\\.png|manifest\\.webmanifest|sw\\.js|sw-push\\.js|registerSW\\.js|workbox-).*)", "destination": "/index.html" }
   ]
 }

@@ -21,6 +21,7 @@ import { SeatActionBubble } from './SeatActionBubble';
 import { ChipFlightLayer } from './ChipFlightLayer';
 import { JokerCardFlightLayer } from './JokerCardFlightLayer';
 import { JokerTrickPile } from './JokerTrickPile';
+import { TurnTimer } from './TurnTimer';
 import { mobileTheme } from '../../theme';
 
 const { colors } = mobileTheme;
@@ -44,6 +45,10 @@ type Props = {
   sidePots?: number[];
   foldingUsers?: string[];
   checkRippleUsers?: string[];
+  activeUserId?: string;
+  activeSecondsLeft?: number | null;
+  deckShuffling?: boolean;
+  isLandscape?: boolean;
   style?: ViewStyle;
 };
 
@@ -66,6 +71,10 @@ export function PokerTableSurface({
   sidePots = [],
   foldingUsers = [],
   checkRippleUsers = [],
+  activeUserId,
+  activeSecondsLeft = null,
+  deckShuffling = false,
+  isLandscape = true,
   style
 }: Props) {
   const { t } = useTranslation();
@@ -89,7 +98,7 @@ export function PokerTableSurface({
 
       <View style={[styles.ambientGlow, { backgroundColor: felt.ambientGlow }]} />
 
-      <View style={styles.feltWrap}>
+      <View style={[styles.feltWrap, isLandscape ? styles.feltWrapLandscape : styles.feltWrapPortrait]}>
         <LinearGradient
           colors={[felt.meshColor, '#1a1208']}
           style={[styles.felt, { borderColor: `${felt.rimColor}99` }]}
@@ -102,7 +111,14 @@ export function PokerTableSurface({
       </View>
 
       <View style={styles.content} pointerEvents="box-none">
-        <View style={styles.boardRow}>
+        {deckShuffling ? (
+          <View style={styles.shuffleDeck} pointerEvents="none">
+            <PlayingCard faceUp={false} deckId={heroDeckId} size="sm" />
+            <PlayingCard faceUp={false} deckId={heroDeckId} size="sm" style={styles.shuffleDeckSecond} />
+          </View>
+        ) : null}
+
+        <View style={[styles.boardRow, isLandscape && styles.boardRowLandscape]}>
           {boardCards.length
             ? boardCards.map((c, i) => (
                 <PlayingCard
@@ -121,7 +137,7 @@ export function PokerTableSurface({
               : null}
         </View>
 
-        <View style={styles.potCenter}>
+        <View style={[styles.potCenter, isLandscape && styles.potCenterLandscape]}>
           <PotDisplay pot={pot} chipId={potChipId} street={street} pulseKey={potPulseKey} sidePots={sidePots} />
         </View>
 
@@ -160,6 +176,12 @@ export function PokerTableSurface({
           const pos = seatCoordinates(index, players.length);
           const bOff = bubbleOffset(index, players.length);
 
+          const showTimer =
+            player.isActive &&
+            activeUserId === player.userId &&
+            activeSecondsLeft !== null &&
+            activeSecondsLeft > 0;
+
           return (
             <View
               key={player.userId}
@@ -174,10 +196,11 @@ export function PokerTableSurface({
                     ...(player.isActive ? [{ scale: 1.04 }] : [])
                   ],
                   opacity: player.isFolded || foldingSet.has(player.userId) ? 0.5 : 1,
-                  zIndex: player.isActive ? 20 : 10
+                  zIndex: player.isWinner ? 22 : player.isActive ? 20 : 10
                 }
               ]}
             >
+              {player.isWinner ? <View style={styles.winnerGlow} /> : null}
               {rippleSet.has(player.userId) ? <View style={styles.checkRipple} /> : null}
               {player.isActive ? <View style={styles.activeGlow} /> : null}
               {bubble ? (
@@ -193,37 +216,70 @@ export function PokerTableSurface({
                 />
               ) : null}
 
-              {player.isFolded ? (
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusFold}>{t('table.seatOut')}</Text>
-                </View>
-              ) : player.isAllIn ? (
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusAllIn}>{t('table.seatAllIn')}</Text>
-                </View>
-              ) : null}
-
               {player.isDealer ? (
                 <View style={styles.dealerBadge}>
                   <Text style={styles.dealerText}>D</Text>
                 </View>
               ) : null}
 
-              <PlayerAvatar
-                name={player.name}
-                avatarUrl={player.avatar}
-                tableStatus={player.tableStatus}
-                frameId={equipped.frame}
-                tier={tier}
-                active={player.isActive}
-                folded={player.isFolded}
-                isBot={isBotUserId(player.userId)}
-                size={isHeroSeat ? 'md' : 'sm'}
-              />
+              <View style={styles.avatarWrap}>
+                {!isHeroSeat && (cards.length > 0 || hiddenCount > 0) ? (
+                  <View style={styles.holeCardsPeek} pointerEvents="none">
+                    {(cards.length
+                      ? cards.slice(0, 2)
+                      : Array.from({ length: Math.min(hiddenCount, 2) })
+                    ).map((c, ci) => (
+                      <PlayingCard
+                        key={`peek-${player.userId}-${ci}`}
+                        card={typeof c === 'object' ? c : undefined}
+                        faceUp={Boolean(player.revealCards && typeof c === 'object' && c)}
+                        deckId={deckId}
+                        size="xs"
+                        style={ci === 1 ? styles.holeCardSecond : styles.holeCardFirst}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+
+                {player.isFolded ? (
+                  <View style={[styles.statusOverlay, styles.statusOverlayFold]}>
+                    <Text style={styles.statusOverlayText}>{t('table.seatOut')}</Text>
+                  </View>
+                ) : player.isAllIn ? (
+                  <View style={[styles.statusOverlay, styles.statusOverlayAllIn]}>
+                    <Text style={styles.statusOverlayText}>{t('table.seatAllIn')}</Text>
+                  </View>
+                ) : null}
+
+                {showTimer ? (
+                  <View style={styles.seatTimer}>
+                    <TurnTimer secondsLeft={activeSecondsLeft!} size={48} />
+                  </View>
+                ) : null}
+
+                <PlayerAvatar
+                  name={player.name}
+                  avatarUrl={player.avatar}
+                  tableStatus={player.tableStatus}
+                  frameId={equipped.frame}
+                  tier={tier}
+                  active={player.isActive}
+                  folded={player.isFolded}
+                  isBot={isBotUserId(player.userId)}
+                  size={isHeroSeat ? 'md' : 'sm'}
+                />
+              </View>
 
               <View style={styles.stackPill}>
-                <PokerChipStack chipId={seatChipId} count={Math.min(4, 2 + Math.floor(player.stack / 5000))} />
-                <Text style={styles.stackText}>{player.stack.toLocaleString()}</Text>
+                {!isHeroSeat ? (
+                  <Text style={styles.seatName} numberOfLines={1}>
+                    {player.name}
+                  </Text>
+                ) : null}
+                <View style={styles.stackRow}>
+                  <PokerChipStack chipId={seatChipId} count={Math.min(3, 2 + Math.floor(player.stack / 5000))} />
+                  <Text style={styles.stackText}>{player.stack.toLocaleString()}</Text>
+                </View>
               </View>
 
               {roundBet > 0 ? (
@@ -233,7 +289,7 @@ export function PokerTableSurface({
                 </View>
               ) : null}
 
-              {(cards.length > 0 || hiddenCount > 0) && !isHeroSeat ? (
+              {(cards.length > 0 || hiddenCount > 0) && isHeroSeat ? (
                 <View style={styles.holeCards}>
                   {(cards.length
                     ? cards
@@ -284,8 +340,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '9%',
     right: '9%',
-    top: '10%',
-    height: '72%'
+    top: '10%'
+  },
+  feltWrapLandscape: {
+    height: '78%',
+    left: '5%',
+    right: '5%',
+    top: '8%'
+  },
+  feltWrapPortrait: {
+    height: '72%',
+    top: '12%'
   },
   felt: {
     flex: 1,
@@ -311,23 +376,55 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   boardRow: {
     position: 'absolute',
-    top: '32%',
-    left: 0,
-    right: 0,
+    top: '36%',
+    left: '6%',
+    right: '12%',
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 4,
     zIndex: 12
   },
+  boardRowLandscape: {
+    top: '34%',
+    left: '10%',
+    right: '16%'
+  },
+  shuffleDeck: {
+    position: 'absolute',
+    top: '14%',
+    alignSelf: 'center',
+    left: '46%',
+    zIndex: 6,
+    opacity: 0.9
+  },
+  shuffleDeckSecond: {
+    position: 'absolute',
+    left: 8,
+    top: 3,
+    transform: [{ rotate: '-8deg' }]
+  },
   ghostCard: { opacity: 0.72 },
   slotCard: { opacity: 0.5 },
   potCenter: {
     position: 'absolute',
-    top: '48%',
+    top: '18%',
     left: 0,
     right: 0,
     alignItems: 'center',
-    zIndex: 12
+    zIndex: 14
+  },
+  potCenterLandscape: {
+    top: '14%'
+  },
+  seatTimer: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    right: -8,
+    bottom: -8,
+    zIndex: 3,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   seat: {
     position: 'absolute',
@@ -346,6 +443,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(74,222,128,0.55)',
     backgroundColor: 'rgba(74,222,128,0.08)'
   },
+  winnerGlow: {
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    right: -10,
+    bottom: -10,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(232,197,71,0.75)',
+    backgroundColor: 'rgba(232,197,71,0.12)'
+  },
   statusPill: {
     position: 'absolute',
     bottom: -4,
@@ -357,6 +465,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2
   },
+  avatarWrap: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  statusOverlay: {
+    position: 'absolute',
+    top: 4,
+    alignSelf: 'center',
+    zIndex: 8,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1
+  },
+  statusOverlayFold: {
+    backgroundColor: 'rgba(220,38,38,0.88)',
+    borderColor: 'rgba(252,165,165,0.7)'
+  },
+  statusOverlayAllIn: {
+    backgroundColor: 'rgba(124,58,237,0.88)',
+    borderColor: 'rgba(196,181,253,0.7)'
+  },
+  statusOverlayText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6
+  },
+  holeCardsPeek: {
+    position: 'absolute',
+    right: -6,
+    top: '22%',
+    flexDirection: 'row',
+    zIndex: 0
+  },
+  holeCardFirst: { transform: [{ rotate: '-14deg' }] },
+  holeCardSecond: { marginLeft: -10, transform: [{ rotate: '10deg' }] },
   statusFold: { fontSize: 8, fontWeight: '700', color: colors.danger, textTransform: 'uppercase' },
   statusAllIn: { fontSize: 8, fontWeight: '700', color: colors.danger, textTransform: 'uppercase' },
   dealerBadge: {
@@ -375,17 +522,25 @@ const styles = StyleSheet.create({
   },
   dealerText: { fontSize: 9, fontWeight: '700', color: colors.goldLight },
   stackPill: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    borderRadius: 12,
+    gap: 2,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    paddingHorizontal: 6,
-    paddingVertical: 3
+    borderColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 64
   },
-  stackText: { fontSize: 9, fontWeight: '600', color: colors.emerald, fontVariant: ['tabular-nums'] },
+  seatName: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.95)',
+    maxWidth: 72,
+    textAlign: 'center'
+  },
+  stackRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stackText: { fontSize: 10, fontWeight: '800', color: '#fcd34d', fontVariant: ['tabular-nums'] },
   betPill: {
     flexDirection: 'row',
     alignItems: 'center',

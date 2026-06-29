@@ -7,7 +7,8 @@ export type TableSoundKind =
   | 'check'
   | 'blind'
   | 'street'
-  | 'win';
+  | 'win'
+  | 'shuffle';
 
 export type TableAnimationCallbacks = {
   haptic?: (kind: TableHapticKind) => void;
