@@ -3,15 +3,15 @@ export type TableSurfaceLayout = 'ring' | 'mobile-arc';
 
 export const TABLE_CENTER_ANCHORS = {
   ring: {
-    potTop: 27,
-    boardTop: 37,
+    potTop: 22,
+    boardTop: 40,
     tickerTop: 50,
     allInTop: 11,
     jokerFlightTop: 38
   },
   'mobile-arc': {
-    potTop: 18,
-    boardTop: 38,
+    potTop: 14,
+    boardTop: 42,
     tickerTop: 52,
     allInTop: 9,
     jokerFlightTop: 38

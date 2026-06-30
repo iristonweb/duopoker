@@ -52,11 +52,18 @@ export const breakpoints = {
   tabletMax: 1279
 } as const;
 
-/** Central overlay stack — keep modals above orientation gate and table HUD. */
+/**
+ * Central overlay stack — keep modals above orientation gate and table HUD.
+ * Table playfield (inside isolate): vignette < pot < board < chipFlight < seatActive.
+ */
 export const zIndex = {
   felt: 1,
-  hud: 45,
+  tableVignette: 8,
+  pot: 10,
+  board: 14,
   chipFlight: 15,
+  seatActive: 20,
+  hud: 45,
   banner: 90,
   pwa: 100,
   panel: 110,

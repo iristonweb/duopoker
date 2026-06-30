@@ -19,7 +19,8 @@ export default {
       tablet: { min: '768px', max: '1279px' },
       desktop: { min: '1280px' },
       'table-compact': { raw: '(max-width: 639px), (max-height: 520px)' },
-      'max-table-compact': { raw: '(min-width: 640px) and (min-height: 521px)' }
+      'max-table-compact': { raw: '(min-width: 640px) and (min-height: 521px)' },
+      'table-short': { raw: '(max-height: 520px) and (min-width: 640px)' }
     },
     extend: {
       colors: {
@@ -80,8 +81,12 @@ export default {
       },
       zIndex: {
         felt: String(zIndex.felt),
-        hud: String(zIndex.hud),
+        tableVignette: String(zIndex.tableVignette),
+        pot: String(zIndex.pot),
+        board: String(zIndex.board),
         chipFlight: String(zIndex.chipFlight),
+        seatActive: String(zIndex.seatActive),
+        hud: String(zIndex.hud),
         banner: String(zIndex.banner),
         pwa: String(zIndex.pwa),
         panel: String(zIndex.panel),

@@ -5,7 +5,7 @@ import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipVisual } from './cosmetics/PokerChipVisual';
-import { isBotUserId, bubbleOffset, timerOffset, seatPositionStyle, seatPositionStyleForPlayers, resolveSeatLayoutIndex, isBottomAnchoredSeat, feltPlayAreaClass, tableRailClass, tableCenterPercent } from '../lib/table-layout';
+import { isBotUserId, bubbleOffset, timerOffset, seatPositionStyle, seatPositionStyleForPlayers, resolveSeatLayoutIndex, isBottomAnchoredSeat, feltPlayAreaClass, tableRailClass, tableCenterPercent, tableCenterTopStyle } from '../lib/table-layout';
 import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 import { JokerTrickPile } from './table/JokerTrickPile';
 import { SeatActionBubble } from './table/SeatActionBubble';
@@ -178,7 +178,10 @@ export function PokerTable3D({
           chipId={potChipId}
         />
 
-        <div className="absolute left-1/2 top-[36%] flex -translate-x-1/2 gap-0.5 max-table-compact:top-[38%] max-table-compact:gap-2">
+        <div
+          className="absolute left-1/2 z-board flex -translate-x-1/2 gap-0.5 max-table-compact:gap-2"
+          style={tableCenterTopStyle('ring', 'boardTop')}
+        >
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
@@ -224,14 +227,17 @@ export function PokerTable3D({
           ) : null}
         </div>
 
-        <div className="absolute left-1/2 top-[26%] z-[12] -translate-x-1/2 max-table-compact:top-[28%]">
+        <div
+          className="absolute left-1/2 z-pot -translate-x-1/2"
+          style={tableCenterTopStyle('ring', 'potTop')}
+        >
           <AnimatedPotDisplay
             pot={pot}
             chipId={potChipId}
             street={street}
             pulseKey={potPulseKey}
             sidePots={sidePots}
-            className="scale-95 sm:scale-100"
+            className="scale-95 table-short:scale-90 max-table-compact:scale-100"
           />
         </div>
 
@@ -334,7 +340,10 @@ export function PokerTable3D({
                 initial={reduceMotion ? false : { scale: 0.6, y: 8, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.7 }}
-                className="glass-shine relative z-[1] flex items-center gap-1 rounded-full border border-gold/30 bg-white/[0.04] px-2 py-0.5 shadow-glow-gold backdrop-blur-glass"
+                className={cn(
+                  'relative z-[1] flex items-center gap-0.5',
+                  'max-table-compact:glass-shine max-table-compact:gap-1 max-table-compact:rounded-full max-table-compact:border max-table-compact:border-gold/30 max-table-compact:bg-white/[0.04] max-table-compact:px-2 max-table-compact:py-0.5 max-table-compact:shadow-glow-gold max-table-compact:backdrop-blur-glass'
+                )}
               >
                 <PokerChipVisual chipId={seatChipId} size="sm" className="scale-75" />
                 <span className="font-mono text-[9px] font-bold text-gold-light sm:text-[10px]">{roundBet.toLocaleString()}</span>
@@ -352,8 +361,8 @@ export function PokerTable3D({
                   'flex max-w-[5.5rem] flex-col items-center gap-0.5 max-table-compact:max-w-none max-table-compact:gap-1',
                   isHeroSeat && '[body[data-table-layout-mode=mobile-classic]_&]:hidden',
                   player.isFolded && 'opacity-50 grayscale-[0.4]',
-                  player.isWinner && 'z-[22]',
-                  player.isActive && 'z-20'
+                  player.isWinner && 'z-seatActive',
+                  player.isActive && 'z-seatActive'
                 )}
               >
                 {player.isWinner ? (
@@ -423,7 +432,7 @@ export function PokerTable3D({
                 initial={{ opacity: 0, scale: 0.75, ...from }}
                 animate={{ opacity: 1, scale: 1, left: '50%', top: boardTop, bottom: 'auto', transform: 'translate(-50%, -50%)' }}
                 exit={{ opacity: 0, scale: 0.85 }}
-                className="absolute z-[18]"
+                className="absolute z-board"
                 transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
               >
                 <PlayingCard card={flight.card} faceUp size="sm" deckId={heroDeckId} />
@@ -441,7 +450,7 @@ export function PokerTable3D({
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[21] h-6 bg-gradient-to-t from-[#050508]/30 to-transparent table-compact:h-5 max-table-compact:h-8"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-tableVignette h-6 bg-gradient-to-t from-[#050508]/30 to-transparent table-compact:h-5 max-table-compact:h-8"
         aria-hidden
       />
     </div>

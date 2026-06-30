@@ -27,8 +27,12 @@
   --shadow-panel: 0 24px 64px rgba(0, 0, 0, 0.55);
   --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --z-felt: 1;
-  --z-hud: 45;
+  --z-table-vignette: 8;
+  --z-pot: 10;
+  --z-board: 14;
   --z-chip-flight: 15;
+  --z-seat-active: 20;
+  --z-hud: 45;
   --z-banner: 90;
   --z-pwa: 100;
   --z-panel: 110;

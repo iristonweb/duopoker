@@ -10,7 +10,7 @@ type Props = {
   compact?: boolean;
 };
 
-/** X-Poker style: dark pill, white name, gold stack. */
+/** X-Poker style: dark pill on desktop; flat inline chip + amount when compact. */
 export function SeatStackPill({
   name,
   stack,
@@ -22,8 +22,10 @@ export function SeatStackPill({
   return (
     <div
       className={cn(
-        'relative z-[1] flex min-w-[4rem] flex-col items-center rounded-lg border border-gold/20 bg-black/85 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.6)] backdrop-blur-sm ring-1 ring-white/5',
-        compact ? 'min-w-[3.5rem] px-1.5 py-0.5' : 'sm:min-w-[4.5rem]',
+        'relative z-[1] flex flex-col items-center',
+        compact
+          ? 'min-w-0 gap-0'
+          : 'min-w-[4rem] rounded-lg border border-gold/20 bg-black/85 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.6)] backdrop-blur-sm ring-1 ring-white/5 sm:min-w-[4.5rem]',
         className
       )}
     >
@@ -46,7 +48,7 @@ export function SeatStackPill({
         <span
           className={cn(
             'font-mono font-bold tabular-nums text-amber-300',
-            compact ? 'text-[9px]' : 'text-[10px] sm:text-xs'
+            compact ? 'text-[9px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]' : 'text-[10px] sm:text-xs'
           )}
         >
           {stack.toLocaleString()}

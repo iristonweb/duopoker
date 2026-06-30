@@ -12,7 +12,7 @@ import { AnimatedPotDisplay } from '../../AnimatedPotDisplay';
 import { ChipFlightLayer } from '../../ChipFlightLayer';
 import type { TablePlayerVisual } from '../../../PokerTable3D';
 import type { ChipFlight, SeatActionBubble } from '../../../../hooks/useTableAnimationQueue';
-import { feltPlayAreaClass, tableRailClass } from '../../../../lib/table-layout';
+import { feltPlayAreaClass, tableRailClass, tableCenterTopStyle } from '../../../../lib/table-layout';
 import { tableFeltVisual } from '../../../../lib/cosmetics-client';
 import { MobileSeatNode } from './MobileSeatNode';
 
@@ -134,7 +134,10 @@ export function MobileTableSurface({
           layout="mobile-arc"
         />
 
-        <div className="absolute left-1/2 top-[38%] flex -translate-x-1/2 gap-0.5">
+        <div
+          className="absolute left-1/2 z-board flex -translate-x-1/2 gap-0.5"
+          style={tableCenterTopStyle('mobile-arc', 'boardTop')}
+        >
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
@@ -161,14 +164,17 @@ export function MobileTableSurface({
           ) : null}
         </div>
 
-        <div className="absolute left-1/2 top-[18%] z-[12] -translate-x-1/2">
+        <div
+          className="absolute left-1/2 z-pot -translate-x-1/2"
+          style={tableCenterTopStyle('mobile-arc', 'potTop')}
+        >
           {showCenterPot ? (
             <AnimatedPotDisplay
               pot={pot}
               chipId={potChipId}
               pulseKey={potPulseKey}
               sidePots={sidePots}
-              className="scale-90"
+              className="scale-90 table-short:scale-[0.85]"
             />
           ) : null}
         </div>
@@ -199,7 +205,7 @@ export function MobileTableSurface({
               style={mobileOpponentSeatPositionStyle(opponentIndex, opponentCount)}
               className={cn(
                 'absolute z-10',
-                player.isWinner && 'z-[12]',
+                player.isWinner && 'z-seatActive',
                 isFolding && 'opacity-60',
                 hasRipple && 'rounded-full ring-2 ring-emerald/40'
               )}
