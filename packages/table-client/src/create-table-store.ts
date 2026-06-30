@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { io, type Socket } from 'socket.io-client';
 import type { SessionState } from '@duopoker/shared-types/index';
 import { createApiHelpers, type TableClientConfig } from './config';
-import { bindTableSocket, detachTableSocket } from './socket-bindings';
+import { bindTableSocket } from './socket-bindings';
 
 export type PlayerActionPayload = {
   sessionId: string;
@@ -57,36 +57,13 @@ export type TableSessionStore = {
 export function createTableSessionStore(deps: TableStoreDeps) {
   const { getApiBase, usesRealtimeSocket } = createApiHelpers(deps);
 
-  return create<TableSessionStore>((set, get) => ({
-    tableVoluntaryLeave: false,
-    resetTableJoin: () => set({ tableVoluntaryLeave: false }),
-    setSession: (session) => set({ session, sessionError: undefined }),
-    setSessionError: (sessionError) => set({ sessionError }),
+  return create<TableSessionStore>((set, get) => {
+    const shouldAccept = () => {
+      if (get().tableVoluntaryLeave) return false;
+      return deps.shouldAcceptTableState?.() ?? true;
+    };
 
-    connect: () => {
-      if (!usesRealtimeSocket()) return;
-      const base = getApiBase();
-      if (!base) return;
-      const existing = get().socket;
-      if (existing?.connected) return;
-      if (existing) {
-        existing.connect();
-        return;
-      }
-      const token = deps.getAccessToken();
-      const socket = io(base, {
-        auth: token ? { token } : undefined,
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelayMax: 10_000,
-        transports: ['websocket', 'polling']
-      });
-
-      const shouldAccept = () => {
-        if (get().tableVoluntaryLeave) return false;
-        return deps.shouldAcceptTableState?.() ?? true;
-      };
-
+    const attachSocketHandlers = (socket: Socket) => {
       bindTableSocket(socket, {
         onStateUpdate: (session) => {
           if (!shouldAccept()) return;
@@ -127,11 +104,47 @@ export function createTableSessionStore(deps: TableStoreDeps) {
           deps.onReconnectSession?.(sid);
         }
       });
+    };
+
+    return {
+    tableVoluntaryLeave: false,
+    resetTableJoin: () => {
+      get().stopPolling();
+      set({ tableVoluntaryLeave: false, session: undefined, sessionError: undefined });
+    },
+    setSession: (session) => set({ session, sessionError: undefined }),
+    setSessionError: (sessionError) => set({ sessionError }),
+
+    connect: () => {
+      if (!usesRealtimeSocket()) return;
+      const base = getApiBase();
+      if (!base) return;
+      const existing = get().socket;
+      if (existing) {
+        attachSocketHandlers(existing);
+        if (!existing.connected) existing.connect();
+        set({ socket: existing });
+        return;
+      }
+      const token = deps.getAccessToken();
+      const socket = io(base, {
+        auth: token ? { token } : undefined,
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelayMax: 10_000,
+        transports: ['websocket', 'polling']
+      });
+
+      attachSocketHandlers(socket);
       set({ socket });
     },
 
     joinSession: async (sessionId, mode, buyIn = 100) => {
       if (get().tableVoluntaryLeave) return;
+      const currentId = get().session?.sessionId;
+      if (currentId && currentId !== sessionId) {
+        set({ session: undefined, sessionError: undefined });
+      }
       if (usesRealtimeSocket()) {
         get().connect();
         get().socket?.emit('joinSession', {
@@ -251,7 +264,6 @@ export function createTableSessionStore(deps: TableStoreDeps) {
 
     clearTableSession: () => {
       get().stopPolling();
-      detachTableSocket(get().socket);
       set({ tableVoluntaryLeave: true, session: undefined, sessionError: undefined });
     },
 
@@ -298,7 +310,8 @@ export function createTableSessionStore(deps: TableStoreDeps) {
         })
         .catch(() => undefined);
     }
-  }));
+  };
+  });
 }
 
 export type TableSessionStoreApi = ReturnType<typeof createTableSessionStore>;

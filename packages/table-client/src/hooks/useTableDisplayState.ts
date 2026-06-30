@@ -23,6 +23,21 @@ export function useTableDisplayState(
   const processingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const displayRef = useRef<SessionState | DisplaySessionState | undefined>(session);
+  const sessionIdRef = useRef<string | undefined>(session?.sessionId);
+
+  const resetDisplayPipeline = useCallback(() => {
+    queueRef.current = [];
+    processingRef.current = false;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    prevRef.current = null;
+    targetRef.current = undefined;
+    displayRef.current = undefined;
+    sessionIdRef.current = undefined;
+    setDisplay(undefined);
+  }, []);
 
   const drain = useCallback(async () => {
     if (processingRef.current) return;
@@ -53,12 +68,14 @@ export function useTableDisplayState(
 
   useEffect(() => {
     if (!session) {
-      prevRef.current = null;
-      targetRef.current = undefined;
-      displayRef.current = undefined;
-      setDisplay(undefined);
+      resetDisplayPipeline();
       return;
     }
+
+    if (sessionIdRef.current && sessionIdRef.current !== session.sessionId) {
+      resetDisplayPipeline();
+    }
+    sessionIdRef.current = session.sessionId;
 
     targetRef.current = session;
 
@@ -96,7 +113,7 @@ export function useTableDisplayState(
     }
 
     prevRef.current = snap;
-  }, [session, heroId, formatAction, reduceMotion, drain]);
+  }, [session, heroId, formatAction, reduceMotion, drain, resetDisplayPipeline]);
 
   useEffect(
     () => () => {

@@ -55,6 +55,11 @@ const amountToCall = (s: SessionState, uid: string) =>
   Math.max(0, maxRoundBet(s) - (s.playerRoundBet[uid] ?? 0));
 
 export const Table = () => {
+  const { sessionId } = useParams<{ sessionId: string }>();
+  return <TableSession key={sessionId ?? 'none'} />;
+};
+
+function TableSession() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
@@ -158,6 +163,15 @@ export const Table = () => {
   const [bustedDismissed, setBustedDismissed] = useState(false);
   const [ghostBoardVisible, setGhostBoardVisible] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+
+  useEffect(() => {
+    useTableStore.setState({ tableVoluntaryLeave: false });
+    useAppStore.setState({ tableMinimized: false });
+    return () => {
+      document.body.classList.remove('table-mobile-immersive');
+      delete document.body.dataset.tableLayoutMode;
+    };
+  }, [routeSessionId]);
 
   const layoutMode = useTableLayoutMode();
   const apiFetch = useAppStore((s) => s.apiFetch);

@@ -403,6 +403,7 @@ export const Lobby = () => {
     }
     setQueueBusy(true);
     setQueueBanner(opponentType === 'BOT' ? t('queue.startingBot') : t('queue.searching'));
+    useAppStore.getState().resetTableJoin();
     useTableStore.setState({ sessionError: undefined });
     try {
       const result = await queue();

@@ -86,6 +86,7 @@ export function useTableAnimationQueue(
   const processingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dealSoundPlayedRef = useRef(false);
+  const sessionIdRef = useRef<string | undefined>(session?.sessionId);
 
   const [seatBubbles, setSeatBubbles] = useState<SeatActionBubble[]>([]);
   const [chipFlights, setChipFlights] = useState<ChipFlight[]>([]);
@@ -94,6 +95,24 @@ export function useTableAnimationQueue(
   const [foldingUsers, setFoldingUsers] = useState<string[]>([]);
   const [checkRippleUsers, setCheckRippleUsers] = useState<string[]>([]);
   const [deckShuffling, setDeckShuffling] = useState(false);
+
+  const resetAnimationPipeline = () => {
+    queueRef.current = [];
+    processingRef.current = false;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    prevRef.current = null;
+    dealSoundPlayedRef.current = false;
+    sessionIdRef.current = undefined;
+    setSeatBubbles([]);
+    setChipFlights([]);
+    setJokerFlights([]);
+    setFoldingUsers([]);
+    setCheckRippleUsers([]);
+    setDeckShuffling(false);
+  };
 
   const cardFmt = (c: Card) => formatCardLabel(c, t);
 
@@ -232,9 +251,14 @@ export function useTableAnimationQueue(
 
   useEffect(() => {
     if (!session) {
-      prevRef.current = null;
+      resetAnimationPipeline();
       return;
     }
+
+    if (sessionIdRef.current && sessionIdRef.current !== session.sessionId) {
+      resetAnimationPipeline();
+    }
+    sessionIdRef.current = session.sessionId;
 
     const prev = prevRef.current;
     const snap = sessionSnap(session);

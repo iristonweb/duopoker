@@ -35,10 +35,10 @@ export function StandardTableLayout({
   ...p
 }: Props) {
   const isTablet = variant === 'tablet';
-  const isClassicHoldem = variant === 'classic' && p.session.mode === 'HOLDEM';
+  const isClassicMobile = variant === 'classic';
   const dockTouchClass = isTablet ? '[&_button]:min-h-[48px] [&_button]:text-sm' : undefined;
 
-  const tableSurface = isClassicHoldem ? (
+  const tableSurface = isClassicMobile ? (
     <MobileTableSurface
       communityCards={p.jokerBoardCards}
       boardCardKeys={p.jokerBoardKeys}
@@ -52,7 +52,7 @@ export function StandardTableLayout({
       chipFlights={p.chipFlights}
       potPulseKey={p.potPulseKey}
       sidePots={p.holdemSidePotList}
-      showBoardSlots
+      showBoardSlots={p.tableView.mode !== 'JOKER'}
       ghostCommunityCards={
         p.ghostBoardVisible && p.canPeekGhostBoard ? (p.tableView.ghostCommunityCards ?? []) : []
       }
@@ -129,7 +129,7 @@ export function StandardTableLayout({
             transition={{ duration: 0.35 }}
             className="relative flex h-full min-h-0 flex-col px-0.5 table-compact:px-0"
           >
-            {isClassicHoldem ? <MobilePerformanceLayer active /> : null}
+            {isClassicMobile ? <MobilePerformanceLayer active /> : null}
             <TuzovanieTableOverlay
               session={p.tableView}
               heroId={p.userId}
