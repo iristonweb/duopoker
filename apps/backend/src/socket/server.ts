@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import type { Express } from 'express';
 import { Server } from 'socket.io';
+import { randomInt } from 'node:crypto';
 import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
 import type { SessionState } from '@duopoker/shared-types/index';
 import { config } from '../config.js';
@@ -62,13 +63,14 @@ const botThinkDelayMs = (state: SessionState): number => {
   const log = state.actionLog ?? [];
   const last = log[log.length - 1];
   const isHeavy = last?.type === 'raise' || last?.type === 'bet' || last?.type === 'bid';
-  if (isHeavy) {
-    return (
-      BOT_THINK_RAISE_MIN_MS +
-      Math.floor(Math.random() * (BOT_THINK_RAISE_MAX_MS - BOT_THINK_RAISE_MIN_MS))
-    );
+  const potHeavy =
+    state.pot +
+      state.players.reduce((sum, p) => sum + (state.playerRoundBet[p] ?? 0), 0) >
+    (state.bigBlind ?? 2) * 12;
+  if (isHeavy || potHeavy) {
+    return BOT_THINK_RAISE_MIN_MS + randomInt(0, BOT_THINK_RAISE_MAX_MS - BOT_THINK_RAISE_MIN_MS);
   }
-  return BOT_THINK_MIN_MS + Math.floor(Math.random() * (BOT_THINK_MAX_MS - BOT_THINK_MIN_MS));
+  return BOT_THINK_MIN_MS + randomInt(0, BOT_THINK_MAX_MS - BOT_THINK_MIN_MS);
 };
 
 const registerUserSocket = (userId: string, socketId: string) => {

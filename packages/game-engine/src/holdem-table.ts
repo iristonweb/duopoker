@@ -3,7 +3,7 @@ import { isAutomatedPlayer } from './bot-actions';
 import { createDeck, shuffle } from './cards';
 import { applyJokerAction, isJokerMatchComplete, jokerTimeoutAction, startJokerHand } from './joker-table';
 import { peekGhostCommunityFromDeck } from './ghost-board';
-import { SeededRng } from './rng';
+import { SeededRng, mixHandSeed } from './rng';
 import {
   activeNonFolded,
   addContribution,
@@ -106,7 +106,7 @@ const dealHoleCards = (
 
 export const startNewHand = (state: SessionState): SessionState => {
   if (state.players.length < 2) return state;
-  const rng = new SeededRng(state.seed + state.handNumber + 1);
+  const rng = new SeededRng(mixHandSeed(state.seed, state.handNumber));
   const dealerIndex = state.handNumber === 0 ? 0 : (state.dealerIndex + 1) % state.players.length;
   const actedThisRound = emptyActed(state.players);
   const handContributions: Record<string, number> = Object.fromEntries(

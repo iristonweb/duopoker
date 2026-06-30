@@ -4,14 +4,14 @@ import { createJokerDeck } from './joker-deck';
 import { jokerCardsPerHand } from '@duopoker/shared-types/index';
 import { compareStrength, strengthFiveFromHand, bestStrengthFromSeven, parseCard } from './poker-eval';
 import { createInitialTableState } from './holdem-table';
-import { SeededRng } from './rng';
+import { SeededRng, mixHandSeed } from './rng';
 
 /** @deprecated use createInitialTableState */
 export const createInitialState = (sessionId: string, mode: SessionState['mode']): SessionState =>
   createInitialTableState(sessionId, mode, 100, Date.now());
 
-export const dealToPlayers = (state: SessionState, playerIds: string[], seed = Date.now()): SessionState => {
-  const rng = new SeededRng(seed);
+export const dealToPlayers = (state: SessionState, playerIds: string[], seed?: number): SessionState => {
+  const rng = new SeededRng(seed ?? mixHandSeed(state.seed ?? Date.now(), state.handNumber));
   const cardsPerPlayer =
     state.mode === 'HOLDEM' ? 2 : jokerCardsPerHand(Math.max(0, state.handNumber));
   const deck = shuffle(state.mode === 'HOLDEM' ? createDeck() : createJokerDeck(), rng);
@@ -28,7 +28,7 @@ export const dealToPlayers = (state: SessionState, playerIds: string[], seed = D
       }
     });
   }
-  return { ...state, playerCards, deck: d as Card[], seed };
+  return { ...state, playerCards, deck: d as Card[], seed: seed ?? state.seed ?? mixHandSeed(Date.now(), state.handNumber) };
 };
 
 export const isLegalAction = (state: SessionState, action: import('@duopoker/shared-types/index').PlayerAction): boolean => {

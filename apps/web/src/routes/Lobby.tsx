@@ -675,6 +675,86 @@ export const Lobby = () => {
           custom={1}
         >
           <GlassPanel
+            glow={mode === 'JOKER' ? 'emerald' : 'gold'}
+            className="relative overflow-hidden border-white/10 p-0 shadow-panel"
+          >
+            <div
+              className={cn(
+                'pointer-events-none absolute inset-0',
+                mode === 'JOKER'
+                  ? 'bg-[radial-gradient(ellipse_at_top_right,rgba(74,222,128,0.07),transparent_55%)]'
+                  : 'bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.08),transparent_55%)]'
+              )}
+            />
+            <div
+              className={cn(
+                'relative h-1 w-full',
+                mode === 'JOKER'
+                  ? 'bg-gradient-to-r from-transparent via-emerald/80 to-transparent'
+                  : 'bg-gradient-to-r from-transparent via-gold/80 to-transparent'
+              )}
+            />
+            <div className="relative flex flex-col gap-4 p-4 sm:p-5">
+              <SectionHeader
+                compact
+                className="mb-0"
+                eyebrow={t('lobby.modesEyebrow')}
+                title={t('lobby.modesTitle')}
+                description={t('lobby.modesDesc')}
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <ModeCard
+                  title={modeTitle('HOLDEM', holdemMode.title)}
+                  description={modeDesc('HOLDEM', holdemMode.description)}
+                  bannerUrl={holdemMode.imageUrl}
+                  icon={<span aria-hidden>♠</span>}
+                  selected={mode === 'HOLDEM'}
+                  selectedLabel={t('modes.selected')}
+                  onClick={() => setMode('HOLDEM')}
+                />
+                <ModeCard
+                  title={modeTitle('JOKER', jokerMode.title)}
+                  description={modeDesc('JOKER', jokerMode.description)}
+                  bannerUrl={jokerMode.imageUrl}
+                  icon={<span aria-hidden>♦</span>}
+                  selected={mode === 'JOKER'}
+                  selectedLabel={t('modes.selected')}
+                  onClick={() => setMode('JOKER')}
+                />
+              </div>
+              {mode === 'JOKER' ? (
+                <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-xs text-subtle sm:text-sm">
+                  <p className="text-center">{t('table.jokerPlayerCountHint')}</p>
+                  <label className="flex cursor-pointer items-center justify-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={jokerStrict}
+                      onChange={(e) => setJokerStrict(e.target.checked)}
+                      className="rounded border-white/20"
+                    />
+                    <span>{t('lobby.jokerStrict')}</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center justify-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={jokerMinusScoring}
+                      onChange={(e) => setJokerMinusScoring(e.target.checked)}
+                      className="rounded border-white/20"
+                    />
+                    <span>{t('lobby.jokerMinusScoring')}</span>
+                  </label>
+                </div>
+              ) : null}
+            </div>
+          </GlassPanel>
+        </motion.div>
+
+        <motion.div
+          className="mb-8"
+          variants={reduceMotion ? undefined : section}
+          custom={2}
+        >
+          <GlassPanel
             glow={opponentType === 'BOT' ? 'emerald' : 'gold'}
             className="relative overflow-hidden border-white/10 p-0 shadow-panel"
           >
@@ -786,67 +866,11 @@ export const Lobby = () => {
           </GlassPanel>
         </motion.div>
 
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
-          <motion.div
-            className="flex flex-col gap-4"
-            variants={reduceMotion ? undefined : section}
-            custom={2}
-          >
-            <SectionHeader
-              eyebrow={t('lobby.modesEyebrow')}
-              title={t('lobby.modesTitle')}
-              description={t('lobby.modesDesc')}
-            />
-            <div className="flex flex-col gap-4">
-              <ModeCard
-                title={modeTitle('HOLDEM', holdemMode.title)}
-                description={modeDesc('HOLDEM', holdemMode.description)}
-                bannerUrl={holdemMode.imageUrl}
-                icon={<span aria-hidden>♠</span>}
-                selected={mode === 'HOLDEM'}
-                selectedLabel={t('modes.selected')}
-                onClick={() => setMode('HOLDEM')}
-              />
-              <ModeCard
-                title={modeTitle('JOKER', jokerMode.title)}
-                description={modeDesc('JOKER', jokerMode.description)}
-                bannerUrl={jokerMode.imageUrl}
-                icon={<span aria-hidden>♦</span>}
-                selected={mode === 'JOKER'}
-                selectedLabel={t('modes.selected')}
-                onClick={() => setMode('JOKER')}
-              />
-            </div>
-            {mode === 'JOKER' ? (
-              <div className="mt-2 flex flex-col gap-2 text-xs text-subtle sm:text-sm">
-                <p className="text-center">{t('table.jokerPlayerCountHint')}</p>
-                <label className="flex cursor-pointer items-center justify-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={jokerStrict}
-                    onChange={(e) => setJokerStrict(e.target.checked)}
-                    className="rounded border-white/20"
-                  />
-                  <span>{t('lobby.jokerStrict')}</span>
-                </label>
-                <label className="flex cursor-pointer items-center justify-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={jokerMinusScoring}
-                    onChange={(e) => setJokerMinusScoring(e.target.checked)}
-                    className="rounded border-white/20"
-                  />
-                  <span>{t('lobby.jokerMinusScoring')}</span>
-                </label>
-              </div>
-            ) : null}
-          </motion.div>
-
-          <motion.div
-            className="flex flex-col gap-4"
-            variants={reduceMotion ? undefined : section}
-            custom={3}
-          >
+        <motion.div
+          className="flex flex-col gap-4"
+          variants={reduceMotion ? undefined : section}
+          custom={3}
+        >
             <SectionHeader
               eyebrow={t('lobby.liveEyebrow')}
               title={t('lobby.liveSession')}
@@ -1070,7 +1094,6 @@ export const Lobby = () => {
               ) : null}
             </div>
           </motion.div>
-        </div>
 
         <motion.footer className="mt-8" variants={reduceMotion ? undefined : section} custom={4}>
           <LegalDisclaimer text={t('legal.disclaimer')} />

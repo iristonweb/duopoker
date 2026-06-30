@@ -10,6 +10,7 @@ import { isNominalTrumpBanned, jokerCardsPerHand, jokerPoolLabel } from '@duopok
 import { createJokerDeck } from './joker-deck';
 import { applyPoolPremiums, isPoolEndHand, jokerPointsForHand } from './joker-scoring';
 import {
+  cardRankIndex,
   cardSuit,
   isJokerCard,
   jokerLegalPlays,
@@ -19,11 +20,7 @@ import {
 } from './joker-trick';
 import { shuffle } from './cards';
 import { SeededRng } from './rng';
-
-const botRng = (state: SessionState, userId: string): SeededRng => {
-  const salt = userId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  return new SeededRng(state.seed + state.handNumber * 997 + salt);
-};
+import { botDecisionRng } from './bot-rng';
 
 const nextSeat = (n: number, from: number): number => (from + 1) % n;
 
@@ -506,18 +503,38 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
   const at = Date.now();
   const base = { sessionId: state.sessionId, userId, at };
   const j = state.joker!;
+  const rng = botDecisionRng(state, userId);
+  const hand = state.playerCards[userId] ?? [];
 
   if (state.street === 'TRUMP_CHOICE') {
-    const suits: (Suit | null)[] = ['S', 'H', 'D', 'C', null];
-    const rng = botRng(state, userId);
-    const trumpSuit = suits[rng.nextInt(suits.length)] ?? null;
+    const counts: Record<Suit, number> = { S: 0, H: 0, D: 0, C: 0 };
+    for (const c of hand) {
+      if (!isJokerCard(c)) counts[cardSuit(c)] += 1;
+    }
+    const best = (['S', 'H', 'D', 'C'] as Suit[]).reduce((a, b) =>
+      counts[a] >= counts[b] ? a : b
+    );
+    const bestCount = counts[best];
+    const pickTrump = bestCount >= 3 || (bestCount >= 2 && rng.next() < 0.75);
+    const trumpSuit = pickTrump ? best : rng.next() < 0.55 ? null : best;
     return { ...base, type: 'chooseTrump', trumpSuit };
   }
 
   if (state.street === 'BIDDING') {
     const max = maxBid(j.cardsThisDeal);
-    const rng = botRng(state, userId);
-    let bid = rng.nextInt(max + 1);
+    let tricks = 0;
+    for (const c of hand) {
+      if (isJokerCard(c)) {
+        tricks += 1.1;
+        continue;
+      }
+      const suit = cardSuit(c);
+      const rank = cardRankIndex(c);
+      if (j.trumpSuit && suit === j.trumpSuit) tricks += rank >= 5 ? 1 : 0.45;
+      else if (rank >= 7) tricks += 0.35;
+    }
+    const target = Math.min(max, Math.max(0, Math.round(tricks * 0.85 + rng.next() * 0.6 - 0.3)));
+    let bid = target;
     const dealerId = state.players[state.dealerIndex]!;
     if (userId === dealerId) {
       bid = correctDealerBidForBot(bid, j.bids, state.players, state.dealerIndex, j.cardsThisDeal);
@@ -525,16 +542,38 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
     return { ...base, type: 'bid', amount: bid };
   }
 
-  const hand = state.playerCards[userId] ?? [];
   const leadSuit = leadSuitFromTrick(j.currentTrick);
   const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit, state.jokerRules?.strictJoker);
-  const card =
-    allowed.find((c) => !isNominalTrumpBanned(c, j.trumpSuit, j.voidTrumpDiscards)) ??
-    allowed[0] ??
-    hand[0]!;
+  const filtered = allowed.filter(
+    (c) => !isNominalTrumpBanned(c, j.trumpSuit, j.voidTrumpDiscards)
+  );
+  const plays = filtered.length ? filtered : allowed;
+  const tricksNeeded = Math.max(0, (j.bids[userId] ?? 0) - (j.tricksWon[userId] ?? 0));
+  const tricksOver = Math.max(0, (j.tricksWon[userId] ?? 0) - (j.bids[userId] ?? 0));
+
+  const rankPlay = (c: Card): number => (isJokerCard(c) ? 100 : cardRankIndex(c));
+
+  let card: Card = plays[0] ?? hand[0]!;
+  if (!leadSuit) {
+    const bySuit = (['S', 'H', 'D', 'C'] as Suit[]).map((s) => ({
+      suit: s,
+      cards: plays.filter((c) => !isJokerCard(c) && cardSuit(c) === s)
+    }));
+    bySuit.sort((a, b) => b.cards.length - a.cards.length);
+    const leadSuitPick = bySuit[0]?.cards ?? plays;
+    card =
+      tricksNeeded > 0
+        ? [...leadSuitPick].sort((a, b) => rankPlay(b) - rankPlay(a))[0]!
+        : [...leadSuitPick].sort((a, b) => rankPlay(a) - rankPlay(b))[0]!;
+  } else if (tricksOver > 0 || tricksNeeded === 0) {
+    card = [...plays].sort((a, b) => rankPlay(a) - rankPlay(b))[0]!;
+  } else {
+    card = [...plays].sort((a, b) => rankPlay(b) - rankPlay(a))[0]!;
+  }
+
   let declaration: PlayerAction['declaration'];
   if (isJokerCard(card)) {
-    declaration = 'senior';
+    declaration = tricksNeeded > 0 || !leadSuit ? 'senior' : 'minor';
   }
   return { ...base, type: 'playCard', card, declaration };
 };

@@ -9,8 +9,8 @@ export const createDeck = (): Card[] => suits.flatMap((s) => ranks.map((r) => `$
 export const shuffle = (input: Card[], rng: Rng): Card[] => {
   const deck = [...input];
   for (let i = deck.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng.next() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+    const j = rng.nextInt(i + 1);
+    [deck[i], deck[j]] = [deck[j]!, deck[i]!];
   }
   return deck;
 };

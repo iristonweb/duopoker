@@ -42,6 +42,7 @@ export { parseLoadedSessionState, sessionStateSchema } from './session-schema';
 export { computeSidePots, distributeSidePots, sortWinnersBySeat, winnersAmongEligible } from './pot-calculator';
 export { bestStrengthFromSeven, strengthFiveCards, compareStrength, describeStrength } from './poker-eval';
 export { createDeck, shuffle } from './cards';
+export { SeededRng, mixHandSeed } from './rng';
 export { evaluateHoldem, evaluateJoker, evaluateRaspisnoy } from './evaluator';
 export { createJokerDeck, JOKER_WILD_IDS } from './joker-deck';
 export {
