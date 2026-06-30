@@ -4,14 +4,14 @@ import { bubbleOffset, seatCoordinates, seatPositionStyle } from './seat-coordin
 describe('seatCoordinates', () => {
   it('places heads-up seats top and bottom', () => {
     expect(seatCoordinates(0, 2)).toMatchObject({ left: 50, top: 10, anchor: 'center' });
-    expect(seatCoordinates(1, 2)).toMatchObject({ left: 50, top: 92, anchor: 'bottom' });
+    expect(seatCoordinates(1, 2)).toMatchObject({ left: 50, top: 88, anchor: 'bottom' });
   });
 
   it('places four players in a cross ring', () => {
-    expect(seatCoordinates(0, 4)).toMatchObject({ left: 50, top: 8 });
-    expect(seatCoordinates(1, 4)).toMatchObject({ left: 92, top: 48 });
-    expect(seatCoordinates(2, 4)).toMatchObject({ left: 8, top: 48 });
-    expect(seatCoordinates(3, 4)).toMatchObject({ left: 50, top: 92, anchor: 'bottom' });
+    expect(seatCoordinates(0, 4)).toMatchObject({ left: 50, top: 10 });
+    expect(seatCoordinates(1, 4)).toMatchObject({ left: 86, top: 48 });
+    expect(seatCoordinates(2, 4)).toMatchObject({ left: 14, top: 48 });
+    expect(seatCoordinates(3, 4)).toMatchObject({ left: 50, top: 86, anchor: 'bottom' });
   });
 });
 
@@ -19,7 +19,7 @@ describe('seatPositionStyle', () => {
   it('uses bottom-anchor transform for hero seats', () => {
     expect(seatPositionStyle(1, 2)).toMatchObject({
       left: '50%',
-      top: '92%',
+      top: '88%',
       transform: 'translate(-50%, -100%)'
     });
     expect(seatPositionStyle(0, 2).transform).toBe('translate(-50%, -50%)');
