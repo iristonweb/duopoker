@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { JokerDealRecord, JokerHandState } from '@duopoker/shared-types/index';
 import { cn } from '@duopoker/ui-kit';
-import { tableFabBottomClass } from '../../hooks/useTableDockHeight';
+import { tableNotebookFabBottomClass } from '../../hooks/useTableDockHeight';
 
 const CELL_FULL = 30;
 const INK = '#1a3a6e';
@@ -513,8 +513,8 @@ export function JokerNotebookPanel({
     <div
       className={cn(
         'pointer-events-auto fixed right-3 z-30 flex flex-col items-end gap-2',
-        tableFabBottomClass,
-        'sm:absolute sm:bottom-auto sm:right-4 sm:top-[4.5rem]',
+        tableNotebookFabBottomClass,
+        'max-table-compact:absolute max-table-compact:bottom-auto max-table-compact:right-4 max-table-compact:top-[4.5rem]',
         className
       )}
     >

@@ -48,6 +48,8 @@ type Props = {
   emptyLabel: string;
   /** Hide winner/hand events when the hand-result overlay already shows them. */
   suppressHandCompleteDupes?: boolean;
+  /** Hide fixed mobile toolbar while hero acts (frees dock space on short viewports). */
+  collapseMobileToolbar?: boolean;
   className?: string;
 };
 
@@ -166,32 +168,41 @@ export function GameStoryPanel({
   closeLabel,
   emptyLabel,
   suppressHandCompleteDupes = false,
+  collapseMobileToolbar = false,
   className
 }: Props) {
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const mobileListRef = useRef<HTMLDivElement>(null);
   const visibleEvents = suppressHandCompleteDupes
     ? events.filter((ev) => ev.kind !== 'winner' && ev.kind !== 'hand')
     : events;
 
   useEffect(() => {
-    if (open && listRef.current) {
-      listRef.current.scrollTop = 0;
-    }
+    if (!open) return;
+    if (listRef.current) listRef.current.scrollTop = 0;
+    if (mobileListRef.current) mobileListRef.current.scrollTop = 0;
   }, [open, visibleEvents.length]);
 
   useEffect(() => {
     if (!open) return;
+    const compact =
+      window.matchMedia('(max-width: 639px), (max-height: 520px)').matches;
+    if (!compact) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
     };
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
   const latest = visibleEvents[0];
@@ -237,7 +248,7 @@ export function GameStoryPanel({
                         {closeLabel}
                       </button>
                     </div>
-                    <FeedList events={visibleEvents} emptyLabel={emptyLabel} listRef={listRef} />
+                    <FeedList events={visibleEvents} emptyLabel={emptyLabel} listRef={mobileListRef} />
                   </GlassPanel>
                 </motion.div>
               </motion.div>
@@ -252,7 +263,7 @@ export function GameStoryPanel({
       {/* Desktop / landscape — bottom-right feed chip, avoids covering seats */}
       <div
         className={cn(
-          'pointer-events-auto hidden w-[min(16rem,calc(100vw-1.5rem))] flex-col gap-2 max-table-compact:absolute max-table-compact:bottom-24 max-table-compact:right-3 max-table-compact:z-20 max-table-compact:flex',
+          'pointer-events-auto hidden w-[min(18rem,calc(100vw-1.5rem))] flex-col gap-2 max-table-compact:flex',
           className
         )}
       >
@@ -283,13 +294,14 @@ export function GameStoryPanel({
             type="button"
             onClick={() => setOpen((v) => !v)}
             className={cn(
-              'rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition',
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition',
               open
                 ? 'border-gold/40 bg-gold/15 text-gold-light'
                 : 'border-white/15 bg-black/55 text-muted backdrop-blur-sm hover:border-gold/30 hover:text-gold-light'
             )}
           >
-            {open ? closeLabel : openLabel}
+            <FeedIcon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+            <span>{open ? closeLabel : openLabel}</span>
             {!open && visibleEvents.length > 0 ? (
               <span className="ml-1.5 rounded-full bg-gold/20 px-1.5 py-0.5 text-[9px] text-gold-light">
                 {visibleEvents.length}
@@ -317,7 +329,7 @@ export function GameStoryPanel({
               transition={{ duration: 0.25 }}
               className="overflow-hidden"
             >
-              <GlassPanel glow="gold" className="overflow-hidden">
+              <GlassPanel glow="gold" className="min-w-[18rem] overflow-hidden">
                 <div className="border-b border-white/10 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold/70">{title}</p>
                 </div>
@@ -329,9 +341,13 @@ export function GameStoryPanel({
       </div>
 
       {/* Mobile toolbar above dock */}
+      {!collapseMobileToolbar ? (
       <div
         data-testid="table-mobile-toolbar"
-        className={cn('pointer-events-auto fixed left-3 right-14 z-30 table-compact:block max-table-compact:hidden', tableFabBottomClass)}
+        className={cn(
+          'pointer-events-auto fixed left-3 right-3 z-30 table-compact:block max-table-compact:hidden',
+          tableFabBottomClass
+        )}
       >
         {latest && !open ? (
           <div
@@ -356,7 +372,7 @@ export function GameStoryPanel({
             )}
           >
             <FeedIcon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-            <span className="max-w-[5rem] truncate">{open ? closeLabel : openLabel}</span>
+            <span>{open ? closeLabel : openLabel}</span>
             {!open && visibleEvents.length > 0 ? (
               <span className="rounded-full bg-gold/25 px-1.5 py-0.5 text-[8px] font-mono text-gold-light">
                 {visibleEvents.length}
@@ -377,6 +393,7 @@ export function GameStoryPanel({
           />
         </div>
       </div>
+      ) : null}
 
       {mobileSheet}
     </>

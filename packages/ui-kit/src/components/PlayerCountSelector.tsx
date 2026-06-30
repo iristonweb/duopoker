@@ -1,6 +1,56 @@
 import { cn } from '../cn';
 import { DpClubMark } from './DpClubMark';
 
+function CountButtons({
+  options,
+  value,
+  onChange,
+  label,
+  compact = false
+}: {
+  options: number[];
+  value: number;
+  onChange: (count: number) => void;
+  label?: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex gap-1.5',
+        compact ? 'shrink-0' : 'grid grid-cols-5 rounded-xl border border-white/10 bg-black/35 p-1.5'
+      )}
+      role="radiogroup"
+      aria-label={label}
+    >
+      {options.map((count) => {
+        const active = value === count;
+        return (
+          <button
+            key={count}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(count)}
+            className={cn(
+              'relative rounded-lg font-semibold tabular-nums transition-all duration-200',
+              compact ? 'h-9 w-9 text-sm' : 'px-1 py-2 text-sm',
+              active
+                ? 'bg-gradient-to-b from-emerald/35 to-emerald/10 text-emerald shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_20px_rgba(74,222,128,0.2)] ring-1 ring-emerald/40'
+                : 'text-muted hover:bg-white/[0.04] hover:text-zinc-200'
+            )}
+          >
+            {count}
+            {active && !compact ? (
+              <span className="absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-emerald/60" aria-hidden />
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PlayerCountSelector({
   value,
   onChange,
@@ -8,7 +58,8 @@ export function PlayerCountSelector({
   max = 6,
   label,
   hint,
-  className
+  className,
+  layout = 'card'
 }: {
   value: number;
   onChange: (count: number) => void;
@@ -17,8 +68,41 @@ export function PlayerCountSelector({
   label?: string;
   hint?: string;
   className?: string;
+  layout?: 'card' | 'inline';
 }) {
   const options = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  const inline = layout === 'inline';
+
+  if (inline) {
+    return (
+      <div
+        className={cn(
+          'rounded-xl border border-white/10 bg-black/25 px-3 py-3 sm:px-4',
+          className
+        )}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1">
+            {label ? (
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald/80">
+                {label}
+              </p>
+            ) : null}
+            {hint ? (
+              <p className="mt-1 text-xs leading-relaxed text-subtle sm:max-w-md">{hint}</p>
+            ) : null}
+          </div>
+          <CountButtons
+            options={options}
+            value={value}
+            onChange={onChange}
+            label={label}
+            compact
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -42,35 +126,7 @@ export function PlayerCountSelector({
         </div>
       </div>
 
-      <div
-        className="grid grid-cols-5 gap-1.5 rounded-xl border border-white/10 bg-black/35 p-1.5"
-        role="radiogroup"
-        aria-label={label}
-      >
-        {options.map((count) => {
-          const active = value === count;
-          return (
-            <button
-              key={count}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => onChange(count)}
-              className={cn(
-                'relative rounded-lg px-1 py-2 text-sm font-semibold tabular-nums transition-all duration-200',
-                active
-                  ? 'bg-gradient-to-b from-emerald/35 to-emerald/10 text-emerald shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_20px_rgba(74,222,128,0.2)] ring-1 ring-emerald/40'
-                  : 'text-muted hover:bg-white/[0.04] hover:text-zinc-200'
-              )}
-            >
-              {count}
-              {active ? (
-                <span className="absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-emerald/60" aria-hidden />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      <CountButtons options={options} value={value} onChange={onChange} label={label} />
     </div>
   );
 }

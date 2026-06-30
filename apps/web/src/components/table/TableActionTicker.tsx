@@ -8,17 +8,23 @@ type Props = {
   events: GameFeedEvent[];
   pulseKey: number;
   className?: string;
+  hideWhenHeroActive?: boolean;
 };
 
 const STREET_BANNER_MS = 1200;
 
-export function TableActionTicker({ events, pulseKey, className }: Props) {
+export function TableActionTicker({
+  events,
+  pulseKey,
+  className,
+  hideWhenHeroActive = false
+}: Props) {
   const { t } = useTranslation();
   const [streetBanner, setStreetBanner] = useState<string | null>(null);
   const prevPulseRef = useRef(pulseKey);
 
-  const recentActions = useMemo(
-    () => events.filter((e) => e.kind === 'action').slice(0, 2),
+  const latestAction = useMemo(
+    () => events.find((e) => e.kind === 'action'),
     [events]
   );
 
@@ -34,13 +40,14 @@ export function TableActionTicker({ events, pulseKey, className }: Props) {
     return undefined;
   }, [pulseKey, events]);
 
-  if (!recentActions.length && !streetBanner) return null;
+  if (hideWhenHeroActive) return null;
+  if (!latestAction && !streetBanner) return null;
 
   return (
     <div
       className={cn(
-        'pointer-events-none absolute left-1/2 z-[28] flex w-[min(94%,22rem)] -translate-x-1/2 flex-col items-center gap-1',
-        className ?? 'top-[68%]'
+        'pointer-events-none absolute left-1/2 z-[28] flex w-[min(88%,20rem)] -translate-x-1/2 flex-col items-center gap-1',
+        className ?? 'top-[42%]'
       )}
     >
       <AnimatePresence mode="wait">
@@ -56,30 +63,20 @@ export function TableActionTicker({ events, pulseKey, className }: Props) {
               {streetBanner}
             </span>
           </motion.div>
+        ) : latestAction ? (
+          <motion.div
+            key={latestAction.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            className="w-full truncate rounded-lg border border-white/18 bg-black/75 px-3 py-1.5 text-center text-[11px] font-medium text-ivory shadow-[0_4px_20px_rgba(0,0,0,0.45)] backdrop-blur-md sm:text-xs"
+          >
+            {latestAction.text}
+          </motion.div>
         ) : null}
       </AnimatePresence>
 
-      {recentActions.length > 0 ? (
-        <div className="flex w-full flex-col gap-1">
-          {recentActions.map((ev, i) => (
-            <motion.div
-              key={ev.id}
-              initial={{ opacity: 0, x: i === 0 ? 0 : 8 }}
-              animate={{ opacity: i === 0 ? 1 : 0.72, x: 0 }}
-              className={cn(
-                'truncate rounded-lg border px-3 py-1.5 text-center text-[11px] backdrop-blur-sm sm:text-xs',
-                i === 0
-                  ? 'border-white/15 bg-black/70 text-ivory'
-                  : 'border-white/8 bg-black/45 text-subtle'
-              )}
-            >
-              {ev.text}
-            </motion.div>
-          ))}
-        </div>
-      ) : null}
-
-      {!streetBanner && recentActions.length === 0 ? (
+      {!streetBanner && !latestAction ? (
         <span className="sr-only">{t('table.feedEmpty')}</span>
       ) : null}
     </div>

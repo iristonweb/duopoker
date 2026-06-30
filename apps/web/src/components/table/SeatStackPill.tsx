@@ -22,7 +22,7 @@ export function SeatStackPill({
   return (
     <div
       className={cn(
-        'relative z-[1] flex min-w-[4rem] flex-col items-center rounded-lg border border-black/50 bg-black/80 px-2 py-1 shadow-[0_4px_12px_rgba(0,0,0,0.55)] backdrop-blur-sm',
+        'relative z-[1] flex min-w-[4rem] flex-col items-center rounded-lg border border-gold/20 bg-black/85 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.6)] backdrop-blur-sm ring-1 ring-white/5',
         compact ? 'min-w-[3.5rem] px-1.5 py-0.5' : 'sm:min-w-[4.5rem]',
         className
       )}

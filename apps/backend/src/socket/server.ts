@@ -12,18 +12,23 @@ import {
 import { assertCanJoinSession, newSessionId } from '../services/session-access.js';
 import {
   autoStartNextHand,
+  advanceBotTurns,
   enqueueMatchmaking,
+  enforceActionTimeout,
   foldActivePlayerOnTimeout,
   getSessionSnapshot,
   joinTable,
   leaveTable,
   requestNextHand,
   seatPlayersBatch,
-  tickSession
 } from '../services/game-session.js';
 import {
   ACTION_TIMEOUT_MS,
   NEXT_HAND_DELAY_MS,
+  BOT_THINK_MIN_MS,
+  BOT_THINK_MAX_MS,
+  BOT_THINK_RAISE_MIN_MS,
+  BOT_THINK_RAISE_MAX_MS,
   playersWithChips
 } from '@duopoker/game-engine/index';
 import { attachSocketAuth, resolveUserId } from './socket-auth.js';
@@ -49,7 +54,22 @@ const userToSockets = new Map<string, Set<string>>();
 const actionTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const nextHandTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const botTickTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const botTickRetries = new Map<string, number>();
+
+const isBotTurnStreet = (street: SessionState['street'] | undefined): boolean =>
+  Boolean(street && street !== 'LOBBY' && street !== 'COMPLETE' && street !== 'SHOWDOWN');
+
+const botThinkDelayMs = (state: SessionState): number => {
+  const log = state.actionLog ?? [];
+  const last = log[log.length - 1];
+  const isHeavy = last?.type === 'raise' || last?.type === 'bet' || last?.type === 'bid';
+  if (isHeavy) {
+    return (
+      BOT_THINK_RAISE_MIN_MS +
+      Math.floor(Math.random() * (BOT_THINK_RAISE_MAX_MS - BOT_THINK_RAISE_MIN_MS))
+    );
+  }
+  return BOT_THINK_MIN_MS + Math.floor(Math.random() * (BOT_THINK_MAX_MS - BOT_THINK_MIN_MS));
+};
 
 const registerUserSocket = (userId: string, socketId: string) => {
   let set = userToSockets.get(userId);
@@ -85,40 +105,41 @@ const clearBotTickTimer = (sessionId: string) => {
   const t = botTickTimers.get(sessionId);
   if (t) clearTimeout(t);
   botTickTimers.delete(sessionId);
-  botTickRetries.delete(sessionId);
 };
 
-const scheduleBotTickRetry = (io: Server, sessionId: string, state: SessionState) => {
+const runBotStep = async (io: Server, sessionId: string): Promise<SessionState | null> => {
+  let out = await advanceBotTurns(sessionId);
+  if (!out) out = await getSessionSnapshot(sessionId);
+  if (!out) return null;
+
+  const nextHand = await autoStartNextHand(sessionId);
+  if (nextHand && nextHand.street !== 'COMPLETE') out = nextHand;
+
+  await emitStateToSession(io, sessionId, out);
+  scheduleActionTimer(io, sessionId, out);
+  scheduleNextHandTimer(io, sessionId, out);
+  return out;
+};
+
+const scheduleBotTurn = (io: Server, sessionId: string, state: SessionState) => {
   clearBotTickTimer(sessionId);
   const activeId = state.players[state.activePlayerIndex];
   if (!activeId?.startsWith(BOT_PREFIX)) return;
-  if (state.street !== 'BIDDING' && state.street !== 'TRICKS') return;
+  if (!isBotTurnStreet(state.street)) return;
 
-  botTickRetries.set(sessionId, 0);
-  const run = async () => {
-    const next = await tickSession(sessionId);
-    if (!next) return;
-    await emitStateToSession(io, sessionId, next);
-    scheduleActionTimer(io, sessionId, next);
-    scheduleNextHandTimer(io, sessionId, next);
-
-    const stillBot = next.players[next.activePlayerIndex]?.startsWith(BOT_PREFIX);
-    const stillActive = stillBot && (next.street === 'BIDDING' || next.street === 'TRICKS');
-    const retries = (botTickRetries.get(sessionId) ?? 0) + 1;
-    if (stillActive && retries < 3) {
-      botTickRetries.set(sessionId, retries);
-      botTickTimers.set(
-        sessionId,
-        setTimeout(() => void run(), 500)
-      );
-    } else {
-      clearBotTickTimer(sessionId);
-    }
-  };
-
+  const delay = botThinkDelayMs(state);
   botTickTimers.set(
     sessionId,
-    setTimeout(() => void run(), 500)
+    setTimeout(() => {
+      void (async () => {
+        const next = await runBotStep(io, sessionId);
+        if (!next) {
+          clearBotTickTimer(sessionId);
+          return;
+        }
+        scheduleBotTurn(io, sessionId, next);
+      })();
+    }, delay)
   );
 };
 
@@ -178,12 +199,14 @@ const scheduleNextHandTimer = (io: Server, sessionId: string, state: SessionStat
 
 const broadcastSessionState = async (io: Server, sessionId: string, state: SessionState) => {
   let out = state;
-  const ticked = await tickSession(sessionId);
-  if (ticked) out = ticked;
+  const timedOut = await enforceActionTimeout(sessionId);
+  if (timedOut) out = timedOut;
+  const nextHand = await autoStartNextHand(sessionId);
+  if (nextHand && nextHand.street !== 'COMPLETE') out = nextHand;
   await emitStateToSession(io, sessionId, out);
   scheduleActionTimer(io, sessionId, out);
   scheduleNextHandTimer(io, sessionId, out);
-  scheduleBotTickRetry(io, sessionId, out);
+  scheduleBotTurn(io, sessionId, out);
 };
 
 const emitMatchFoundToPlayers = (
@@ -339,6 +362,9 @@ export const createRealtimeServer = (app: Express) => {
           socket.emit('sessionError', { code: result.reason });
           return;
         }
+        if (result.state.street !== 'COMPLETE') {
+          clearNextHandTimer(sessionId);
+        }
         await broadcastSessionState(io, sessionId, result.state);
       }
     );
@@ -353,6 +379,8 @@ export const createRealtimeServer = (app: Express) => {
           return;
         }
         clearActionTimer(sessionId);
+        clearBotTickTimer(sessionId);
+        clearNextHandTimer(sessionId);
         const result = await leaveTable(sessionId, userId);
         if (!result.ok) {
           socket.emit('sessionError', { code: result.reason });

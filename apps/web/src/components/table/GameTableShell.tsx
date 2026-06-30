@@ -34,7 +34,7 @@ export function GameTableShell({
         className="pointer-events-none absolute inset-0 z-[1]"
         style={{
           background:
-            'radial-gradient(ellipse 75% 55% at 50% 38%, rgba(232,197,71,0.08) 0%, transparent 50%), radial-gradient(ellipse 100% 100% at 50% 50%, transparent 35%, rgba(5,5,8,0.75) 100%)'
+            'radial-gradient(ellipse 75% 55% at 50% 38%, rgba(232,197,71,0.08) 0%, transparent 52%), radial-gradient(ellipse 100% 100% at 50% 50%, transparent 48%, rgba(5,5,8,0.42) 100%)'
         }}
       />
       <div

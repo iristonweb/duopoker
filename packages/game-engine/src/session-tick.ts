@@ -5,6 +5,10 @@ import { isJokerMatchComplete } from './joker-table';
 
 export const ACTION_TIMEOUT_MS = 60_000;
 export const NEXT_HAND_DELAY_MS = 2800;
+export const BOT_THINK_MIN_MS = 700;
+export const BOT_THINK_MAX_MS = 2200;
+export const BOT_THINK_RAISE_MIN_MS = 1400;
+export const BOT_THINK_RAISE_MAX_MS = 3200;
 
 export const playersWithChips = (state: SessionState): string[] =>
   state.players.filter((p) => (state.stacks[p] ?? 0) > 0);

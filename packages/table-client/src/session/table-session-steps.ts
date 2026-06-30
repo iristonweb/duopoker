@@ -3,9 +3,16 @@ import { computeSidePots, winnersAmongEligible } from '@duopoker/game-engine';
 import { potIndexForChipFlight } from '../holdem/side-pots';
 
 export const TABLE_STEP_MS = 300;
+export const TABLE_ACTION_STEP_MS = 900;
+export const TABLE_ACTION_JITTER_MS = 400;
+export const TABLE_ACTION_RAISE_EXTRA_MS = 300;
 export const TABLE_DEAL_STEP_MS = 450;
 export const TABLE_BOARD_STEP_MS = 400;
 export const TABLE_SHUFFLE_MS = 600;
+
+const BOT_USER_PREFIX = 'duopoker-bot';
+
+const isBotUserId = (userId: string): boolean => userId.startsWith(BOT_USER_PREFIX);
 
 export type TableSessionStep =
   | { kind: 'shuffle' }
@@ -26,6 +33,20 @@ export const stepDurationMs = (step: TableSessionStep): number => {
       return TABLE_DEAL_STEP_MS;
     case 'dealBoard':
       return TABLE_BOARD_STEP_MS;
+    case 'action': {
+      let ms = TABLE_ACTION_STEP_MS;
+      if (isBotUserId(step.userId)) {
+        ms += Math.floor(Math.random() * TABLE_ACTION_JITTER_MS);
+      }
+      if (
+        step.action.type === 'raise' ||
+        step.action.type === 'bet' ||
+        step.action.type === 'bid'
+      ) {
+        ms += TABLE_ACTION_RAISE_EXTRA_MS;
+      }
+      return ms;
+    }
     default:
       return TABLE_STEP_MS;
   }

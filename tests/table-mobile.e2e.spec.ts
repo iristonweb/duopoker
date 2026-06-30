@@ -161,7 +161,7 @@ test.describe('mobile table layout', () => {
 
   for (const viewport of [
     { width: 932, height: 430, label: 'iPhone Pro Max landscape' },
-    { width: 360, height: 640, label: 'small Android landscape' },
+    { width: 640, height: 360, label: 'small Android landscape' },
     { width: 812, height: 375, label: 'iPhone X landscape' }
   ]) {
     test(`${viewport.label} (${viewport.width}x${viewport.height}) shows ring table without gate`, async ({

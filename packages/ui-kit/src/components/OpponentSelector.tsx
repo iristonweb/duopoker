@@ -65,7 +65,8 @@ export function OpponentSelector({
   onChange,
   selectedLabel,
   className,
-  showBrand = true
+  showBrand = true,
+  layout = 'default'
 }: {
   options: OpponentSelectorOption[];
   value: OpponentKind;
@@ -73,7 +74,10 @@ export function OpponentSelector({
   selectedLabel?: string;
   className?: string;
   showBrand?: boolean;
+  layout?: 'default' | 'wide';
 }) {
+  const wide = layout === 'wide';
+
   return (
     <div className={cn('flex flex-col gap-2.5', className)}>
       {showBrand ? (
@@ -85,7 +89,13 @@ export function OpponentSelector({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2" role="radiogroup">
+      <div
+        className={cn(
+          'grid gap-2.5',
+          wide ? 'grid-cols-2 gap-3 lg:gap-4' : 'grid-cols-1 sm:grid-cols-2'
+        )}
+        role="radiogroup"
+      >
         {options.map((option) => {
           const selected = value === option.id;
           const styles = accentStyles[option.id];
@@ -101,13 +111,15 @@ export function OpponentSelector({
                 'transition-[transform,box-shadow,border-color,background] duration-300',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold',
                 'active:scale-[0.985]',
+                wide && 'lg:min-h-[88px]',
                 selected ? styles.active : styles.idle
               )}
             >
-              <div className="flex items-start gap-3 p-3.5">
+              <div className={cn('flex items-start gap-3', wide ? 'p-4 sm:p-4' : 'p-3.5')}>
                 <div
                   className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-md transition-colors duration-300',
+                    'flex shrink-0 items-center justify-center rounded-xl border shadow-md transition-colors duration-300',
+                    wide ? 'h-12 w-12' : 'h-11 w-11',
                     selected ? styles.iconActive : styles.iconIdle
                   )}
                 >

@@ -1,15 +1,11 @@
-import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows, Environment } from '@react-three/drei';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
-import type { PointLight } from 'three';
 import type { Card, EquippedCosmetics, SubscriptionTier } from '@duopoker/shared-types/index';
-import { colors, resolveEquipped, gameChipId } from '@duopoker/shared-types';
+import { resolveEquipped, gameChipId } from '@duopoker/shared-types';
 import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipVisual } from './cosmetics/PokerChipVisual';
-import { isBotUserId, bubbleOffset, seatPositionStyle, feltPlayAreaClass } from '../lib/table-layout';
+import { isBotUserId, bubbleOffset, timerOffset, seatPositionStyle, feltPlayAreaClass, tableRailClass } from '../lib/table-layout';
 import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 import { JokerTrickPile } from './table/JokerTrickPile';
 import { SeatActionBubble } from './table/SeatActionBubble';
@@ -70,16 +66,6 @@ type Props = {
   className?: string;
 };
 
-function RimLightSweep({ color }: { color: string }) {
-  const lightRef = useRef<PointLight>(null);
-  useFrame(({ clock }) => {
-    if (lightRef.current) {
-      lightRef.current.intensity = 0.12 + Math.sin(clock.elapsedTime * 0.55) * 0.08;
-    }
-  });
-  return <pointLight ref={lightRef} position={[0, 2.5, 0]} intensity={0.12} color={color} />;
-}
-
 export function PokerTable3D({
   communityCards,
   boardCardKeys,
@@ -113,115 +99,79 @@ export function PokerTable3D({
   const playerIndex = new Map(players.map((p, i) => [p.userId, i]));
   const bubbleByUser = new Map(seatBubbles.map((b) => [b.userId, b]));
   const foldingSet = new Set(foldingUsers);
-  const [webglOk, setWebglOk] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setWebglOk((v) => (v === null ? false : v));
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const showWebgl = webglOk !== false;
 
   return (
-    <div className={cn('relative h-full min-h-0 w-full overflow-hidden', className)}>
+    <div
+      data-testid="poker-table-surface"
+      className={cn('relative h-full min-h-0 w-full overflow-hidden', className)}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_50%,_#000_100%)]" />
 
       <div
-        className="pointer-events-none absolute inset-x-[4%] top-[8%] z-[1] h-[78%] rounded-[50%] blur-3xl"
-        style={{ background: `radial-gradient(ellipse at center, ${felt.ambientGlow} 0%, transparent 65%)` }}
+        className="pointer-events-none absolute inset-x-[2%] top-[4%] z-[1] h-[88%] rounded-[50%] blur-3xl opacity-80"
+        style={{ background: `radial-gradient(ellipse at center, ${felt.ambientGlow} 0%, transparent 70%)` }}
       />
 
-      {/* CSS felt underlay — always visible as WebGL fallback */}
-      <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
+      {/* Wooden rail */}
+      <div className="pointer-events-none absolute inset-0 z-[2]" aria-hidden>
         <div
-          className={cn('rounded-[50%]', feltPlayAreaClass)}
+          className={cn('rounded-[50%]', tableRailClass)}
           style={{
-            background: `radial-gradient(ellipse at center, ${felt.meshColor} 0%, #1a1208 70%)`,
-            boxShadow: `0 0 48px ${felt.rimColor}55, inset 0 0 72px rgba(0,0,0,0.65)`
+            background:
+              'linear-gradient(160deg, #5c3d24 0%, #3d2817 30%, #2a1810 55%, #1a1008 80%, #4a3020 100%)',
+            boxShadow:
+              '0 16px 56px rgba(0,0,0,0.7), inset 0 2px 20px rgba(255,220,160,0.1), inset 0 -6px 24px rgba(0,0,0,0.5)'
           }}
-        />
-        <div
-          className={cn('rounded-[50%] border-[3px]', feltPlayAreaClass)}
-          style={{ borderColor: `${felt.rimColor}99` }}
         />
       </div>
 
-      {showWebgl ? (
-      <Canvas
-        camera={{ position: [0, 7.2, 8.6], fov: 32 }}
-        dpr={[1, 1.5]}
-        shadows
-        className="pointer-events-none !absolute inset-0 z-[2] hidden max-table-compact:block"
-        onCreated={() => setWebglOk(true)}
-      >
-        <color attach="background" args={['#030305']} />
-        <ambientLight intensity={0.28} />
-        <spotLight castShadow position={[0, 11, 2]} angle={0.55} penumbra={0.92} intensity={2.1} color="#fff4cc" />
-        <pointLight position={[-4, 4, 3]} intensity={0.22} color="#4ade80" />
-        <pointLight position={[4, 4, 3]} intensity={0.18} color={colors.gold} />
-        {!reduceMotion ? <RimLightSweep color={felt.rimColor} /> : null}
-        <Environment preset="night" />
-
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-          <cylinderGeometry args={[3.55, 3.75, 0.22, 96]} />
-          <meshStandardMaterial color="#2a1810" metalness={0.45} roughness={0.58} />
-        </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-          <cylinderGeometry args={[3.15, 3.25, 0.12, 96]} />
-          <meshStandardMaterial color={felt.meshColor} metalness={0.12} roughness={0.74} />
-        </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
-          <ringGeometry args={[2.55, 3.05, 96]} />
-          <meshStandardMaterial color={felt.rimColor} metalness={0.78} roughness={0.18} />
-        </mesh>
-        <ContactShadows position={[0, 0.005, 0]} opacity={0.55} scale={14} blur={3.2} far={6} />
-      </Canvas>
-      ) : null}
-
+      {/* Felt surface */}
       <div
         className={cn(
-          'pointer-events-none z-[1] overflow-visible rounded-[50%] border-[3px] shadow-[inset_0_0_100px_rgba(0,0,0,0.65),inset_0_4px_24px_rgba(232,197,71,0.08)]',
+          'pointer-events-none absolute z-[3] overflow-hidden rounded-[50%] border-[4px]',
           feltPlayAreaClass,
           felt.className,
           heroTableFeltId === 'table_void'
-            ? 'border-violet-500/50 shadow-[inset_0_0_100px_rgba(88,28,135,0.45),0_0_56px_rgba(139,92,246,0.25)]'
+            ? 'border-violet-500/55 shadow-[0_0_56px_rgba(139,92,246,0.3),inset_0_0_80px_rgba(88,28,135,0.35)]'
             : heroTableFeltId === 'table_diamond'
-              ? 'border-cyan-400/45 shadow-[inset_0_0_90px_rgba(34,211,238,0.2),0_0_48px_rgba(34,211,238,0.18)]'
+              ? 'border-cyan-400/50 shadow-[0_0_48px_rgba(34,211,238,0.25),inset_0_0_70px_rgba(34,211,238,0.15)]'
               : heroTableFeltId === 'table_platinum'
-                ? 'border-violet-300/40 shadow-[inset_0_0_80px_rgba(167,139,250,0.18),0_0_44px_rgba(196,181,253,0.15)]'
-                : 'border-[#c9a227]/70 shadow-[0_0_64px_rgba(232,197,71,0.22),inset_0_0_60px_rgba(0,0,0,0.5)]'
+                ? 'border-violet-300/45 shadow-[0_0_44px_rgba(196,181,253,0.2),inset_0_0_60px_rgba(167,139,250,0.15)]'
+                : 'border-[#c9a227]/80 shadow-[0_0_64px_rgba(232,197,71,0.32),inset_0_0_50px_rgba(0,0,0,0.35)]'
         )}
-        style={{ backgroundImage: felt.backgroundImage, backgroundSize: felt.backgroundSize }}
+        style={{
+          backgroundColor: felt.meshColor,
+          backgroundImage: felt.backgroundImage,
+          backgroundSize: felt.backgroundSize
+        }}
       >
-        <div className="absolute inset-[10%] rounded-[50%] border border-white/[0.08]" />
-        <div className="absolute inset-[6%] rounded-[50%] border border-gold/10" />
-        <div className="absolute inset-0 rounded-[50%] bg-[radial-gradient(ellipse_at_center,_transparent_35%,_rgba(0,0,0,0.42)_100%)]" />
+        <div className="absolute inset-[8%] rounded-[50%] border border-white/[0.12]" />
+        <div className="absolute inset-0 rounded-[50%] bg-[radial-gradient(ellipse_at_50%_42%,_transparent_45%,_rgba(0,0,0,0.22)_100%)] max-table-compact:bg-[radial-gradient(ellipse_at_50%_42%,_transparent_50%,_rgba(0,0,0,0.18)_100%)]" />
       </div>
 
-      {/* Virtual deck — shuffle + deal origin */}
-      <motion.div
-        className="pointer-events-none absolute left-1/2 top-[22%] z-[6] -translate-x-1/2"
-        animate={
-          deckShuffling && !reduceMotion
-            ? { rotate: [0, -8, 8, -6, 6, 0], scale: [1, 1.08, 0.95, 1.05, 1], opacity: 1 }
-            : { opacity: deckShuffling ? 0.85 : 0, scale: deckShuffling ? 1 : 0.8 }
-        }
-        transition={{ duration: deckShuffling ? 0.6 : 0.35, ease: 'easeInOut' }}
-      >
-        <div className="relative">
-          <PlayingCard faceUp={false} size="sm" deckId={heroDeckId} className="shadow-[0_8px_24px_rgba(0,0,0,0.6)]" />
-          <PlayingCard
-            faceUp={false}
-            size="sm"
-            deckId={heroDeckId}
-            className="absolute left-1 top-0.5 -rotate-6 shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
-          />
-        </div>
-      </motion.div>
+      <div className={cn('pointer-events-none z-20', feltPlayAreaClass)}>
+        {deckShuffling ? (
+          <motion.div
+            className="pointer-events-none absolute left-1/2 top-[12%] z-[6] -translate-x-1/2"
+            animate={
+              !reduceMotion
+                ? { rotate: [0, -8, 8, -6, 6, 0], scale: [1, 1.08, 0.95, 1.05, 1], opacity: 1 }
+                : { opacity: 0.85, scale: 1 }
+            }
+            transition={{ duration: reduceMotion ? 0.01 : 0.6, ease: 'easeInOut' }}
+          >
+            <div className="relative">
+              <PlayingCard faceUp={false} size="sm" deckId={heroDeckId} className="shadow-[0_8px_24px_rgba(0,0,0,0.6)]" />
+              <PlayingCard
+                faceUp={false}
+                size="sm"
+                deckId={heroDeckId}
+                className="absolute left-1 top-0.5 -rotate-6 shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+              />
+            </div>
+          </motion.div>
+        ) : null}
 
-      <div className={cn('pointer-events-none z-10', feltPlayAreaClass)}>
         <ChipFlightLayer
           flights={chipFlights}
           playerIndex={playerIndex}
@@ -229,7 +179,7 @@ export function PokerTable3D({
           chipId={potChipId}
         />
 
-        <div className="absolute left-[44%] top-[36%] flex -translate-x-1/2 gap-0.5 max-table-compact:top-[38%] max-table-compact:gap-2">
+        <div className="absolute left-1/2 top-[36%] flex -translate-x-1/2 gap-0.5 max-table-compact:top-[38%] max-table-compact:gap-2">
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
@@ -309,6 +259,7 @@ export function PokerTable3D({
           const hasCheckRipple = checkRippleUsers.includes(player.userId);
 
           const showTimer =
+            !isHeroSeat &&
             player.isActive &&
             activeUserId === player.userId &&
             activeSecondsLeft !== null &&
@@ -320,6 +271,7 @@ export function PokerTable3D({
               style={seatPositionStyle(index, players.length)}
               className={cn(
                 'absolute flex max-w-[5.5rem] flex-col items-center gap-0.5 transition-all duration-300 max-table-compact:max-w-none max-table-compact:gap-1',
+                isHeroSeat && 'table-compact:hidden max-table-compact:flex',
                 player.isActive && 'z-20 scale-[1.03] max-table-compact:scale-[1.05]',
                 player.isFolded && 'opacity-50 grayscale-[0.4]',
                 player.isWinner && 'z-[22]'
@@ -330,8 +282,8 @@ export function PokerTable3D({
               ) : null}
               {player.isActive ? (
                 <>
-                  <span className="absolute -inset-2 animate-pulse-glow rounded-3xl border-2 border-emerald/55 bg-emerald/[0.08] shadow-[0_0_32px_rgba(74,222,128,0.4)] max-table-compact:-inset-5" />
-                  <span className="absolute -inset-1 rounded-3xl border border-gold/25 max-table-compact:-inset-3" />
+                  <span className="absolute -inset-2 animate-pulse-glow rounded-3xl border-2 border-emerald/55 bg-emerald/[0.08] shadow-[0_0_32px_rgba(74,222,128,0.4)] table-compact:-inset-3 max-table-compact:-inset-4" />
+                  <span className="absolute -inset-1 rounded-3xl border border-gold/25 table-compact:-inset-2 max-table-compact:-inset-3" />
                 </>
               ) : null}
               {hasCheckRipple ? (
@@ -384,13 +336,17 @@ export function PokerTable3D({
                   showTier={tier === 'BLACK' || tier === 'DIAMOND' || tier === 'PLATINUM'}
                   hideName
                 />
+                {player.isDealer ? (
+                  <span className="absolute -bottom-0.5 -right-0.5 z-[5] flex h-4 w-4 items-center justify-center rounded-full border border-gold/50 bg-[#1a1208]/90 text-[8px] font-bold text-gold-light shadow-glow-gold sm:h-5 sm:w-5 sm:text-[10px]">
+                    D
+                  </span>
+                ) : null}
+                {showTimer ? (
+                  <div className={cn('absolute z-[6]', timerOffset(index, players.length))}>
+                    <TurnTimer secondsLeft={activeSecondsLeft!} size={40} className="opacity-95" />
+                  </div>
+                ) : null}
               </div>
-
-              {player.isDealer ? (
-                <span className="absolute -right-1 -top-1 z-[2] flex h-4 w-4 items-center justify-center rounded-full border border-gold/40 bg-gold/20 text-[8px] font-bold text-gold-light shadow-glow-gold sm:h-5 sm:w-5 sm:text-[10px]">
-                  D
-                </span>
-              ) : null}
 
               {player.tricksWon !== undefined && player.tricksWon > 0 ? (
                 <JokerTrickPile
@@ -400,19 +356,13 @@ export function PokerTable3D({
                 />
               ) : null}
 
-              {showTimer ? (
-                <div className="absolute -inset-3 z-[3] max-table-compact:-inset-4">
-                  <TurnTimer secondsLeft={activeSecondsLeft!} size={52} className="opacity-95" />
-                </div>
-              ) : null}
-
               <SeatStackPill
                 name={player.name}
                 stack={player.stack}
                 chipId={seatChipId}
                 showName={!isHeroSeat}
                 compact={!isHeroSeat}
-                className={cn(isHeroSeat && 'max-table-compact:hidden')}
+                className={cn(isHeroSeat && 'table-compact:hidden')}
               />
 
               {roundBet > 0 ? (
@@ -429,7 +379,7 @@ export function PokerTable3D({
               ) : null}
 
               {isHeroSeat && (cards.length || hiddenCount > 0) ? (
-                <div className="relative z-[1] flex gap-0.5 max-table-compact:hidden">
+                <div className="relative z-[1] flex gap-0.5 table-compact:hidden">
                   <AnimatePresence mode="popLayout">
                     {(cards.length ? cards : Array.from({ length: hiddenCount })).map((c, ci) => {
                       const faceUp = Boolean(player.revealCards && typeof c === 'object' && c);
@@ -495,14 +445,14 @@ export function PokerTable3D({
       </div>
 
       <div
-        className="pointer-events-none absolute inset-0 z-[5]"
+        className="pointer-events-none absolute inset-0 z-[1] max-table-compact:opacity-60"
         style={{
           background:
-            'radial-gradient(ellipse 75% 65% at 50% 45%, transparent 35%, rgba(5,5,8,0.35) 100%)'
+            'radial-gradient(ellipse 85% 75% at 50% 44%, transparent 42%, rgba(5,5,8,0.2) 100%)'
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[11] h-10 bg-gradient-to-t from-[#050508]/90 via-[#050508]/40 to-transparent table-compact:h-8 max-table-compact:h-12 max-table-compact:opacity-60"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[21] h-6 bg-gradient-to-t from-[#050508]/30 to-transparent table-compact:h-5 max-table-compact:h-8"
         aria-hidden
       />
     </div>

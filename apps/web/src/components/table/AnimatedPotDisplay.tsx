@@ -35,7 +35,7 @@ export function AnimatedPotDisplay({ pot, chipId, pulseKey = 0, sidePots = [], c
       }
       transition={{ duration: reduceMotion ? 0.01 : 0.65 }}
       className={cn(
-        'flex items-center gap-3 rounded-full border border-gold/35 bg-black/65 px-5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.55),0_0_32px_rgba(232,197,71,0.2)] backdrop-blur-md',
+        'flex items-center gap-3 rounded-full border border-gold/40 bg-black/70 px-5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.55),0_0_40px_rgba(232,197,71,0.25)] backdrop-blur-md ring-1 ring-gold/15',
         className
       )}
     >

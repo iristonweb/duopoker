@@ -88,7 +88,7 @@ export function TableActionDock({
       {showActions ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
       ) : null}
-      <div className="mx-auto max-w-6xl px-3 py-2.5 table-compact:py-1.5 max-table-compact:px-5 max-table-compact:py-4">
+      <div className="mx-auto max-w-6xl px-3 py-2 table-compact:py-1 max-table-compact:px-5 max-table-compact:py-4">
         {sessionError ? (
           <p className="mb-2 rounded-lg border border-rose/30 bg-rose/10 px-3 py-1.5 text-xs text-rose">
             {formatTableError(sessionError, t)}
@@ -98,7 +98,8 @@ export function TableActionDock({
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {showActions && holeCards.length ? (
-              <div className="flex shrink-0 gap-0.5">
+              <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex gap-0.5">
                 <AnimatePresence mode="popLayout">
                   {holeCards.map((c, i) => (
                     <motion.div
@@ -119,6 +120,10 @@ export function TableActionDock({
                     </motion.div>
                   ))}
                 </AnimatePresence>
+                </div>
+                {secondsLeft !== null ? (
+                  <TurnTimer secondsLeft={secondsLeft} size={36} className="shrink-0 table-compact:flex sm:hidden max-table-compact:hidden" />
+                ) : null}
               </div>
             ) : null}
             <div className="min-w-0">
@@ -186,7 +191,7 @@ export function TableActionDock({
 
               <div className="relative table-compact:min-w-0">
                 {secondsLeft !== null ? (
-                  <TurnTimer secondsLeft={secondsLeft} size={40} className="absolute -left-1 -top-1 max-table-compact:hidden" />
+                  <TurnTimer secondsLeft={secondsLeft} size={40} className="absolute -left-1 -top-1 hidden sm:block max-table-compact:hidden" />
                 ) : null}
                 {need === 0 ? (
                   <Button

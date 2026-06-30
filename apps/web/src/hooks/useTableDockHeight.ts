@@ -50,3 +50,11 @@ export function useTableDockHeight(
 
 export const tableFabBottomClass =
   'bottom-[calc(var(--table-dock-height,7.5rem)+0.75rem+env(safe-area-inset-bottom))]';
+
+/** Offset for FAB stacked above the history toolbar. */
+export const tableLeaderboardFabBottomClass =
+  'bottom-[calc(var(--table-dock-height,7.5rem)+0.75rem+3.25rem+env(safe-area-inset-bottom))]';
+
+/** Offset for Joker notebook FAB above leaderboard. */
+export const tableNotebookFabBottomClass =
+  'bottom-[calc(var(--table-dock-height,7.5rem)+0.75rem+6.5rem+env(safe-area-inset-bottom))]';

@@ -48,7 +48,7 @@ export function useTableSessionTick(
     if (!session || !sessionId) return;
 
     const street = session.street;
-    if (street !== 'BIDDING' && street !== 'TRICKS' && street !== 'TRUMP_CHOICE') {
+    if (!street || street === 'LOBBY' || street === 'COMPLETE' || street === 'SHOWDOWN') {
       botStuckSince.current = null;
       lastActiveKey.current = null;
       hasNudged.current = false;

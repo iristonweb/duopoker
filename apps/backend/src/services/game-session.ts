@@ -12,7 +12,7 @@ import {
   shouldForceActionTimeout,
   startNewHand,
   foldActivePlayerRuntime,
-  advanceBotTurnsRuntime,
+  advanceSingleBotTurnRuntime,
   tickSessionRuntime
 } from '@duopoker/game-engine/index';
 import { randomSessionSeed } from '@duopoker/game-engine/server-rng';
@@ -213,9 +213,9 @@ export const enqueueMatchmaking = (
   return null;
 };
 
-/** Advances through consecutive bot turns until a human acts or the hand ends. */
+/** Advances a single bot turn — further turns are scheduled with delay on the socket layer. */
 export const advanceBotTurns = async (sessionId: string): Promise<SessionState | null> =>
-  advanceBotTurnsRuntime(
+  advanceSingleBotTurnRuntime(
     () => getSessionSnapshot(sessionId),
     (action) => processPlayerAction(action)
   );
@@ -223,9 +223,7 @@ export const advanceBotTurns = async (sessionId: string): Promise<SessionState |
 export const autoStartNextHand = async (sessionId: string): Promise<SessionState | null> => {
   const state = sessions.get(sessionId) ?? (await getSessionSnapshot(sessionId));
   if (!state || !shouldAutoStartNextHand(state)) return state;
-  const next = await save(buildAutoNextHand(state));
-  const botState = await advanceBotTurns(sessionId);
-  return botState ?? next;
+  return save(buildAutoNextHand(state));
 };
 
 export const enforceActionTimeout = async (sessionId: string): Promise<SessionState | null> => {
@@ -240,6 +238,14 @@ export const tickSession = async (sessionId: string): Promise<SessionState | nul
   tickSessionRuntime(() => getSessionSnapshot(sessionId), {
     enforceActionTimeout: () => enforceActionTimeout(sessionId),
     advanceBotTurns: () => advanceBotTurns(sessionId),
+    autoStartNextHand: () => autoStartNextHand(sessionId)
+  });
+
+/** Timeouts and auto next-hand only — bot turns are scheduled with delay on the socket layer. */
+export const tickSessionMeta = async (sessionId: string): Promise<SessionState | null> =>
+  tickSessionRuntime(() => getSessionSnapshot(sessionId), {
+    enforceActionTimeout: () => enforceActionTimeout(sessionId),
+    advanceBotTurns: () => Promise.resolve(null),
     autoStartNextHand: () => autoStartNextHand(sessionId)
   });
 
@@ -270,7 +276,7 @@ export const foldActivePlayerOnTimeout = async (
     (state) => save(state),
     sessionId,
     userId,
-    () => advanceBotTurns(sessionId),
+    () => Promise.resolve(null),
     () => autoStartNextHand(sessionId)
   );
 
@@ -287,9 +293,7 @@ export const leaveTable = async (sessionId: string, userId: string) => {
     return { ok: false as const, reason: result.reason };
   }
   const saved = await save(result.state);
-  const botState = await advanceBotTurns(sessionId);
-  const after = botState ?? saved;
-  return { ok: true as const, state: after };
+  return { ok: true as const, state: saved };
 };
 
 export const listSessionIdsForUser = (userId: string): string[] => {

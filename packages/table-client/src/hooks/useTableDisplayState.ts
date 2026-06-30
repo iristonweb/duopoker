@@ -39,12 +39,16 @@ export function useTableDisplayState(
         timerRef.current = setTimeout(resolve, stepDurationMs(step));
       });
     }
+    processingRef.current = false;
+    if (queueRef.current.length > 0) {
+      void drain();
+      return;
+    }
     const target = targetRef.current;
     if (target) {
       displayRef.current = target;
       setDisplay(target);
     }
-    processingRef.current = false;
   }, [heroId]);
 
   useEffect(() => {

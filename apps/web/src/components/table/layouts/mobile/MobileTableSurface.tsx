@@ -12,6 +12,7 @@ import { AnimatedPotDisplay } from '../../AnimatedPotDisplay';
 import { ChipFlightLayer } from '../../ChipFlightLayer';
 import type { TablePlayerVisual } from '../../../PokerTable3D';
 import type { ChipFlight, SeatActionBubble } from '../../../../hooks/useTableAnimationQueue';
+import { feltPlayAreaClass, tableRailClass } from '../../../../lib/table-layout';
 import { tableFeltVisual } from '../../../../lib/cosmetics-client';
 import { MobileSeatNode } from './MobileSeatNode';
 
@@ -77,27 +78,41 @@ export function MobileTableSurface({
   return (
     <div
       data-testid="mobile-table-surface"
-      className={cn('table-felt-immersive relative min-h-0 w-full flex-1 overflow-visible', className)}
+      className={cn('table-felt-immersive relative min-h-0 w-full flex-1 overflow-hidden', className)}
     >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1208_0%,_#050508_55%,_#000_100%)]" />
+
       <div
-        className="absolute left-1/2 top-[6%] h-[58%] w-[88%] max-w-[24rem] -translate-x-1/2 rounded-[50%]"
-        style={{
-          background: `radial-gradient(ellipse at center, ${felt.meshColor} 0%, #1a1208 70%)`,
-          boxShadow: `0 0 32px ${felt.rimColor}44, inset 0 0 48px rgba(0,0,0,0.6)`
-        }}
-      />
+        className="pointer-events-none absolute inset-0 z-[2]"
+        aria-hidden
+      >
+        <div
+          className={cn('rounded-[50%]', tableRailClass)}
+          style={{
+            background:
+              'linear-gradient(160deg, #5c3d24 0%, #3d2817 30%, #2a1810 55%, #1a1008 80%, #4a3020 100%)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.65), inset 0 2px 16px rgba(255,220,160,0.08)'
+          }}
+        />
+      </div>
+
       <div
         className={cn(
-          'absolute left-1/2 top-[6%] h-[58%] w-[88%] max-w-[24rem] -translate-x-1/2 rounded-[50%] border-2',
+          'pointer-events-none absolute z-[3] overflow-hidden rounded-[50%] border-[3px] border-[#c9a227]/75',
+          feltPlayAreaClass,
           felt.className
         )}
-        style={{ borderColor: `${felt.rimColor}88` }}
+        style={{
+          backgroundColor: felt.meshColor,
+          backgroundImage: felt.backgroundImage,
+          backgroundSize: felt.backgroundSize,
+          boxShadow: '0 0 48px rgba(232,197,71,0.25), inset 0 0 40px rgba(0,0,0,0.4)'
+        }}
       />
 
-      <div className="absolute left-1/2 top-[22%] h-[42%] w-[78%] max-w-[20rem] -translate-x-1/2">
+      <div className={cn('pointer-events-none absolute z-20', feltPlayAreaClass)}>
         {deckShuffling && !reduceMotion ? (
-          <div className="pointer-events-none absolute left-1/2 top-[8%] z-[6] -translate-x-1/2">
+          <div className="pointer-events-none absolute left-1/2 top-[10%] z-[6] -translate-x-1/2">
             <div className="relative animate-pulse">
               <PlayingCard faceUp={false} size="sm" deckId={heroDeckId} />
               <PlayingCard
@@ -118,7 +133,7 @@ export function MobileTableSurface({
           layout="mobile-arc"
         />
 
-        <div className="absolute left-[44%] top-[38%] flex -translate-x-1/2 gap-1">
+        <div className="absolute left-1/2 top-[38%] flex -translate-x-1/2 gap-0.5">
           {boardCards.length ? (
             <AnimatePresence mode="popLayout">
               {boardCards.map((c, i) => (
@@ -128,7 +143,7 @@ export function MobileTableSurface({
                   animate={{ opacity: showGhostBoard ? 0.75 : 1, y: 0, scale: 1 }}
                   transition={{ delay: i * 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <PlayingCard card={c} faceUp size="sm" deckId={heroDeckId} />
+                  <PlayingCard card={c} faceUp size="sm" deckId={heroDeckId} className="scale-90" />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -139,13 +154,13 @@ export function MobileTableSurface({
                 faceUp={false}
                 size="sm"
                 deckId={heroDeckId}
-                className="opacity-40"
+                className="scale-90 opacity-40"
               />
             ))
           ) : null}
         </div>
 
-        <div className="absolute left-1/2 top-[8%] z-[12] -translate-x-1/2">
+        <div className="absolute left-1/2 top-[18%] z-[12] -translate-x-1/2">
           {showCenterPot ? (
             <AnimatedPotDisplay
               pot={pot}
@@ -182,7 +197,7 @@ export function MobileTableSurface({
                 'absolute z-10',
                 player.isWinner && 'z-[12]',
                 isFolding && 'opacity-60',
-                hasRipple && 'ring-2 ring-emerald/40 rounded-full'
+                hasRipple && 'rounded-full ring-2 ring-emerald/40'
               )}
             >
               <MobileSeatNode

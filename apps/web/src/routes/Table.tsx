@@ -194,11 +194,6 @@ export const Table = () => {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [connect, routeSessionId, tableVoluntaryLeave]);
 
-  const activeId = useMemo(() => {
-    if (!session || session.players.length === 0) return undefined;
-    return session.players[session.activePlayerIndex];
-  }, [session]);
-
   const label = useCallback(
     (uid: string) => playerProfiles[uid]?.name ?? uid.slice(0, 8),
     [playerProfiles]
@@ -244,6 +239,20 @@ export const Table = () => {
 
   const viewSession =
     useTableDisplayState(session, userId, formatDisplayAction, reduceMotion) ?? session;
+
+  const activeId = useMemo(() => {
+    if (!viewSession || viewSession.players.length === 0) return undefined;
+    return viewSession.players[viewSession.activePlayerIndex];
+  }, [viewSession]);
+
+  const serverActiveId = useMemo(() => {
+    if (!session || session.players.length === 0) return undefined;
+    return session.players[session.activePlayerIndex];
+  }, [session]);
+
+  const animationCatchUp = Boolean(
+    serverActiveId && activeId && serverActiveId !== activeId
+  );
 
   const { events: feedEvents, pulseKey: feedPulseKey } = useTableGameFeed(
     viewSession,
@@ -370,20 +379,21 @@ export const Table = () => {
   ]);
 
   const raiseBounds = useMemo(() => {
-    if (!session || session.mode === 'JOKER' || !userId) {
+    const s = viewSession ?? session;
+    if (!s || s.mode === 'JOKER' || !userId) {
       return { minTotal: 0, maxTotal: 0, canRaise: false, need: 0, roundBet: 0 };
     }
-    const roundBet = session.playerRoundBet[userId] ?? 0;
-    const need = amountToCall(session, userId);
-    const heroStack = session.stacks[userId] ?? 0;
-    const minIncrement = session.bigBlind;
+    const roundBet = s.playerRoundBet[userId] ?? 0;
+    const need = amountToCall(s, userId);
+    const heroStack = s.stacks[userId] ?? 0;
+    const minIncrement = s.bigBlind;
     const minTotal =
       need > 0
         ? roundBet + need + minIncrement
-        : Math.max(session.bigBlind, roundBet + minIncrement);
+        : Math.max(s.bigBlind, roundBet + minIncrement);
     const maxTotal = roundBet + heroStack;
     return { minTotal, maxTotal, canRaise: minTotal <= maxTotal, need, roundBet };
-  }, [session, userId]);
+  }, [session, viewSession, userId]);
 
   useEffect(() => {
     if (!session || session.mode === 'JOKER') return;
@@ -541,10 +551,13 @@ export const Table = () => {
   );
   const matchLeaderNames = session ? leaderboardLeaders(session).map(label).join(', ') : '';
 
-  const need = amountToCall(session, userId);
-  const myTurn = activeId === userId && session.street !== 'LOBBY' && session.street !== 'COMPLETE';
+  const need = amountToCall(viewSession ?? session, userId);
+  const myTurn =
+    activeId === userId &&
+    viewSession.street !== 'LOBBY' &&
+    viewSession.street !== 'COMPLETE';
   const secondsLeft =
-    myTurn && session.actionDeadlineAt
+    myTurn && !animationCatchUp && session.actionDeadlineAt
       ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
       : null;
   const nextHandMsLeft =
@@ -580,7 +593,11 @@ export const Table = () => {
   const { showBustedOverlay, showAllInRunoutBanner, heroSpectating } = bustState;
   const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay;
   const activeSecondsLeft =
-    activeId && session.actionDeadlineAt && session.street !== 'LOBBY' && session.street !== 'COMPLETE'
+    activeId &&
+    !animationCatchUp &&
+    session.actionDeadlineAt &&
+    viewSession.street !== 'LOBBY' &&
+    viewSession.street !== 'COMPLETE'
       ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
       : null;
 

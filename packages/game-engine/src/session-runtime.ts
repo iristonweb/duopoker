@@ -10,6 +10,37 @@ export type ProcessActionResult =
 
 const BOT_ACTION_CAP = 96;
 
+const processOneBotTurn = async (
+  getState: () => Promise<SessionState | null>,
+  processAction: (action: PlayerAction) => Promise<ProcessActionResult>
+): Promise<SessionState | null> => {
+  const state = await getState();
+  if (!state) return null;
+  const activeId = state.players[state.activePlayerIndex];
+  if (!activeId || !isAutomatedPlayer(activeId)) return null;
+  if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') {
+    return null;
+  }
+
+  const primary =
+    state.mode === 'JOKER' ? pickBotJokerAction(state, activeId) : pickBotAction(state, activeId);
+  let r = await processAction(primary);
+  if (r.rejected && state.mode === 'JOKER') {
+    r = await processAction(jokerTimeoutAction(state, activeId));
+  }
+  if (r.rejected) {
+    r = await processAction({ ...primary, type: 'call', at: Date.now() });
+  }
+  if (r.rejected) {
+    r = await processAction({ ...primary, type: 'fold', at: Date.now() });
+  }
+  if (r.rejected) return null;
+  return r.state;
+};
+
+/** Process a single bot action — used by live tick scheduler. */
+export const advanceSingleBotTurnRuntime = processOneBotTurn;
+
 /** Shared bot turn loop for API and socket backend game-session services. */
 export const advanceBotTurnsRuntime = async (
   getState: () => Promise<SessionState | null>,
@@ -17,26 +48,9 @@ export const advanceBotTurnsRuntime = async (
 ): Promise<SessionState | null> => {
   let last: SessionState | null = null;
   for (let i = 0; i < BOT_ACTION_CAP; i += 1) {
-    const state = await getState();
-    if (!state) break;
-    const activeId = state.players[state.activePlayerIndex];
-    if (!activeId || !isAutomatedPlayer(activeId)) break;
-    if (state.street === 'LOBBY' || state.street === 'COMPLETE' || state.street === 'SHOWDOWN') break;
-
-    const primary =
-      state.mode === 'JOKER' ? pickBotJokerAction(state, activeId) : pickBotAction(state, activeId);
-    let r = await processAction(primary);
-    if (r.rejected && state.mode === 'JOKER') {
-      r = await processAction(jokerTimeoutAction(state, activeId));
-    }
-    if (r.rejected) {
-      r = await processAction({ ...primary, type: 'call', at: Date.now() });
-    }
-    if (r.rejected) {
-      r = await processAction({ ...primary, type: 'fold', at: Date.now() });
-    }
-    if (r.rejected) break;
-    last = r.state;
+    const next = await processOneBotTurn(getState, processAction);
+    if (!next) break;
+    last = next;
   }
   return last;
 };
@@ -102,10 +116,11 @@ export const tickSessionRuntime = async (
   if (botState) state = botState;
 
   const nextHand = await deps.autoStartNextHand();
-  if (nextHand && nextHand.street !== 'COMPLETE') state = nextHand;
-
-  botState = await deps.advanceBotTurns();
-  if (botState) state = botState;
+  if (nextHand && nextHand.street !== 'COMPLETE') {
+    state = nextHand;
+    botState = await deps.advanceBotTurns();
+    if (botState) state = botState;
+  }
 
   return state;
 };

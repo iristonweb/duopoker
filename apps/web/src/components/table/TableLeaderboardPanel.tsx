@@ -6,7 +6,7 @@ import type { GameMode } from '@duopoker/shared-types/index';
 import type { TableLeaderboardEntry } from '@duopoker/table-client';
 import { GlassPanel, cn } from '@duopoker/ui-kit';
 import { PlayerAvatar } from '../cosmetics/PlayerAvatar';
-import { tableFabBottomClass } from '../../hooks/useTableDockHeight';
+import { tableFabBottomClass, tableLeaderboardFabBottomClass } from '../../hooks/useTableDockHeight';
 import type { LeaderboardProfile } from './LeaderboardPodium';
 import { TrophyIcon } from './TrophyIcon';
 
@@ -247,7 +247,7 @@ export function TableLeaderboardPanel({
             'border border-gold/35 bg-black/55 text-gold-light shadow-[0_0_24px_rgba(232,197,71,0.2)] backdrop-blur-md',
             'transition hover:border-gold/55 hover:bg-gold/10 hover:shadow-glow-gold',
             open && 'border-gold/60 bg-gold/15 shadow-glow-gold ring-2 ring-gold/25',
-            tableFabBottomClass,
+            tableLeaderboardFabBottomClass,
             className
           )}
         >

@@ -9,6 +9,7 @@ import { VoiceChatHudButton } from './VoiceChatPill';
 import { CoachHudButton } from './CoachHudButton';
 import { LeaderboardPodium, type LeaderboardProfile } from './LeaderboardPodium';
 import { TrophyIcon } from './TrophyIcon';
+import { TableChatHudButton } from './chat/TableChatHudButton';
 
 const streetBadgeVariant = (street: GameStreet): 'gold' | 'emerald' | 'default' | 'rose' => {
   if (street === 'PREFLOP' || street === 'FLOP' || street === 'BIDDING' || street === 'TRUMP_CHOICE') return 'gold';
@@ -42,6 +43,8 @@ type Props = {
   heroId?: string;
   session?: SessionState;
   onOpenLeaderboard?: () => void;
+  onChatOpen?: () => void;
+  chatUnread?: number;
   hidePodium?: boolean;
   className?: string;
   layoutVariant?: 'desktop' | 'tablet' | 'compact';
@@ -130,9 +133,10 @@ export function TableTopHUD({
   heroId,
   session,
   onOpenLeaderboard,
+  onChatOpen,
+  chatUnread = 0,
   hidePodium = false,
-  className,
-  layoutVariant = 'desktop'
+  className
 }: Props) {
   const { t } = useTranslation();
   const isJoker = mode === 'JOKER' && joker ? joker : null;
@@ -144,7 +148,6 @@ export function TableTopHUD({
       data-testid="table-top-hud"
       className={cn(
         'relative z-30 shrink-0 overflow-hidden border-b border-gold/20 bg-[linear-gradient(180deg,rgba(5,5,8,0.94)_0%,rgba(5,5,8,0.82)_100%)] shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_48px_rgba(232,197,71,0.06)] backdrop-blur-xl',
-        layoutVariant === 'tablet' && '[&_.max-table-compact\\:flex]:flex',
         className
       )}
     >
@@ -152,7 +155,7 @@ export function TableTopHUD({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
       {/* Tier 1: slim nav bar */}
-      <div className="mx-auto flex h-9 items-center justify-between gap-2 px-3 sm:h-10 sm:px-5">
+      <div className="mx-auto flex h-8 items-center justify-between gap-2 px-3 table-compact:h-8 sm:h-10 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {onMinimizeTable ? (
             <button
@@ -214,6 +217,9 @@ export function TableTopHUD({
           ) : null}
           <CoachHudButton session={session} heroId={heroId} />
           <VoiceChatHudButton />
+          {onChatOpen ? (
+            <TableChatHudButton unread={chatUnread} onClick={onChatOpen} compact />
+          ) : null}
           <LanguageSwitch />
           {onLeaveTable ? (
             <Button
@@ -229,8 +235,8 @@ export function TableTopHUD({
         </div>
       </div>
 
-      {/* Tier 2: meta + optional mini leaderboard */}
-      <div className="mx-auto flex flex-wrap items-center justify-between gap-2 px-3 py-2 table-compact:gap-1 table-compact:py-1 sm:px-5 sm:py-2.5">
+      {/* Tier 2: meta + optional mini leaderboard (spacious viewports only) */}
+      <div className="mx-auto hidden flex-wrap items-center justify-between gap-2 px-3 py-2 max-table-compact:flex table-compact:gap-1 table-compact:py-1 sm:px-5 sm:py-2.5">
         <div className="hidden min-w-0 flex-1 max-table-compact:block lg:max-w-[50%]">
           <MetaChipGroup
             mode={mode}
@@ -261,8 +267,8 @@ export function TableTopHUD({
         </div>
       </div>
 
-      {/* Compact meta row (portrait + landscape phones) */}
-      <div className="border-t border-white/[0.05] px-3 py-1 table-compact:py-0.5 table-compact:block max-table-compact:hidden">
+      {/* Compact meta row (portrait + landscape phones, short viewports) */}
+      <div className="border-t border-white/[0.05] px-3 py-0.5 table-compact:block max-table-compact:hidden">
         <MetaChipGroup
           mode={mode}
           isJoker={isJoker}

@@ -64,6 +64,10 @@ export { assertChipConservation, countChipsInPlay } from './invariants';
 export {
   ACTION_TIMEOUT_MS,
   NEXT_HAND_DELAY_MS,
+  BOT_THINK_MIN_MS,
+  BOT_THINK_MAX_MS,
+  BOT_THINK_RAISE_MIN_MS,
+  BOT_THINK_RAISE_MAX_MS,
   buildAutoNextHand,
   enrichSessionMeta,
   playersWithChips,
@@ -72,6 +76,7 @@ export {
 } from './session-tick';
 export {
   advanceBotTurnsRuntime,
+  advanceSingleBotTurnRuntime,
   autoStartNextHandRuntime,
   enforceActionTimeoutRuntime,
   foldActivePlayerRuntime,

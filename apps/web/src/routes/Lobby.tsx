@@ -669,11 +669,128 @@ export const Lobby = () => {
           </div>
         </motion.div>
 
+        <motion.div
+          className="mb-8"
+          variants={reduceMotion ? undefined : section}
+          custom={1}
+        >
+          <GlassPanel
+            glow={opponentType === 'BOT' ? 'emerald' : 'gold'}
+            className="relative overflow-hidden border-white/10 p-0 shadow-panel"
+          >
+            <div
+              className={cn(
+                'pointer-events-none absolute inset-0',
+                opponentType === 'BOT'
+                  ? 'bg-[radial-gradient(ellipse_at_top_left,rgba(74,222,128,0.08),transparent_55%)]'
+                  : 'bg-[radial-gradient(ellipse_at_top_left,rgba(212,175,55,0.08),transparent_55%)]'
+              )}
+            />
+            <div
+              className={cn(
+                'relative h-1.5 w-full',
+                opponentType === 'BOT'
+                  ? 'bg-gradient-to-r from-transparent via-emerald to-transparent shadow-[0_0_16px_rgba(74,222,128,0.35)]'
+                  : 'bg-gradient-to-r from-transparent via-gold to-transparent shadow-[0_0_16px_rgba(212,175,55,0.35)]'
+              )}
+            />
+            <div className="relative border-b border-white/10 bg-black/30 px-4 py-3.5 sm:px-6 sm:py-4">
+              <SectionHeader
+                compact
+                className="mb-0"
+                eyebrow={t('lobby.opponentEyebrow')}
+                title={t('lobby.opponentTitle')}
+                description={t('lobby.opponentDesc')}
+              />
+            </div>
+            <div className="relative grid gap-5 p-4 sm:p-5 lg:grid-cols-[1fr_minmax(0,340px)] lg:items-stretch lg:gap-0">
+              <div className="flex flex-col gap-3 lg:pr-5">
+                <OpponentSelector
+                  showBrand={false}
+                  layout="wide"
+                  value={opponentType}
+                  onChange={setOpponentType}
+                  selectedLabel={t('modes.selected')}
+                  options={[
+                    {
+                      id: 'HUMAN',
+                      label: t('lobby.opponentHuman'),
+                      hint: t('lobby.opponentHumanHint')
+                    },
+                    {
+                      id: 'BOT',
+                      label: t('lobby.opponentBot'),
+                      hint: t('lobby.opponentBotHint')
+                    }
+                  ]}
+                  className="mb-0 border-0 bg-transparent p-0"
+                />
+                {opponentType === 'BOT' && mode === 'HOLDEM' ? (
+                  <PlayerCountSelector
+                    layout="inline"
+                    value={botPlayerCount}
+                    onChange={setBotPlayerCount}
+                    label={t('lobby.botPlayerCount')}
+                    hint={t('lobby.botPlayerCountHint')}
+                  />
+                ) : null}
+                {opponentType === 'BOT' && mode === 'JOKER' ? (
+                  <p className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-center text-xs text-subtle">
+                    {t('lobby.jokerBotPlayerCount')}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-col justify-center gap-3 border-t border-white/10 pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+                <Button
+                  variant={opponentType === 'BOT' ? 'secondary' : 'primary'}
+                  size="lg"
+                  className="w-full"
+                  disabled={queueBusy}
+                  data-testid="lobby-queue-button"
+                  onClick={() => void startQueue()}
+                >
+                  {opponentType === 'BOT'
+                    ? mode === 'HOLDEM'
+                      ? t('queue.buttonHoldemBot')
+                      : t('queue.buttonJokerBot')
+                    : mode === 'HOLDEM'
+                      ? t('queue.buttonHoldem')
+                      : t('queue.buttonJoker')}
+                </Button>
+                {queueBanner ? (
+                  <p
+                    className={cn(
+                      'rounded-xl border px-3 py-2.5 text-xs leading-relaxed',
+                      opponentType === 'BOT'
+                        ? 'border-emerald/25 bg-emerald/[0.08] text-emerald'
+                        : 'border-amber-500/20 bg-amber-500/10 text-amber-200/90'
+                    )}
+                  >
+                    {queueBanner}
+                  </p>
+                ) : null}
+                {sessionError ? (
+                  <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300">
+                    {translateQueueError(sessionError)}
+                  </p>
+                ) : null}
+                {tableHref ? (
+                  <Link to={tableHref} className="block">
+                    <Button variant="ghost" size="md" className="w-full">
+                      {t('queue.openTable')}
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          </GlassPanel>
+        </motion.div>
+
         <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
           <motion.div
             className="flex flex-col gap-4"
             variants={reduceMotion ? undefined : section}
-            custom={1}
+            custom={2}
           >
             <SectionHeader
               eyebrow={t('lobby.modesEyebrow')}
@@ -723,108 +840,12 @@ export const Lobby = () => {
                 </label>
               </div>
             ) : null}
-            <GlassPanel
-              glow={opponentType === 'BOT' ? 'emerald' : 'gold'}
-              className="relative mt-2 overflow-hidden border-white/10 p-0"
-            >
-              <div
-                className={cn(
-                  'h-1 w-full',
-                  opponentType === 'BOT'
-                    ? 'bg-gradient-to-r from-transparent via-emerald to-transparent'
-                    : 'bg-gradient-to-r from-transparent via-gold to-transparent'
-                )}
-              />
-              <div className="border-b border-white/10 bg-black/30 px-4 py-3.5 sm:px-5">
-                <SectionHeader
-                  compact
-                  className="mb-0"
-                  eyebrow={t('lobby.opponentEyebrow')}
-                  title={t('lobby.opponentTitle')}
-                  description={t('lobby.opponentDesc')}
-                />
-              </div>
-              <div className="space-y-3 bg-black/15 p-4 sm:p-5">
-                <OpponentSelector
-                  showBrand={false}
-                  value={opponentType}
-                  onChange={setOpponentType}
-                  selectedLabel={t('modes.selected')}
-                  options={[
-                    {
-                      id: 'HUMAN',
-                      label: t('lobby.opponentHuman'),
-                      hint: t('lobby.opponentHumanHint')
-                    },
-                    {
-                      id: 'BOT',
-                      label: t('lobby.opponentBot'),
-                      hint: t('lobby.opponentBotHint')
-                    }
-                  ]}
-                  className="mb-0 border-0 bg-transparent p-0"
-                />
-                {opponentType === 'BOT' && mode === 'HOLDEM' ? (
-                  <PlayerCountSelector
-                    value={botPlayerCount}
-                    onChange={setBotPlayerCount}
-                    label={t('lobby.botPlayerCount')}
-                    hint={t('lobby.botPlayerCountHint')}
-                  />
-                ) : null}
-                {opponentType === 'BOT' && mode === 'JOKER' ? (
-                  <p className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-center text-xs text-subtle">
-                    {t('lobby.jokerBotPlayerCount')}
-                  </p>
-                ) : null}
-                <Button
-                  variant={opponentType === 'BOT' ? 'secondary' : 'primary'}
-                  size="lg"
-                  className="w-full"
-                  disabled={queueBusy}
-                  data-testid="lobby-queue-button"
-                  onClick={() => void startQueue()}
-                >
-                  {opponentType === 'BOT'
-                    ? mode === 'HOLDEM'
-                      ? t('queue.buttonHoldemBot')
-                      : t('queue.buttonJokerBot')
-                    : mode === 'HOLDEM'
-                      ? t('queue.buttonHoldem')
-                      : t('queue.buttonJoker')}
-                </Button>
-                {queueBanner ? (
-                  <p
-                    className={cn(
-                      'mt-3 rounded-xl border px-3 py-2.5 text-xs leading-relaxed',
-                      opponentType === 'BOT'
-                        ? 'border-emerald/25 bg-emerald/[0.08] text-emerald'
-                        : 'border-amber-500/20 bg-amber-500/10 text-amber-200/90'
-                    )}
-                  >
-                    {queueBanner}
-                  </p>
-                ) : null}
-                {sessionError ? (
-                  <p className="mt-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300">
-                    {translateQueueError(sessionError)}
-                  </p>
-                ) : null}
-                {tableHref ? (
-                  <Link to={tableHref} className="mt-3 block">
-                    <Button variant="ghost" size="md" className="w-full">
-                      {t('queue.openTable')}
-                    </Button>
-                  </Link>
-                ) : null}
-              </div>
-            </GlassPanel>
           </motion.div>
 
           <motion.div
             className="flex flex-col gap-4"
             variants={reduceMotion ? undefined : section}
-            custom={2}
+            custom={3}
           >
             <SectionHeader
               eyebrow={t('lobby.liveEyebrow')}

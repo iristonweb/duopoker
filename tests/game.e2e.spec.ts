@@ -134,9 +134,14 @@ async function playHoldemHandToComplete() {
   p1.emit('joinSession', { sessionId, userId: uid1, mode: 'HOLDEM', buyIn: 100 });
   p2.emit('joinSession', { sessionId, userId: uid2, mode: 'HOLDEM', buyIn: 100 });
 
-  let state = await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2);
+  let state = await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2, 20_000);
 
-  for (let guard = 0; guard < 40 && state.street !== 'COMPLETE'; guard += 1) {
+  for (let guard = 0; guard < 60 && state.street !== 'COMPLETE'; guard += 1) {
+    if (state.street === 'SHOWDOWN') {
+      state = await waitForState(p1, (s) => s.street === 'COMPLETE', 20_000);
+      break;
+    }
+
     const actor = state.players[state.activePlayerIndex]!;
     const sock = actor === uid1 ? p1 : p2;
     const need =
@@ -151,7 +156,8 @@ async function playHoldemHandToComplete() {
     }
     state = await waitForState(
       p1,
-      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE'
+      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE',
+      25_000
     );
   }
 
@@ -159,11 +165,14 @@ async function playHoldemHandToComplete() {
   expect(state.winners?.length).toBeGreaterThan(0);
 
   const handNum = state.handNumber;
+  // Emit both ready signals — next hand may start via ready or auto-start after NEXT_HAND_DELAY_MS.
   p1.emit('readyNextHand', { sessionId, userId: uid1 });
-  await waitForState(p1, (s) => (s.readyForNextHand ?? []).includes(uid1));
-
   p2.emit('readyNextHand', { sessionId, userId: uid2 });
-  const nextHand = await waitForState(p1, (s) => s.street === 'PREFLOP' && s.handNumber === handNum + 1);
+  const nextHand = await waitForState(
+    p1,
+    (s) => s.street === 'PREFLOP' && s.handNumber === handNum + 1,
+    30_000
+  );
   expect(nextHand.handNumber).toBe(handNum + 1);
 
   p1.disconnect();
@@ -226,6 +235,7 @@ const skipWithoutBackend = async (
 };
 
 test('socket gameplay — Hold\'em hand through showdown and next hand', async ({ request }, testInfo) => {
+  test.setTimeout(90_000);
   if (!(await skipWithoutBackend(request, testInfo))) return;
   await playHoldemHandToComplete();
 });

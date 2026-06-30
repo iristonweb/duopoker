@@ -16,6 +16,7 @@ export {
   bubbleOffset,
   seatLayoutTailwind,
   bubbleOffsetTailwind,
+  timerOffsetTailwind,
   type SeatPosition,
   type BubbleOffset,
   type SeatAnchor

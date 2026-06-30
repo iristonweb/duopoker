@@ -11,7 +11,7 @@ import {
   shouldAutoStartNextHand,
   shouldForceActionTimeout,
   startNewHand,
-  advanceBotTurnsRuntime,
+  advanceSingleBotTurnRuntime,
   tickSessionRuntime,
   foldActivePlayerRuntime
 } from '@duopoker/game-engine/index';
@@ -285,9 +285,17 @@ export const tickSession = async (sessionId: string): Promise<SessionState | nul
     autoStartNextHand: () => autoStartNextHand(sessionId)
   });
 
-/** Advances through consecutive bot turns until a human acts or the hand ends. */
+/** Timeouts and auto next-hand only — no synchronous bot burst (REST may call tickSession once). */
+export const tickSessionMeta = async (sessionId: string): Promise<SessionState | null> =>
+  tickSessionRuntime(() => getSessionSnapshot(sessionId), {
+    enforceActionTimeout: () => enforceActionTimeout(sessionId),
+    advanceBotTurns: () => Promise.resolve(null),
+    autoStartNextHand: () => autoStartNextHand(sessionId)
+  });
+
+/** Advances one bot turn — further bot turns are scheduled by the socket layer. */
 export const advanceBotTurns = async (sessionId: string): Promise<SessionState | null> =>
-  advanceBotTurnsRuntime(
+  advanceSingleBotTurnRuntime(
     () => getSessionSnapshot(sessionId),
     (action) => processPlayerAction(action)
   );
@@ -301,7 +309,7 @@ export const foldActivePlayerOnTimeout = async (
     (state) => saveState(state),
     sessionId,
     userId,
-    () => advanceBotTurns(sessionId),
+    () => Promise.resolve(null),
     () => autoStartNextHand(sessionId)
   );
 

@@ -13,7 +13,9 @@ import { AllInRunoutBanner } from '../AllInRunoutBanner';
 import { TableActionTicker } from '../TableActionTicker';
 import { TuzovanieTableOverlay } from '../TuzovanieTableOverlay';
 import { TableLeaderboardPanel } from '../TableLeaderboardPanel';
-import { TableChatHudButton } from '../chat/TableChatHudButton';
+import { TableSideFabStack } from '../TableSideFabStack';
+import { MobileTableSurface } from './mobile/MobileTableSurface';
+import { MobilePerformanceLayer } from './mobile/MobilePerformanceLayer';
 import type { TableLayoutProps } from './table-layout-types';
 
 type Variant = 'desktop' | 'tablet' | 'classic';
@@ -33,49 +35,101 @@ export function StandardTableLayout({
   ...p
 }: Props) {
   const isTablet = variant === 'tablet';
+  const isClassicHoldem = variant === 'classic' && p.session.mode === 'HOLDEM';
   const dockTouchClass = isTablet ? '[&_button]:min-h-[48px] [&_button]:text-sm' : undefined;
+
+  const tableSurface = isClassicHoldem ? (
+    <MobileTableSurface
+      communityCards={p.jokerBoardCards}
+      boardCardKeys={p.jokerBoardKeys}
+      pot={p.viewKettle}
+      street={p.tableView.street === 'LOBBY' ? 'COMPLETE' : p.tableView.street}
+      players={p.tablePlayers}
+      heroDeckId={p.equipped.deck}
+      heroChipId={p.equipped.chip}
+      heroTableFeltId={p.equipped.table}
+      seatBubbles={p.seatBubbles}
+      chipFlights={p.chipFlights}
+      potPulseKey={p.potPulseKey}
+      sidePots={p.holdemSidePotList}
+      showBoardSlots
+      ghostCommunityCards={
+        p.ghostBoardVisible && p.canPeekGhostBoard ? (p.tableView.ghostCommunityCards ?? []) : []
+      }
+      foldingUsers={p.foldingUsers}
+      checkRippleUsers={p.checkRippleUsers}
+      activeUserId={p.activeUserId}
+      secondsLeft={p.activeSecondsLeft}
+      deckShuffling={p.deckShuffling}
+      reduceMotion={p.reduceMotion}
+      className="h-full"
+    />
+  ) : (
+    <PokerTable3D
+      communityCards={p.jokerBoardCards}
+      boardCardKeys={p.jokerBoardKeys}
+      handNumber={p.tableView.handNumber}
+      showBoardSlots={p.tableView.mode !== 'JOKER'}
+      ghostCommunityCards={
+        p.ghostBoardVisible && p.canPeekGhostBoard ? (p.tableView.ghostCommunityCards ?? []) : []
+      }
+      pot={p.viewKettle}
+      street={p.tableView.street === 'LOBBY' ? 'COMPLETE' : p.tableView.street}
+      players={p.tablePlayers}
+      heroDeckId={p.equipped.deck}
+      heroChipId={p.equipped.chip}
+      heroTableFeltId={p.equipped.table}
+      seatBubbles={p.seatBubbles}
+      chipFlights={p.chipFlights}
+      jokerFlights={p.jokerFlights}
+      potPulseKey={p.potPulseKey}
+      sidePots={p.holdemSidePotList}
+      foldingUsers={p.foldingUsers}
+      checkRippleUsers={p.checkRippleUsers}
+      activeUserId={p.activeUserId}
+      activeSecondsLeft={p.activeSecondsLeft}
+      deckShuffling={p.deckShuffling}
+      className="h-full"
+    />
+  );
 
   return (
     <GameTableShell
       overlay={overlay}
       hud={
-        <div className="relative">
-          <TableTopHUD
-            mode={p.tableView.mode}
-            street={p.tableView.street}
-            seatCount={p.tableView.players.length}
-            smallBlind={p.tableView.smallBlind}
-            bigBlind={p.tableView.bigBlind}
-            handNumber={p.tableView.handNumber}
-            joker={p.tableView.mode === 'JOKER' ? p.tableView.joker : null}
-            jokerRules={p.session.jokerRules}
-            onLeaveTable={p.onLeaveTable}
-            onMinimizeTable={p.onMinimizeTable}
-            leaving={p.leaving}
-            leaderboardEntries={p.leaderboardEntries}
-            leaderboardProfiles={p.leaderboardProfiles}
-            heroId={p.userId}
-            session={p.session}
-            onOpenLeaderboard={() => p.onLeaderboardOpenChange(true)}
-            hidePodium={
-              (p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE') || p.gameOver
-            }
-            layoutVariant={isTablet ? 'tablet' : variant === 'classic' ? 'compact' : 'desktop'}
-          />
-          {onChatOpen ? (
-            <div className="absolute right-3 top-2 z-40">
-              <TableChatHudButton unread={chatUnread} onClick={onChatOpen} />
-            </div>
-          ) : null}
-        </div>
+        <TableTopHUD
+          mode={p.tableView.mode}
+          street={p.tableView.street}
+          seatCount={p.tableView.players.length}
+          smallBlind={p.tableView.smallBlind}
+          bigBlind={p.tableView.bigBlind}
+          handNumber={p.tableView.handNumber}
+          joker={p.tableView.mode === 'JOKER' ? p.tableView.joker : null}
+          jokerRules={p.session.jokerRules}
+          onLeaveTable={p.onLeaveTable}
+          onMinimizeTable={p.onMinimizeTable}
+          leaving={p.leaving}
+          leaderboardEntries={p.leaderboardEntries}
+          leaderboardProfiles={p.leaderboardProfiles}
+          heroId={p.userId}
+          session={p.session}
+          onOpenLeaderboard={() => p.onLeaderboardOpenChange(true)}
+          onChatOpen={onChatOpen}
+          chatUnread={chatUnread}
+          hidePodium={
+            (p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE') || p.gameOver
+          }
+          layoutVariant={isTablet ? 'tablet' : variant === 'classic' ? 'compact' : 'desktop'}
+        />
       }
       table={
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.35 }}
-            className="relative h-full min-h-0"
+            className="relative flex h-full min-h-0 flex-col px-0.5 table-compact:px-0"
           >
+            {isClassicHoldem ? <MobilePerformanceLayer active /> : null}
             <TuzovanieTableOverlay
               session={p.tableView}
               heroId={p.userId}
@@ -84,34 +138,13 @@ export function StandardTableLayout({
               t={p.t}
               reduceMotion={p.reduceMotion}
             />
-            <PokerTable3D
-              communityCards={p.jokerBoardCards}
-              boardCardKeys={p.jokerBoardKeys}
-              handNumber={p.tableView.handNumber}
-              showBoardSlots={p.tableView.mode !== 'JOKER'}
-              ghostCommunityCards={
-                p.ghostBoardVisible && p.canPeekGhostBoard ? (p.tableView.ghostCommunityCards ?? []) : []
-              }
-              pot={p.viewKettle}
-              street={p.tableView.street === 'LOBBY' ? 'COMPLETE' : p.tableView.street}
-              players={p.tablePlayers}
-              heroDeckId={p.equipped.deck}
-              heroChipId={p.equipped.chip}
-              heroTableFeltId={p.equipped.table}
-              seatBubbles={p.seatBubbles}
-              chipFlights={p.chipFlights}
-              jokerFlights={p.jokerFlights}
-              potPulseKey={p.potPulseKey}
-              sidePots={p.holdemSidePotList}
-              foldingUsers={p.foldingUsers}
-              checkRippleUsers={p.checkRippleUsers}
-              activeUserId={p.activeUserId}
-              activeSecondsLeft={p.activeSecondsLeft}
-              deckShuffling={p.deckShuffling}
-              className="h-full"
-            />
+            {tableSurface}
             <AllInRunoutBanner visible={p.showAllInRunoutBanner} />
-            <TableActionTicker events={p.feedEvents} pulseKey={p.feedPulseKey} />
+            <TableActionTicker
+              events={p.feedEvents}
+              pulseKey={p.feedPulseKey}
+              hideWhenHeroActive={p.myTurn}
+            />
             <HandResultOverlay
               visible={p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'}
               winners={p.isJoker || p.holdemPayoutSummary ? undefined : p.winnerNames}
@@ -156,25 +189,28 @@ export function StandardTableLayout({
               onWatch={p.onBustedWatch}
               onLeave={p.onLeaveTable}
             />
-            <GameStoryPanel
-              events={p.feedEvents}
-              pulseKey={p.feedPulseKey}
-              suppressHandCompleteDupes={
-                p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'
-              }
-              soundOn={p.soundOn}
-              musicOn={p.musicOn}
-              onSoundToggle={p.onSoundToggle}
-              onMusicToggle={p.onMusicToggle}
-              soundOnLabel={p.t('table.soundOn')}
-              soundOffLabel={p.t('table.soundOff')}
-              musicOnLabel={p.t('table.musicOn')}
-              musicOffLabel={p.t('table.musicOff')}
-              title={p.t('table.feedTitle')}
-              openLabel={p.t('table.feedOpenHistory')}
-              closeLabel={p.t('table.feedCloseHistory')}
-              emptyLabel={p.t('table.feedEmpty')}
-            />
+            <TableSideFabStack>
+              <GameStoryPanel
+                events={p.feedEvents}
+                pulseKey={p.feedPulseKey}
+                collapseMobileToolbar={p.myTurn}
+                suppressHandCompleteDupes={
+                  p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'
+                }
+                soundOn={p.soundOn}
+                musicOn={p.musicOn}
+                onSoundToggle={p.onSoundToggle}
+                onMusicToggle={p.onMusicToggle}
+                soundOnLabel={p.t('table.soundOn')}
+                soundOffLabel={p.t('table.soundOff')}
+                musicOnLabel={p.t('table.musicOn')}
+                musicOffLabel={p.t('table.musicOff')}
+                title={p.t('table.feedTitle')}
+                openLabel={p.t('table.feedOpenHistory')}
+                closeLabel={p.t('table.feedCloseHistory')}
+                emptyLabel={p.t('table.feedEmpty')}
+              />
+            </TableSideFabStack>
             {p.session.mode === 'JOKER' && p.session.joker ? (
               <JokerNotebookPanel
                 joker={p.session.joker}

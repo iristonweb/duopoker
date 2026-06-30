@@ -29,7 +29,6 @@ export function SeatActionBubble({ text, kind = 'check', className }: Props) {
           'pointer-events-none absolute z-[25] min-w-[3.5rem] max-w-[10rem]',
           'flex items-center justify-center gap-1 rounded-lg border px-2 py-1 backdrop-blur-md',
           'text-[10px] font-bold uppercase tracking-[0.06em] whitespace-nowrap sm:min-w-[4.5rem] sm:max-w-[14rem] sm:gap-1.5 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm',
-          '-top-12 left-1/2 -translate-x-1/2',
           style,
           className
         )}

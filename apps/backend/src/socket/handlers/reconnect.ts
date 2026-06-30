@@ -1,7 +1,7 @@
 import type { Server, Socket } from 'socket.io';
 import { sanitizeStateForViewer } from '@duopoker/game-engine/index';
 import { assertCanJoinSession } from '../../services/session-access.js';
-import { getSessionSnapshot, tickSession } from '../../services/game-session.js';
+import { getSessionSnapshot, tickSessionMeta } from '../../services/game-session.js';
 import { getUserSubscriptionTier } from '../../services/subscription-tier.js';
 import { resolveUserId } from '../socket-auth.js';
 
@@ -28,7 +28,7 @@ export const registerReconnectHandler = (
     }
     registerUserSocket(userId, socket.id);
     await socket.join(sessionId);
-    const snapshot = (await tickSession(sessionId)) ?? (await getSessionSnapshot(sessionId));
+    const snapshot = (await tickSessionMeta(sessionId)) ?? (await getSessionSnapshot(sessionId));
     if (!snapshot) {
       socket.emit('sessionError', { code: 'SESSION_NOT_FOUND' });
       return;
