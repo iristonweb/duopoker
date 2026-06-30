@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card, SessionState } from '@duopoker/shared-types/index';
 import { cn } from '@duopoker/ui-kit';
+import {
+  mobileOpponentSeatPositionStyle,
+  seatPositionStyleForPlayers,
+  type TableSurfaceLayout
+} from '@duopoker/table-client';
 import { PlayingCard } from '../cosmetics/PlayingCard';
-import { rotatePlayersForHero, seatPositionStyle, feltPlayAreaClass } from '../../lib/table-layout';
+import { feltPlayAreaClass } from '../../lib/table-layout';
 import { formatCardLabel } from '../../lib/joker-labels';
 
 const STAGGER_MS = 450;
@@ -15,6 +20,7 @@ type Props = {
   label: (uid: string) => string;
   t: (key: string, opts?: Record<string, unknown>) => string;
   reduceMotion?: boolean;
+  surfaceLayout?: TableSurfaceLayout;
 };
 
 export function TuzovanieTableOverlay({
@@ -23,7 +29,8 @@ export function TuzovanieTableOverlay({
   deckId,
   label,
   t,
-  reduceMotion
+  reduceMotion,
+  surfaceLayout = 'ring'
 }: Props) {
   const log = session.joker?.tuzovanieLog;
   const active =
@@ -49,24 +56,39 @@ export function TuzovanieTableOverlay({
     return () => timers.forEach(clearTimeout);
   }, [active, log, reduceMotion, session.sessionId]);
 
-  const seatIndex = useMemo(() => {
-    const order = rotatePlayersForHero(
-      session.players.map((userId) => ({ userId })),
-      heroId
-    );
-    return new Map(order.map((p, i) => [p.userId, i]));
-  }, [session.players, heroId]);
+  const tablePlayers = useMemo(
+    () => session.players.map((userId) => ({ userId, isHero: userId === heroId })),
+    [session.players, heroId]
+  );
+
+  const seatIndex = useMemo(
+    () => new Map(tablePlayers.map((p, i) => [p.userId, i])),
+    [tablePlayers]
+  );
+
+  const opponentCount = tablePlayers.filter((p) => !p.isHero).length;
 
   if (!active || !log) return null;
 
   const visible = log.slice(0, revealed);
   const last = visible[visible.length - 1];
 
+  const seatStyle = (userId: string) => {
+    const idx = seatIndex.get(userId) ?? 0;
+    const player = tablePlayers[idx];
+    if (surfaceLayout === 'mobile-arc') {
+      if (player?.isHero) return { left: '50%', top: '92%', transform: 'translate(-50%, -100%)' };
+      const opponentIndex = tablePlayers.slice(0, idx).filter((p) => !p.isHero).length;
+      return mobileOpponentSeatPositionStyle(opponentIndex, opponentCount);
+    }
+    return seatPositionStyleForPlayers(idx, tablePlayers);
+  };
+
   return (
     <div className={cn('pointer-events-none z-[18]', feltPlayAreaClass)}>
       <AnimatePresence>
         {visible.map((entry, i) => {
-          const idx = seatIndex.get(entry.userId) ?? 0;
+          if (surfaceLayout === 'mobile-arc' && entry.userId === heroId) return null;
           return (
             <motion.div
               key={`${entry.userId}-${i}-${entry.card}`}
@@ -75,7 +97,7 @@ export function TuzovanieTableOverlay({
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.28 }}
               className="absolute flex flex-col items-center gap-1"
-              style={seatPositionStyle(idx, session.players.length)}
+              style={seatStyle(entry.userId)}
             >
               <PlayingCard card={entry.card as Card} deckId={deckId} size="sm" />
               <span className="rounded-full bg-black/70 px-2 py-0.5 text-[9px] text-gold-light backdrop-blur-sm">
@@ -89,7 +111,10 @@ export function TuzovanieTableOverlay({
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute bottom-[18%] left-1/2 z-10 max-w-xs -translate-x-1/2 rounded-full border border-gold/30 bg-black/75 px-4 py-2 text-center text-xs text-gold-light backdrop-blur-md"
+          className={cn(
+            'absolute left-1/2 z-10 max-w-xs -translate-x-1/2 rounded-full border border-gold/30 bg-black/75 px-4 py-2 text-center text-xs text-gold-light backdrop-blur-md',
+            surfaceLayout === 'mobile-arc' ? 'bottom-[22%]' : 'bottom-[18%]'
+          )}
         >
           {t('table.feedJokerTuzovanieDealer', { name: label(session.players[session.dealerIndex]!) })}
           {' — '}

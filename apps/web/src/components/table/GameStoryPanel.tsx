@@ -50,6 +50,7 @@ type Props = {
   suppressHandCompleteDupes?: boolean;
   /** Hide fixed mobile toolbar while hero acts (frees dock space on short viewports). */
   collapseMobileToolbar?: boolean;
+  layoutVariant?: 'desktop' | 'tablet' | 'classic';
   className?: string;
 };
 
@@ -169,6 +170,7 @@ export function GameStoryPanel({
   emptyLabel,
   suppressHandCompleteDupes = false,
   collapseMobileToolbar = false,
+  layoutVariant = 'desktop',
   className
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -263,7 +265,8 @@ export function GameStoryPanel({
       {/* Desktop / landscape — bottom-right feed chip, avoids covering seats */}
       <div
         className={cn(
-          'pointer-events-auto hidden w-[min(18rem,calc(100vw-1.5rem))] flex-col gap-2 max-table-compact:flex',
+          'pointer-events-auto flex w-[min(18rem,calc(100vw-1.5rem))] flex-col gap-2',
+          layoutVariant === 'classic' && 'hidden',
           className
         )}
       >
@@ -341,11 +344,11 @@ export function GameStoryPanel({
       </div>
 
       {/* Mobile toolbar above dock */}
-      {!collapseMobileToolbar ? (
+      {!collapseMobileToolbar && layoutVariant === 'classic' ? (
       <div
         data-testid="table-mobile-toolbar"
         className={cn(
-          'pointer-events-auto fixed left-3 right-3 z-30 table-compact:block max-table-compact:hidden',
+          'pointer-events-auto fixed left-3 right-3 z-30',
           tableFabBottomClass
         )}
       >

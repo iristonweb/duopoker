@@ -5,7 +5,7 @@ import { cn } from '@duopoker/ui-kit';
 import { PlayingCard } from './cosmetics/PlayingCard';
 import { PlayerAvatar } from './cosmetics/PlayerAvatar';
 import { PokerChipVisual } from './cosmetics/PokerChipVisual';
-import { isBotUserId, bubbleOffset, timerOffset, seatPositionStyle, feltPlayAreaClass, tableRailClass } from '../lib/table-layout';
+import { isBotUserId, bubbleOffset, timerOffset, seatPositionStyleForPlayers, resolveSeatLayoutIndex, feltPlayAreaClass, tableRailClass, tableCenterPercent } from '../lib/table-layout';
 import { AnimatedPotDisplay } from './table/AnimatedPotDisplay';
 import { JokerTrickPile } from './table/JokerTrickPile';
 import { SeatActionBubble } from './table/SeatActionBubble';
@@ -176,6 +176,7 @@ export function PokerTable3D({
           flights={chipFlights}
           playerIndex={playerIndex}
           playerCount={players.length}
+          players={players}
           chipId={potChipId}
         />
 
@@ -237,6 +238,7 @@ export function PokerTable3D({
         </div>
 
         {players.map((player, index) => {
+          const layoutIndex = resolveSeatLayoutIndex(index, players);
           const tier = player.tier ?? 'FREE';
           const equipped =
             player.inventory && player.inventory.length > 0
@@ -252,7 +254,7 @@ export function PokerTable3D({
           const seatChipId = gameChipId(equipped.chip);
           const cards = player.holeCards ?? [];
           const hiddenCount = player.hiddenCardCount ?? 0;
-          const isHeroSeat = player.isHero ?? index === players.length - 1;
+          const isHeroSeat = player.isHero === true;
           const roundBet = player.roundBet ?? 0;
           const bubble = bubbleByUser.get(player.userId);
           const isFolding = foldingSet.has(player.userId);
@@ -268,10 +270,10 @@ export function PokerTable3D({
           return (
             <div
               key={player.userId}
-              style={seatPositionStyle(index, players.length)}
+              style={seatPositionStyleForPlayers(index, players)}
               className={cn(
                 'absolute flex max-w-[5.5rem] flex-col items-center gap-0.5 transition-all duration-300 max-table-compact:max-w-none max-table-compact:gap-1',
-                isHeroSeat && 'table-compact:hidden max-table-compact:flex',
+                isHeroSeat && '[body[data-table-layout-mode=mobile-classic]_&]:hidden',
                 player.isActive && 'z-20 scale-[1.03] max-table-compact:scale-[1.05]',
                 player.isFolded && 'opacity-50 grayscale-[0.4]',
                 player.isWinner && 'z-[22]'
@@ -302,7 +304,7 @@ export function PokerTable3D({
                 <SeatActionBubble
                   text={bubble.text}
                   kind={bubble.kind}
-                  className={bubbleOffset(index, players.length)}
+                  className={bubbleOffset(layoutIndex, players.length)}
                 />
               ) : null}
 
@@ -342,7 +344,7 @@ export function PokerTable3D({
                   </span>
                 ) : null}
                 {showTimer ? (
-                  <div className={cn('absolute z-[6]', timerOffset(index, players.length))}>
+                  <div className={cn('absolute z-[6]', timerOffset(layoutIndex, players.length))}>
                     <TurnTimer secondsLeft={activeSecondsLeft!} size={40} className="opacity-95" />
                   </div>
                 ) : null}
@@ -362,7 +364,7 @@ export function PokerTable3D({
                 chipId={seatChipId}
                 showName={!isHeroSeat}
                 compact={!isHeroSeat}
-                className={cn(isHeroSeat && 'table-compact:hidden')}
+                className={cn(isHeroSeat && '[body[data-table-layout-mode=mobile-classic]_&]:hidden')}
               />
 
               {roundBet > 0 ? (
@@ -379,7 +381,7 @@ export function PokerTable3D({
               ) : null}
 
               {isHeroSeat && (cards.length || hiddenCount > 0) ? (
-                <div className="relative z-[1] flex gap-0.5 table-compact:hidden">
+                <div className="relative z-[1] flex gap-0.5 [body[data-table-layout-mode=mobile-classic]_&]:hidden">
                   <AnimatePresence mode="popLayout">
                     {(cards.length ? cards : Array.from({ length: hiddenCount })).map((c, ci) => {
                       const faceUp = Boolean(player.revealCards && typeof c === 'object' && c);
@@ -427,12 +429,13 @@ export function PokerTable3D({
           {jokerFlights.map((flight) => {
             const seatIdx = playerIndex.get(flight.userId);
             if (seatIdx === undefined) return null;
-            const from = seatPositionStyle(seatIdx, players.length);
+            const from = seatPositionStyleForPlayers(seatIdx, players);
+            const boardTop = `${tableCenterPercent('ring', 'jokerFlightTop')}%`;
             return (
               <motion.div
                 key={flight.id}
                 initial={{ opacity: 0, scale: 0.75, left: from.left, top: from.top, x: '-50%', y: '-50%' }}
-                animate={{ opacity: 1, scale: 1, left: '50%', top: '38%', x: '-50%', y: '-50%' }}
+                animate={{ opacity: 1, scale: 1, left: '50%', top: boardTop, x: '-50%', y: '-50%' }}
                 exit={{ opacity: 0, scale: 0.85 }}
                 className="absolute z-[18]"
                 transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}

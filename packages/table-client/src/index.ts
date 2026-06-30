@@ -9,10 +9,23 @@ export {
   type TableSessionCallbacks
 } from './create-table-store';
 
+export {
+  TABLE_CENTER_ANCHORS,
+  tableCenterPercent,
+  potFlightAnchor,
+  type TableSurfaceLayout
+} from './layout/table-anchors';
 export { rotatePlayersForHero, isBotUserId, botDisplayIndex } from './layout/rotate-players';
+export {
+  heroSeatIndex,
+  heroArrayIndex,
+  resolveSeatLayoutIndex,
+  isHeroSeatIndex
+} from './layout/hero-seat';
 export {
   seatCoordinates,
   seatPositionStyle,
+  seatPositionStyleForPlayers,
   bubbleOffset,
   seatLayoutTailwind,
   bubbleOffsetTailwind,
@@ -25,8 +38,8 @@ export {
 export {
   mobileSeatCoordinates,
   mobileSeatPositionStyle,
-  mobileBubbleOffset,
-  isHeroSeatIndex
+  mobileOpponentSeatPositionStyle,
+  mobileBubbleOffset
 } from './layout/mobile-seat-coordinates';
 
 export { useTableChat } from './hooks/useTableChat';

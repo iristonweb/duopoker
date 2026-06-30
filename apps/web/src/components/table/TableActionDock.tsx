@@ -122,7 +122,7 @@ export function TableActionDock({
                 </AnimatePresence>
                 </div>
                 {secondsLeft !== null ? (
-                  <TurnTimer secondsLeft={secondsLeft} size={36} className="shrink-0 table-compact:flex sm:hidden max-table-compact:hidden" />
+                  <TurnTimer secondsLeft={secondsLeft} size={36} className="shrink-0 table-compact:flex max-table-compact:hidden" />
                 ) : null}
               </div>
             ) : null}
@@ -191,7 +191,7 @@ export function TableActionDock({
 
               <div className="relative table-compact:min-w-0">
                 {secondsLeft !== null ? (
-                  <TurnTimer secondsLeft={secondsLeft} size={40} className="absolute -left-1 -top-1 hidden sm:block max-table-compact:hidden" />
+                  <TurnTimer secondsLeft={secondsLeft} size={40} className="absolute -left-1 -top-1 hidden sm:flex table-compact:hidden max-table-compact:hidden" />
                 ) : null}
                 {need === 0 ? (
                   <Button

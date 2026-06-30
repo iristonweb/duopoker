@@ -67,7 +67,7 @@ export function HandResultOverlay({
           exit={{ opacity: 0, y: -12, scale: 0.98 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
-            'absolute inset-x-0 top-[9.5rem] z-20 flex justify-center px-3 sm:top-[5.5rem] sm:px-4',
+            'absolute inset-x-0 top-[9.5rem] z-20 flex justify-center px-3 table-compact:top-[7.5rem] sm:top-[5.5rem] sm:px-4',
             className
           )}
         >

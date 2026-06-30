@@ -16,6 +16,8 @@ export function seatAnchorTransform(anchor: SeatAnchor): string {
   return anchor === 'bottom' ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)';
 }
 
+import { resolveSeatLayoutIndex } from './hero-seat';
+
 /** Inline style for absolute seat placement (matches chip-flight anchors). */
 export function seatPositionStyle(
   index: number,
@@ -29,19 +31,48 @@ export function seatPositionStyle(
   };
 }
 
+/** Seat style using hero-aware ring index (use array index + player list). */
+export function seatPositionStyleForPlayers(
+  arrayIndex: number,
+  players: readonly { isHero?: boolean }[]
+): { left: string; top: string; transform: string } {
+  const layoutIndex = resolveSeatLayoutIndex(arrayIndex, players);
+  return seatPositionStyle(layoutIndex, players.length);
+}
+
 /** Percent-based seat positions within the felt ellipse (hero rotated to bottom). */
 export function seatCoordinates(index: number, total: number): SeatPosition {
   if (total <= 2) {
     return index === 0
       ? { left: 50, top: 10, anchor: 'center' }
-      : { left: 50, top: 88, anchor: 'bottom' };
+      : { left: 50, top: 92, anchor: 'bottom' };
   }
   if (total === 4) {
     const ring: SeatPosition[] = [
       { left: 50, top: 10, anchor: 'center' },
       { left: 86, top: 48, anchor: 'center' },
       { left: 14, top: 48, anchor: 'center' },
-      { left: 50, top: 86, anchor: 'bottom' }
+      { left: 50, top: 92, anchor: 'bottom' }
+    ];
+    return ring[index] ?? ring[0]!;
+  }
+  if (total === 3) {
+    const ring: SeatPosition[] = [
+      { left: 50, top: 10, anchor: 'center' },
+      { left: 86, top: 38, anchor: 'center' },
+      { left: 14, top: 38, anchor: 'center' },
+      { left: 50, top: 92, anchor: 'bottom' }
+    ];
+    return ring[index] ?? ring[0]!;
+  }
+  if (total === 5) {
+    const ring: SeatPosition[] = [
+      { left: 50, top: 10, anchor: 'center' },
+      { left: 86, top: 22, anchor: 'center' },
+      { left: 86, top: 68, anchor: 'center' },
+      { left: 50, top: 92, anchor: 'bottom' },
+      { left: 14, top: 68, anchor: 'center' },
+      { left: 14, top: 22, anchor: 'center' }
     ];
     return ring[index] ?? ring[0]!;
   }
@@ -49,7 +80,7 @@ export function seatCoordinates(index: number, total: number): SeatPosition {
     { left: 50, top: 10, anchor: 'center' },
     { left: 86, top: 22, anchor: 'center' },
     { left: 86, top: 68, anchor: 'center' },
-    { left: 50, top: 86, anchor: 'bottom' },
+    { left: 50, top: 92, anchor: 'bottom' },
     { left: 14, top: 68, anchor: 'center' },
     { left: 14, top: 22, anchor: 'center' }
   ];

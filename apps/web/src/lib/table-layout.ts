@@ -2,10 +2,15 @@ export {
   rotatePlayersForHero,
   isBotUserId,
   botDisplayIndex,
-  seatLayoutTailwind as seatLayout,
+  heroSeatIndex,
+  resolveSeatLayoutIndex,
   seatPositionStyle,
+  seatPositionStyleForPlayers,
+  tableCenterPercent,
+  potFlightAnchor,
   bubbleOffsetTailwind as bubbleOffset,
-  timerOffsetTailwind as timerOffset
+  timerOffsetTailwind as timerOffset,
+  type TableSurfaceLayout
 } from '@duopoker/table-client';
 
 /** Shared bounds for felt + seat positioning (must match PokerTable3D). */

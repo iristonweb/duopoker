@@ -1,19 +1,25 @@
 import { describe, expect, it } from 'vitest';
+import { heroSeatIndex } from './hero-seat';
 import { isHeroSeatIndex, mobileSeatCoordinates } from './mobile-seat-coordinates';
 
 describe('mobileSeatCoordinates', () => {
   it('places hero at bottom for all table sizes', () => {
     for (const total of [2, 3, 4, 5, 6]) {
-      const hero = mobileSeatCoordinates(total - 1, total);
+      const heroIdx = heroSeatIndex(total);
+      const hero = mobileSeatCoordinates(heroIdx, total);
       expect(hero.anchor).toBe('bottom');
       expect(hero.top).toBeGreaterThan(80);
-      expect(isHeroSeatIndex(total - 1, total)).toBe(true);
+      expect(isHeroSeatIndex(heroIdx, total)).toBe(true);
     }
   });
 
   it('places opponents along top arc without extreme overlap', () => {
     for (const total of [3, 4, 5, 6]) {
-      const opponents = Array.from({ length: total - 1 }, (_, i) => mobileSeatCoordinates(i, total));
+      const heroIdx = heroSeatIndex(total);
+      const opponents = Array.from({ length: total - 1 }, (_, i) => {
+        const arrayIndex = i < heroIdx ? i : i + 1;
+        return mobileSeatCoordinates(arrayIndex, total);
+      });
       for (const pos of opponents) {
         expect(pos.top).toBeLessThan(50);
         expect(pos.left).toBeGreaterThan(5);

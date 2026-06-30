@@ -36,6 +36,7 @@ export function StandardTableLayout({
 }: Props) {
   const isTablet = variant === 'tablet';
   const isClassicMobile = variant === 'classic';
+  const surfaceLayout = isClassicMobile ? 'mobile-arc' : 'ring';
   const dockTouchClass = isTablet ? '[&_button]:min-h-[48px] [&_button]:text-sm' : undefined;
 
   const tableSurface = isClassicMobile ? (
@@ -137,13 +138,18 @@ export function StandardTableLayout({
               label={p.label}
               t={p.t}
               reduceMotion={p.reduceMotion}
+              surfaceLayout={surfaceLayout}
             />
             {tableSurface}
-            <AllInRunoutBanner visible={p.showAllInRunoutBanner} />
+            <AllInRunoutBanner
+              visible={p.showAllInRunoutBanner}
+              className={surfaceLayout === 'mobile-arc' ? 'top-[9%]' : 'top-[11%]'}
+            />
             <TableActionTicker
               events={p.feedEvents}
               pulseKey={p.feedPulseKey}
               hideWhenHeroActive={p.myTurn}
+              className={surfaceLayout === 'mobile-arc' ? 'top-[52%]' : 'top-[50%]'}
             />
             <HandResultOverlay
               visible={p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'}
@@ -189,10 +195,11 @@ export function StandardTableLayout({
               onWatch={p.onBustedWatch}
               onLeave={p.onLeaveTable}
             />
-            <TableSideFabStack>
+            <TableSideFabStack layoutVariant={variant}>
               <GameStoryPanel
                 events={p.feedEvents}
                 pulseKey={p.feedPulseKey}
+                layoutVariant={variant}
                 collapseMobileToolbar={p.myTurn}
                 suppressHandCompleteDupes={
                   p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'

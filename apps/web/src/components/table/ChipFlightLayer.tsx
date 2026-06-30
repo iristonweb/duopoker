@@ -1,13 +1,22 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { mobileSeatCoordinates, seatCoordinates } from '@duopoker/table-client';
+import {
+  mobileOpponentSeatPositionStyle,
+  potFlightAnchor,
+  resolveSeatLayoutIndex,
+  seatCoordinates,
+  type TableSurfaceLayout
+} from '@duopoker/table-client';
 import type { SeatAnchor } from '@duopoker/table-client';
 import { PokerChipVisual } from '../cosmetics/PokerChipVisual';
 import type { ChipFlight } from '../../hooks/useTableAnimationQueue';
+
+type PlayerSeat = { isHero?: boolean };
 
 type Props = {
   flights: ChipFlight[];
   playerIndex: Map<string, number>;
   playerCount: number;
+  players?: readonly PlayerSeat[];
   chipId: string;
   /** `mobile-arc` matches portrait MobileTableSurface seat positions. */
   layout?: 'ring' | 'mobile-arc';
@@ -17,9 +26,12 @@ type FlightAnchor = { x: number; y: number; anchor: SeatAnchor };
 
 const anchorOffset = (anchor: SeatAnchor) => (anchor === 'bottom' ? '-100%' : '-50%');
 
-const sidePotAnchor = (potIndex: number, potCount: number): FlightAnchor => {
-  const center = { x: 50, y: 52 };
-  if (potCount <= 1) return { ...center, anchor: 'center' };
+const parsePercent = (value: string) => Number.parseFloat(value);
+
+const sidePotAnchor = (potIndex: number, potCount: number, layout: TableSurfaceLayout): FlightAnchor => {
+  const pot = potFlightAnchor(layout);
+  const center = { x: pot.x, y: pot.y, anchor: 'center' as const };
+  if (potCount <= 1) return center;
   const offsets = [
     { x: -10, y: -6 },
     { x: 10, y: -6 },
@@ -32,9 +44,30 @@ const sidePotAnchor = (potIndex: number, potCount: number): FlightAnchor => {
   return { x: center.x + off.x, y: center.y + off.y, anchor: 'center' };
 };
 
-const seatAnchor = (index: number, total: number, layout: 'ring' | 'mobile-arc'): FlightAnchor => {
-  const pos =
-    layout === 'mobile-arc' ? mobileSeatCoordinates(index, total) : seatCoordinates(index, total);
+const seatAnchor = (
+  arrayIndex: number,
+  total: number,
+  layout: 'ring' | 'mobile-arc',
+  players?: readonly PlayerSeat[]
+): FlightAnchor => {
+  if (layout === 'mobile-arc' && players?.length === total) {
+    const player = players[arrayIndex];
+    if (player?.isHero) {
+      return { x: 50, y: 96, anchor: 'bottom' };
+    }
+    const opponentIndex = players.slice(0, arrayIndex).filter((p) => !p.isHero).length;
+    const opponentCount = players.filter((p) => !p.isHero).length;
+    const style = mobileOpponentSeatPositionStyle(opponentIndex, opponentCount);
+    return {
+      x: parsePercent(style.left),
+      y: parsePercent(style.top),
+      anchor: style.transform.includes('-100%') ? 'bottom' : 'center'
+    };
+  }
+
+  const layoutIndex =
+    players?.length === total ? resolveSeatLayoutIndex(arrayIndex, players) : arrayIndex;
+  const pos = seatCoordinates(layoutIndex, total);
   return { x: pos.left, y: pos.top, anchor: pos.anchor };
 };
 
@@ -42,6 +75,7 @@ export function ChipFlightLayer({
   flights,
   playerIndex,
   playerCount,
+  players,
   chipId,
   layout = 'ring'
 }: Props) {
@@ -54,8 +88,8 @@ export function ChipFlightLayer({
         {flights.map((flight) => {
           const seatIdx = playerIndex.get(flight.userId);
           if (seatIdx === undefined) return null;
-          const from = seatAnchor(seatIdx, playerCount, layout);
-          const pot = sidePotAnchor(flight.potIndex ?? 0, potCount);
+          const from = seatAnchor(seatIdx, playerCount, layout, players);
+          const pot = sidePotAnchor(flight.potIndex ?? 0, potCount, layout);
           const toPot = flight.kind === 'toPot';
           const fromPt = toPot ? from : pot;
           const toPt = toPot ? pot : from;

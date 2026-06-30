@@ -3,9 +3,9 @@ import type { Card } from '@duopoker/shared-types/index';
 import { cn } from '@duopoker/ui-kit';
 import { gameChipId, resolveEquipped } from '@duopoker/shared-types';
 import {
-  isHeroSeatIndex,
   mobileBubbleOffset,
-  mobileSeatPositionStyle
+  mobileOpponentSeatPositionStyle,
+  resolveSeatLayoutIndex
 } from '@duopoker/table-client';
 import { PlayingCard } from '../../../cosmetics/PlayingCard';
 import { AnimatedPotDisplay } from '../../AnimatedPotDisplay';
@@ -129,6 +129,7 @@ export function MobileTableSurface({
           flights={chipFlights}
           playerIndex={playerIndex}
           playerCount={players.length}
+          players={players}
           chipId={potChipId}
           layout="mobile-arc"
         />
@@ -173,7 +174,10 @@ export function MobileTableSurface({
         </div>
 
         {players.map((player, index) => {
-          if (isHeroSeatIndex(index, players.length)) return null;
+          if (player.isHero) return null;
+          const opponentIndex = players.slice(0, index).filter((p) => !p.isHero).length;
+          const opponentCount = players.filter((p) => !p.isHero).length;
+          const layoutIndex = resolveSeatLayoutIndex(index, players);
           const equipped =
             player.inventory && player.inventory.length > 0
               ? resolveEquipped(player.equipped, player.tier ?? 'FREE', player.inventory)
@@ -192,7 +196,7 @@ export function MobileTableSurface({
           return (
             <div
               key={player.userId}
-              style={mobileSeatPositionStyle(index, players.length)}
+              style={mobileOpponentSeatPositionStyle(opponentIndex, opponentCount)}
               className={cn(
                 'absolute z-10',
                 player.isWinner && 'z-[12]',
@@ -203,7 +207,7 @@ export function MobileTableSurface({
               <MobileSeatNode
                 player={player}
                 bubble={bubbleByUser.get(player.userId)}
-                bubbleOffset={mobileBubbleOffset(index, players.length)}
+                bubbleOffset={mobileBubbleOffset(layoutIndex, players.length)}
                 secondsLeft={seatSeconds}
                 chipId={gameChipId(equipped.chip)}
                 deckId={equipped.deck}

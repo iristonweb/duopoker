@@ -4,6 +4,7 @@ import {
   type SeatAnchor,
   type SeatPosition
 } from './seat-coordinates';
+import { heroSeatIndex } from './hero-seat';
 
 const ARC_START_DEG = -150;
 const ARC_END_DEG = -30;
@@ -16,7 +17,7 @@ function degToRad(deg: number) {
   return (deg * Math.PI) / 180;
 }
 
-/** Opponent indices along top arc; hero is always last index after rotatePlayersForHero. */
+/** Opponent indices along top arc; hero is rendered off-table in immersive mobile UI. */
 function opponentArcPosition(opponentIndex: number, opponentCount: number): SeatPosition {
   if (opponentCount <= 1) {
     return { left: ARC_CENTER_X, top: 14, anchor: 'center' };
@@ -33,19 +34,35 @@ function opponentArcPosition(opponentIndex: number, opponentCount: number): Seat
 
 /** Portrait mobile seat layout — hero at bottom (off-table in immersive UI). */
 export function mobileSeatCoordinates(index: number, total: number): SeatPosition {
-  const heroIndex = total - 1;
+  const heroIndex = heroSeatIndex(total);
   if (index === heroIndex) {
-    return { left: 50, top: 88, anchor: 'bottom' };
+    return { left: 50, top: 92, anchor: 'bottom' };
   }
 
   const opponentCount = total - 1;
-  const opponentIndex = index;
+  const opponentIndex = index < heroIndex ? index : index - 1;
 
   if (total <= 2) {
     return { left: 50, top: 16, anchor: 'center' };
   }
 
   return opponentArcPosition(opponentIndex, opponentCount);
+}
+
+/** Mobile arc position for opponents only (hero excluded from table surface). */
+export function mobileOpponentSeatPositionStyle(
+  opponentIndex: number,
+  opponentCount: number
+): { left: string; top: string; transform: string } {
+  const pos =
+    opponentCount <= 1
+      ? { left: 50, top: 16, anchor: 'center' as const }
+      : opponentArcPosition(opponentIndex, opponentCount);
+  return {
+    left: `${pos.left}%`,
+    top: `${pos.top}%`,
+    transform: seatAnchorTransform(pos.anchor)
+  };
 }
 
 export function mobileSeatPositionStyle(
@@ -61,11 +78,15 @@ export function mobileSeatPositionStyle(
 }
 
 export function mobileBubbleOffset(index: number, total: number): BubbleOffset {
-  const heroIndex = total - 1;
+  const heroIndex = heroSeatIndex(total);
   if (index === heroIndex) {
     return { dx: 0, dy: -48, anchor: 'above' };
   }
-  const pos = mobileSeatCoordinates(index, total);
+  const opponentIndex = index < heroIndex ? index : index - 1;
+  const pos =
+    total <= 2
+      ? { left: 50, top: 16, anchor: 'center' as const }
+      : opponentArcPosition(opponentIndex, total - 1);
   if (pos.top < ARC_CENTER_Y) {
     return { dx: 0, dy: 10, anchor: 'below' };
   }
@@ -78,8 +99,6 @@ export function mobileBubbleOffset(index: number, total: number): BubbleOffset {
   return { dx: 0, dy: 10, anchor: 'below' };
 }
 
-export function isHeroSeatIndex(index: number, total: number): boolean {
-  return index === total - 1;
-}
+export { isHeroSeatIndex } from './hero-seat';
 
 export type { SeatAnchor, SeatPosition, BubbleOffset };
