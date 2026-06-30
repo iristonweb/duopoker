@@ -77,7 +77,7 @@ export function TuzovanieTableOverlay({
     const idx = seatIndex.get(userId) ?? 0;
     const player = tablePlayers[idx];
     if (surfaceLayout === 'mobile-arc') {
-      if (player?.isHero) return { left: '50%', top: '92%', transform: 'translate(-50%, -100%)' };
+      if (player?.isHero) return { left: '50%', bottom: '8%', top: 'auto', transform: 'translateX(-50%)' };
       const opponentIndex = tablePlayers.slice(0, idx).filter((p) => !p.isHero).length;
       return mobileOpponentSeatPositionStyle(opponentIndex, opponentCount);
     }

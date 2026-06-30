@@ -26,6 +26,7 @@ export {
   seatCoordinates,
   seatPositionStyle,
   seatPositionStyleForPlayers,
+  isBottomAnchoredSeat,
   bubbleOffset,
   seatLayoutTailwind,
   bubbleOffsetTailwind,

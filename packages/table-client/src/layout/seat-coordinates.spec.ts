@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bubbleOffset, seatCoordinates, seatPositionStyle } from './seat-coordinates';
+import { bubbleOffset, isBottomAnchoredSeat, seatCoordinates, seatPositionStyle } from './seat-coordinates';
 
 describe('seatCoordinates', () => {
   it('places heads-up seats top and bottom', () => {
@@ -29,10 +29,26 @@ describe('seatPositionStyle', () => {
   it('uses bottom-anchor transform for hero seats', () => {
     expect(seatPositionStyle(1, 2)).toMatchObject({
       left: '50%',
-      top: '92%',
-      transform: 'translate(-50%, -100%)'
+      bottom: '8%',
+      top: 'auto',
+      transform: 'translateX(-50%)'
+    });
+    expect(seatPositionStyle(3, 6)).toMatchObject({
+      left: '50%',
+      bottom: '8%',
+      transform: 'translateX(-50%)'
     });
     expect(seatPositionStyle(0, 2).transform).toBe('translate(-50%, -50%)');
+  });
+});
+
+describe('isBottomAnchoredSeat', () => {
+  it('marks hero ring slots as bottom-anchored', () => {
+    expect(isBottomAnchoredSeat(1, 2)).toBe(true);
+    expect(isBottomAnchoredSeat(3, 4)).toBe(true);
+    expect(isBottomAnchoredSeat(3, 6)).toBe(true);
+    expect(isBottomAnchoredSeat(0, 6)).toBe(false);
+    expect(isBottomAnchoredSeat(1, 6)).toBe(false);
   });
 });
 

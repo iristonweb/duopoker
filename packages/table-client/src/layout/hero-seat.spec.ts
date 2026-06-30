@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heroArrayIndex, heroSeatIndex, resolveSeatLayoutIndex } from './hero-seat';
+import { seatPositionStyleForPlayers } from './seat-coordinates';
 
 describe('heroSeatIndex', () => {
   it('places hero at bottom ring slot for common table sizes', () => {
@@ -50,5 +51,21 @@ describe('resolveSeatLayoutIndex', () => {
     expect(resolveSeatLayoutIndex(3, rotated)).toBe(3);
     expect(resolveSeatLayoutIndex(0, rotated)).toBe(0);
     expect(resolveSeatLayoutIndex(4, rotated)).toBe(4);
+  });
+
+  it('anchors hero seat to bottom even when hero is first in array', () => {
+    const sixMax = [
+      { isHero: true },
+      { isHero: false },
+      { isHero: false },
+      { isHero: false },
+      { isHero: false },
+      { isHero: false }
+    ];
+    expect(seatPositionStyleForPlayers(0, sixMax)).toMatchObject({
+      left: '50%',
+      bottom: '8%',
+      transform: 'translateX(-50%)'
+    });
   });
 });

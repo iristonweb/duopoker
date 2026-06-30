@@ -6,6 +6,7 @@ export {
   resolveSeatLayoutIndex,
   seatPositionStyle,
   seatPositionStyleForPlayers,
+  isBottomAnchoredSeat,
   tableCenterPercent,
   potFlightAnchor,
   bubbleOffsetTailwind as bubbleOffset,

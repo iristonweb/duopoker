@@ -68,8 +68,16 @@ export function mobileOpponentSeatPositionStyle(
 export function mobileSeatPositionStyle(
   index: number,
   total: number
-): { left: string; top: string; transform: string } {
+): { left: string; top?: string; bottom?: string; transform: string } {
   const pos = mobileSeatCoordinates(index, total);
+  if (pos.anchor === 'bottom') {
+    return {
+      left: `${pos.left}%`,
+      bottom: `${Math.max(4, 100 - pos.top)}%`,
+      top: 'auto',
+      transform: 'translateX(-50%)'
+    };
+  }
   return {
     left: `${pos.left}%`,
     top: `${pos.top}%`,

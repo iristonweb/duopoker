@@ -18,12 +18,25 @@ export function seatAnchorTransform(anchor: SeatAnchor): string {
 
 import { resolveSeatLayoutIndex } from './hero-seat';
 
+/** True when the ring slot anchors the seat block from the bottom edge (hero seat). */
+export function isBottomAnchoredSeat(index: number, total: number): boolean {
+  return seatCoordinates(index, total).anchor === 'bottom';
+}
+
 /** Inline style for absolute seat placement (matches chip-flight anchors). */
 export function seatPositionStyle(
   index: number,
   total: number
-): { left: string; top: string; transform: string } {
+): { left: string; top?: string; bottom?: string; transform: string } {
   const pos = seatCoordinates(index, total);
+  if (pos.anchor === 'bottom') {
+    return {
+      left: `${pos.left}%`,
+      bottom: `${Math.max(4, 100 - pos.top)}%`,
+      top: 'auto',
+      transform: 'translateX(-50%)'
+    };
+  }
   return {
     left: `${pos.left}%`,
     top: `${pos.top}%`,
@@ -35,7 +48,7 @@ export function seatPositionStyle(
 export function seatPositionStyleForPlayers(
   arrayIndex: number,
   players: readonly { isHero?: boolean }[]
-): { left: string; top: string; transform: string } {
+): { left: string; top?: string; bottom?: string; transform: string } {
   const layoutIndex = resolveSeatLayoutIndex(arrayIndex, players);
   return seatPositionStyle(layoutIndex, players.length);
 }
