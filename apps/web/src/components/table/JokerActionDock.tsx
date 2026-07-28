@@ -198,19 +198,6 @@ export function JokerActionDock({
                     {activeLabel}
                   </span>
                 </p>
-                {lastActionText ? (
-                  <motion.p
-                    key={lastActionText}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="truncate text-sm font-medium text-ivory sm:text-base"
-                  >
-                    <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300/70">
-                      {t('table.lastAction')}:
-                    </span>
-                    {lastActionText}
-                  </motion.p>
-                ) : null}
               </div>
             )}
           </div>
@@ -342,7 +329,7 @@ export function JokerActionDock({
         ) : null}
 
         {showHand ? (
-          <div className="flex flex-col gap-2">
+          <div className={cn('flex flex-col gap-2', bidding && 'gap-1')}>
             {suitForceHint ? (
               <p className="text-center text-xs font-medium text-gold/90">{suitForceHint}</p>
             ) : null}
@@ -358,20 +345,27 @@ export function JokerActionDock({
                 className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-6 bg-gradient-to-l from-surface to-transparent"
                 aria-hidden
               />
-              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+              <div
+                className={cn(
+                  'flex overflow-x-auto touch-pan-x pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory',
+                  bidding || trumpChoice ? 'gap-0.5 justify-center' : 'gap-2'
+                )}
+              >
               {holeCards.length === 0 ? (
                 <p className="text-sm text-muted">{t('table.jokerNoCards')}</p>
               ) : (
                 holeCards.map((c, i) => {
                   const playable = showActions && !bidding && !trumpChoice && legalCards.has(c);
+                  const compact = bidding || trumpChoice;
                   const CardEl = (
                     <PlayingCard
                       card={c}
                       faceUp
                       deckId={deckId}
-                      size="sm"
+                      size={compact ? 'xs' : 'sm'}
                       className={cn(
-                        'shrink-0 snap-start shadow-lg transition duration-200 sm:scale-100',
+                        'shrink-0 snap-start shadow-lg transition duration-200',
+                        compact && i > 0 && '-ml-3 sm:-ml-2',
                         playable && !pendingCard ? 'hover:-translate-y-1 hover:scale-105' : '',
                         playable && !pendingCard ? 'ring-2 ring-gold/60 shadow-[0_0_20px_rgba(232,197,71,0.25)] scale-[1.02]' : '',
                         !playable && showActions && !bidding && !trumpChoice ? 'opacity-40 grayscale' : ''

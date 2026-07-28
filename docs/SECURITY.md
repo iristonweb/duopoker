@@ -27,6 +27,14 @@ Email и пароли: email в БД в открытом виде (нужен д
 
 `MOCK_CHECKOUT=true` **отключён в production** — mock-подписки и произвольные покупки недоступны.
 
+## Dependency audit (CI)
+
+`pnpm audit --audit-level=high` is a failing CI gate. Overrides in root `package.json` use version floors (`>=x.y.z` / `~7.18.0`), not exact vulnerable pins.
+
+| Advisory | Policy |
+|---|---|
+| [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2) (react-router RSC CSRF) | Ignored via `pnpm.auditConfig.ignoreGhsas`. Patch is only in react-router `>=8.3.0`, which requires React 19. App uses Vite SPA + `react-router-dom` ~7.18 (not RSC). Revisit on React 19 upgrade. |
+
 ## Закрытые уязвимости
 
 | Проблема | Исправление |

@@ -243,13 +243,14 @@ export function TableLeaderboardPanel({
           title={t('table.openLeaderboard')}
           onClick={() => onOpenChange(true)}
           className={cn(
-            'absolute right-3 z-50 flex h-11 w-11 items-center justify-center rounded-full',
+            'absolute z-50 flex h-11 w-11 items-center justify-center rounded-full',
             'border border-gold/35 bg-black/55 text-gold-light shadow-[0_0_24px_rgba(232,197,71,0.2)] backdrop-blur-md',
             'transition hover:border-gold/55 hover:bg-gold/10 hover:shadow-glow-gold',
             open && 'border-gold/60 bg-gold/15 shadow-glow-gold ring-2 ring-gold/25',
             tableLeaderboardFabBottomClass,
             className
           )}
+          style={{ right: 'max(0.75rem, env(safe-area-inset-right))' }}
         >
           <TrophyIcon className="h-5 w-5" />
         </button>

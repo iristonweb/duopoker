@@ -12,10 +12,19 @@ type Props = {
   className?: string;
 };
 
-export function AnimatedPotDisplay({ pot, chipId, pulseKey = 0, sidePots = [], className }: Props) {
+export function AnimatedPotDisplay({
+  pot,
+  chipId,
+  pulseKey = 0,
+  sidePots = [],
+  className,
+  hidden = false
+}: Props & { hidden?: boolean }) {
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const chipCount = Math.min(6, Math.max(2, 2 + Math.floor(Math.log10(Math.max(10, pot)) * 1.2)));
+
+  if (hidden) return null;
 
   return (
     <motion.div
@@ -41,6 +50,7 @@ export function AnimatedPotDisplay({ pot, chipId, pulseKey = 0, sidePots = [], c
         'max-table-compact:gap-3 max-table-compact:px-5 max-table-compact:py-2.5',
         className
       )}
+      data-testid="table-center-pot"
     >
       <motion.div
         animate={reduceMotion ? undefined : { y: [0, -4, 0] }}

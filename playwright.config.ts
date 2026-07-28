@@ -34,6 +34,8 @@ const webServer = process.env.CI
       timeout: 120_000
     };
 
+const tableMobileSmoke = /table-mobile\.e2e\.spec\.ts/;
+
 export default defineConfig({
   testDir: './tests',
   timeout: 60_000,
@@ -44,7 +46,21 @@ export default defineConfig({
     screenshot: process.env.CI ? 'only-on-failure' : 'off'
   },
   projects: process.env.CI
-    ? [{ name: 'Google Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }]
-    : undefined,
+    ? [
+        { name: 'Google Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
+        {
+          name: 'Mobile Safari',
+          use: { ...devices['iPhone 12 Landscape'] },
+          testMatch: tableMobileSmoke
+        }
+      ]
+    : [
+        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+        {
+          name: 'Mobile Safari',
+          use: { ...devices['iPhone 12 Landscape'] },
+          testMatch: tableMobileSmoke
+        }
+      ],
   webServer
 });

@@ -444,10 +444,14 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
           viewSession.street === 'COMPLETE' && (viewSession.winners ?? []).includes(uid),
         isHero: hero,
         tricksWon:
+          viewSession.mode === 'JOKER' && viewSession.joker && viewSession.street === 'TRICKS'
+            ? (viewSession.joker.tricksWon[uid] ?? 0)
+            : undefined,
+        jokerBid:
           viewSession.mode === 'JOKER' &&
           viewSession.joker &&
-          (viewSession.street === 'TRICKS' || viewSession.street === 'BIDDING')
-            ? (viewSession.joker.tricksWon[uid] ?? 0)
+          Object.prototype.hasOwnProperty.call(viewSession.joker.bids, uid)
+            ? (viewSession.joker.bids[uid] as number)
             : undefined
       };
     });

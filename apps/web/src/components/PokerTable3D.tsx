@@ -39,6 +39,8 @@ export type TablePlayerVisual = {
   isHero?: boolean;
   /** JOKER: tricks won this hand */
   tricksWon?: number;
+  /** JOKER: sticky bid once declared (0 is valid). */
+  jokerBid?: number;
 };
 
 type Props = {
@@ -184,6 +186,7 @@ export function PokerTable3D({
         />
 
         <div
+          data-testid="table-community-board"
           className="absolute left-1/2 z-board flex -translate-x-1/2 gap-0.5 max-table-compact:gap-2"
           style={tableCenterTopStyle('ring', 'boardTop')}
         >
@@ -267,6 +270,7 @@ export function PokerTable3D({
           const hiddenCount = player.hiddenCardCount ?? 0;
           const isHeroSeat = player.isHero === true;
           const roundBet = player.roundBet ?? 0;
+          const jokerBid = player.jokerBid;
           const bubble = bubbleByUser.get(player.userId);
           const hasCheckRipple = checkRippleUsers.includes(player.userId);
 
@@ -282,7 +286,7 @@ export function PokerTable3D({
             <div
               className={cn(
                 'relative flex w-full flex-col items-center transition-transform duration-300',
-                player.isActive && 'scale-[1.03] max-table-compact:scale-[1.05]'
+                player.isActive && 'scale-[1.06] max-table-compact:scale-[1.08]'
               )}
             >
               <div className="relative">
@@ -357,6 +361,18 @@ export function PokerTable3D({
               </motion.div>
             ) : null;
 
+          const bidBlock =
+            jokerBid !== undefined ? (
+              <div
+                data-testid={`seat-joker-bid-${player.userId}`}
+                className="relative z-[1] flex items-center gap-0.5 rounded-full border border-violet-400/45 bg-violet-950/80 px-1.5 py-0.5 shadow-[0_0_14px_rgba(167,139,250,0.25)]"
+              >
+                <span className="font-mono text-[9px] font-bold text-violet-200 sm:text-[10px]">
+                  {player.tricksWon !== undefined ? `${player.tricksWon}/${jokerBid}` : jokerBid}
+                </span>
+              </div>
+            ) : null;
+
           return (
             <div
               key={player.userId}
@@ -377,8 +393,8 @@ export function PokerTable3D({
                 ) : null}
                 {player.isActive ? (
                   <>
-                    <span className="pointer-events-none absolute -inset-2 animate-pulse-glow rounded-3xl border-2 border-emerald/55 bg-emerald/[0.08] shadow-[0_0_32px_rgba(74,222,128,0.4)] table-compact:-inset-3 max-table-compact:-inset-4" />
-                    <span className="pointer-events-none absolute -inset-1 rounded-3xl border border-gold/25 table-compact:-inset-2 max-table-compact:-inset-3" />
+                    <span className="pointer-events-none absolute -inset-2.5 animate-pulse-glow rounded-3xl border-[3px] border-emerald/70 bg-emerald/[0.12] shadow-[0_0_40px_rgba(74,222,128,0.55)] table-compact:-inset-3.5 max-table-compact:-inset-4" />
+                    <span className="pointer-events-none absolute -inset-1 rounded-3xl border border-gold/35 table-compact:-inset-2 max-table-compact:-inset-3" />
                   </>
                 ) : null}
                 {hasCheckRipple ? (
@@ -403,6 +419,7 @@ export function PokerTable3D({
 
                 {isBottomSeat ? (
                   <>
+                    {bidBlock}
                     {betBlock}
                     {stackBlock}
                     {avatarBlock}
@@ -411,11 +428,14 @@ export function PokerTable3D({
                   <>
                     {avatarBlock}
                     {stackBlock}
+                    {bidBlock}
                     {betBlock}
                   </>
                 )}
 
-                {player.tricksWon !== undefined && player.tricksWon > 0 ? (
+                {player.tricksWon !== undefined &&
+                player.tricksWon > 0 &&
+                jokerBid === undefined ? (
                   <JokerTrickPile
                     count={player.tricksWon}
                     deckId={deckId}

@@ -16,12 +16,13 @@ export function TableSideFabStack({ children, className, layoutVariant = 'deskto
   return (
     <div
       className={cn(
-        'pointer-events-auto absolute right-3 z-20 flex flex-col items-end gap-2',
+        'pointer-events-auto absolute z-20 flex flex-col items-end gap-2',
         isClassic && 'hidden',
-        !isClassic && 'table-compact:fixed table-compact:right-3',
+        !isClassic && 'table-compact:fixed',
         tableFabBottomClass,
         className
       )}
+      style={{ right: 'max(0.75rem, env(safe-area-inset-right))' }}
     >
       {children}
     </div>

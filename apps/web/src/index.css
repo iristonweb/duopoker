@@ -41,6 +41,27 @@
     background-color: var(--color-background);
   }
 
+  html.table-route-active,
+  html.table-route-active body.table-route-active {
+    height: calc(var(--app-vh, 1vh) * 100);
+    max-height: calc(var(--app-vh, 1vh) * 100);
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html.table-route-active body.table-route-active {
+    min-height: 0;
+  }
+
+  html.table-route-active #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body[data-table-layout-mode='mobile-classic'] [data-table-playfield] {
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  }
+
   ::selection {
     background: rgba(232, 197, 71, 0.25);
     color: #faf8f2;

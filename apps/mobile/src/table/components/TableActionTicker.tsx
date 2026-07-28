@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { GameFeedEvent } from '@duopoker/table-client';
 
@@ -7,16 +7,12 @@ type Props = {
   pulseKey: number;
 };
 
-const STREET_BANNER_MS = 1200;
+const STREET_BANNER_MS = 1400;
 
+/** Street banners only — live actions stay on seats (parity with web). */
 export function TableActionTicker({ events, pulseKey }: Props) {
   const [streetBanner, setStreetBanner] = useState<string | null>(null);
   const prevPulseRef = useRef(pulseKey);
-
-  const recentActions = useMemo(
-    () => events.filter((e) => e.kind === 'action').slice(0, 2),
-    [events]
-  );
 
   useEffect(() => {
     if (pulseKey === prevPulseRef.current) return;
@@ -30,22 +26,13 @@ export function TableActionTicker({ events, pulseKey }: Props) {
     return undefined;
   }, [pulseKey, events]);
 
-  if (!recentActions.length && !streetBanner) return null;
+  if (!streetBanner) return null;
 
   return (
     <View style={styles.wrap} pointerEvents="none" testID="table-action-ticker">
-      {streetBanner ? (
-        <View style={styles.streetBanner}>
-          <Text style={styles.streetText}>{streetBanner}</Text>
-        </View>
-      ) : null}
-      {recentActions.map((ev, i) => (
-        <View key={ev.id} style={[styles.actionRow, i > 0 && styles.actionRowMuted]}>
-          <Text style={[styles.actionText, i > 0 && styles.actionTextMuted]} numberOfLines={1}>
-            {ev.text}
-          </Text>
-        </View>
-      ))}
+      <View style={styles.streetBanner}>
+        <Text style={styles.streetText}>{streetBanner}</Text>
+      </View>
     </View>
   );
 }
@@ -55,7 +42,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '4%',
     right: '4%',
-    bottom: '8%',
+    top: '12%',
     zIndex: 28,
     alignItems: 'center',
     gap: 4
@@ -76,27 +63,5 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: '#f5e6a8',
     textAlign: 'center'
-  },
-  actionRow: {
-    width: '100%',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    backgroundColor: 'rgba(0,0,0,0.72)',
-    paddingHorizontal: 12,
-    paddingVertical: 6
-  },
-  actionRowMuted: {
-    opacity: 0.72,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(0,0,0,0.5)'
-  },
-  actionText: {
-    fontSize: 11,
-    color: '#f5f5f4',
-    textAlign: 'center'
-  },
-  actionTextMuted: {
-    color: '#a8a29e'
   }
 });

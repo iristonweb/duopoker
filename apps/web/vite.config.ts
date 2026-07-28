@@ -32,29 +32,8 @@ export default defineConfig(({ mode }) => {
         filename: 'sw-push.ts',
         injectRegister: 'auto',
         includeAssets: ['manifest.webmanifest', 'favicon.png', 'apple-touch-icon.png', 'assets/**/*'],
-        manifest: {
-          name: 'DP CLUB — Duo Poker Club',
-          short_name: 'DP CLUB',
-          description: 'Premium play-money poker — Texas Hold\'em & Joker.',
-          theme_color: '#050508',
-          background_color: '#050508',
-          display: 'standalone',
-          start_url: '/lobby',
-          icons: [
-            {
-              src: '/favicon.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: '/favicon.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable'
-            }
-          ]
-        },
+        // Single source of truth: apps/web/public/manifest.webmanifest
+        manifest: false,
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,svg,webmanifest,png,webp,jpg,jpeg}'],
           globIgnores: [

@@ -66,10 +66,12 @@ export function HandResultOverlay({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -12, scale: 0.98 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className={cn(
-            'absolute inset-x-0 top-[9.5rem] z-20 flex justify-center px-3 table-compact:top-[7.5rem] sm:top-[5.5rem] sm:px-4',
-            className
-          )}
+          className={cn('absolute inset-x-0 z-20 flex justify-center', className)}
+          style={{
+            top: 'max(1rem, 12%)',
+            paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+            paddingRight: 'max(0.75rem, env(safe-area-inset-right))'
+          }}
         >
           <GlassPanel
             glow="gold"

@@ -318,6 +318,7 @@
     "jokerNoTrumpHint": "Без козыря — козырь определит последняя карта",
     "jokerDeclCancel": "Отмена",
     "jokerBidPrompt": "Сделайте заявку на взятки",
+    "jokerBiddingStatus": "Заявки · {{cards}} карт",
     "jokerPlayPrompt": "Выберите карту для хода",
     "jokerBid": "Заявка: {{amount}}",
     "submittingBid": "Отправка…",

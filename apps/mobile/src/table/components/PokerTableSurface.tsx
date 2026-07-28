@@ -8,10 +8,13 @@ import {
   isBotUserId,
   resolveSeatLayoutIndex,
   seatCoordinates,
+  TABLE_CENTER_ANCHORS,
   type ChipFlight,
   type JokerCardFlight,
   type SeatActionBubble as SeatBubble
 } from '@duopoker/table-client';
+
+const RING_ANCHORS = TABLE_CENTER_ANCHORS.ring;
 import { tableFeltVisual } from '../lib/cosmetics';
 import type { TablePlayerVisual } from '../types';
 import { PlayingCard } from './PlayingCard';
@@ -141,7 +144,7 @@ export function PokerTableSurface({
               : null}
         </View>
 
-        <View style={[styles.potCenter, isLandscape && styles.potCenterLandscape]}>
+        <View style={styles.potCenter}>
           {showCenterPot ? (
             <PotDisplay pot={pot} chipId={potChipId} street={street} pulseKey={potPulseKey} sidePots={sidePots} />
           ) : null}
@@ -178,12 +181,14 @@ export function PokerTableSurface({
           const hiddenCount = player.hiddenCardCount ?? 0;
           const isHeroSeat = player.isHero ?? index === players.length - 1;
           const roundBet = player.roundBet ?? 0;
+          const jokerBid = player.jokerBid;
           const bubble = bubbleByUser.get(player.userId);
           const layoutIndex = resolveSeatLayoutIndex(index, players);
           const pos = seatCoordinates(layoutIndex, players.length);
           const bOff = bubbleOffset(index, players.length);
 
           const showTimer =
+            !isHeroSeat &&
             player.isActive &&
             activeUserId === player.userId &&
             activeSecondsLeft !== null &&
@@ -200,7 +205,7 @@ export function PokerTableSurface({
                   transform: [
                     { translateX: -40 },
                     pos.anchor === 'bottom' ? { translateY: -80 } : { translateY: 0 },
-                    ...(player.isActive ? [{ scale: 1.04 }] : [])
+                    ...(player.isActive ? [{ scale: 1.07 }] : [])
                   ],
                   opacity: player.isFolded || foldingSet.has(player.userId) ? 0.5 : 1,
                   zIndex: player.isWinner ? 22 : player.isActive ? 20 : 10
@@ -301,6 +306,13 @@ export function PokerTableSurface({
                   <Text style={styles.betText}>{roundBet.toLocaleString()}</Text>
                 </View>
               ) : null}
+              {jokerBid !== undefined ? (
+                <View style={styles.bidPill} testID={`seat-joker-bid-${player.userId}`}>
+                  <Text style={styles.bidText}>
+                    {player.tricksWon !== undefined ? `${player.tricksWon}/${jokerBid}` : String(jokerBid)}
+                  </Text>
+                </View>
+              ) : null}
 
               {(cards.length > 0 || hiddenCount > 0) && isHeroSeat ? (
                 <View style={styles.holeCards}>
@@ -389,7 +401,7 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   boardRow: {
     position: 'absolute',
-    top: '36%',
+    top: `${RING_ANCHORS.boardTop}%`,
     left: '6%',
     right: '12%',
     flexDirection: 'row',
@@ -398,7 +410,6 @@ const styles = StyleSheet.create({
     zIndex: 12
   },
   boardRowLandscape: {
-    top: '34%',
     left: '10%',
     right: '16%'
   },
@@ -420,14 +431,11 @@ const styles = StyleSheet.create({
   slotCard: { opacity: 0.5 },
   potCenter: {
     position: 'absolute',
-    top: '18%',
+    top: `${RING_ANCHORS.potTop}%`,
     left: 0,
     right: 0,
     alignItems: 'center',
     zIndex: 14
-  },
-  potCenterLandscape: {
-    top: '14%'
   },
   seatTimer: {
     position: 'absolute',
@@ -447,14 +455,14 @@ const styles = StyleSheet.create({
   },
   activeGlow: {
     position: 'absolute',
-    top: -8,
-    left: -8,
-    right: -8,
-    bottom: -8,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(74,222,128,0.55)',
-    backgroundColor: 'rgba(74,222,128,0.08)'
+    top: -10,
+    left: -10,
+    right: -10,
+    bottom: -10,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: 'rgba(74,222,128,0.75)',
+    backgroundColor: 'rgba(74,222,128,0.14)'
   },
   winnerGlow: {
     position: 'absolute',
@@ -566,6 +574,15 @@ const styles = StyleSheet.create({
     paddingVertical: 3
   },
   betText: { fontSize: 9, fontWeight: '700', color: colors.goldLight, fontVariant: ['tabular-nums'] },
+  bidPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.5)',
+    backgroundColor: 'rgba(46,16,101,0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 3
+  },
+  bidText: { fontSize: 9, fontWeight: '800', color: '#ddd6fe', fontVariant: ['tabular-nums'] },
   holeCards: { flexDirection: 'row', gap: 2, marginTop: 2 },
   checkRipple: {
     position: 'absolute',
@@ -581,7 +598,7 @@ const styles = StyleSheet.create({
   tricksWrap: {
     position: 'absolute',
     left: -24,
-    top: '36%',
+    top: `${RING_ANCHORS.jokerFlightTop}%`,
     zIndex: 3
   },
   bottomFade: {

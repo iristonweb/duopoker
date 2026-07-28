@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { AppBackground, cn } from '@duopoker/ui-kit';
 import { useTableDockHeight } from '../../hooks/useTableDockHeight';
 import { useViewportHeight } from '../../hooks/useViewportHeight';
@@ -20,14 +20,26 @@ export function GameTableShell({
   useTableDockHeight(dockRef);
   useViewportHeight();
 
+  useEffect(() => {
+    document.documentElement.classList.add('table-route-active');
+    document.body.classList.add('table-route-active');
+    return () => {
+      document.documentElement.classList.remove('table-route-active');
+      document.body.classList.remove('table-route-active');
+    };
+  }, []);
+
   return (
     <div
       data-testid="game-table-shell"
       className={cn(
-        'relative h-[calc(var(--app-vh,1vh)*100)] min-h-0 w-full overflow-hidden overscroll-none touch-pan-y',
+        'relative h-[calc(var(--app-vh,1vh)*100)] min-h-0 w-full overflow-hidden overscroll-none touch-none select-none',
         className
       )}
-      style={{ ['--table-dock-height' as string]: '7.5rem' }}
+      style={{
+        ['--table-dock-height' as string]: '7.5rem',
+        WebkitTouchCallout: 'none'
+      }}
     >
       <AppBackground />
       <div
@@ -46,9 +58,14 @@ export function GameTableShell({
       />
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         {hud}
-        <div className="relative min-h-0 flex-1">{table}</div>
+        <div
+          className="relative min-h-0 flex-1 touch-none"
+          data-table-playfield
+        >
+          {table}
+        </div>
         {dock ? (
-          <div ref={dockRef} data-table-dock className="shrink-0">
+          <div ref={dockRef} data-table-dock className="shrink-0 touch-manipulation">
             {dock}
           </div>
         ) : null}

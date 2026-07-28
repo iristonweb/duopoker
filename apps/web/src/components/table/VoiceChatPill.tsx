@@ -96,7 +96,10 @@ export function VoiceChatPill({ className }: { className?: string }) {
   return (
     <div
       className={cn('fixed z-50 hidden max-table-compact:block', className)}
-      style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))', right: 'max(1rem, env(safe-area-inset-right))' }}
+      style={{
+        bottom: 'calc(var(--table-dock-height, 7.5rem) + 0.75rem)',
+        right: 'max(1rem, env(safe-area-inset-right))'
+      }}
     >
       <AnimatePresence>
         {open && !blocked ? <VoiceChatPanel onClose={() => setOpen(false)} /> : null}

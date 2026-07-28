@@ -1,6 +1,8 @@
 {
   "name": "DP CLUB — Duo Poker Club",
   "short_name": "DP CLUB",
+  "id": "/",
+  "scope": "/",
   "start_url": "/lobby",
   "display": "standalone",
   "background_color": "#050508",

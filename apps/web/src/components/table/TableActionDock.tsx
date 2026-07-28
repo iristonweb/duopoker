@@ -146,19 +146,6 @@ export function TableActionDock({
                       {activeLabel}
                     </span>
                   </p>
-                  {lastActionText ? (
-                    <motion.p
-                      key={lastActionText}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="truncate text-sm font-medium text-ivory sm:text-base"
-                    >
-                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wider text-gold/60">
-                        {t('table.lastAction')}:
-                      </span>
-                      {lastActionText}
-                    </motion.p>
-                  ) : null}
                 </div>
               )}
             </div>

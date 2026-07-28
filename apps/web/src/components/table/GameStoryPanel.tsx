@@ -155,7 +155,6 @@ function ControlButtons({
 
 export function GameStoryPanel({
   events,
-  pulseKey,
   soundOn,
   musicOn,
   onSoundToggle,
@@ -206,8 +205,6 @@ export function GameStoryPanel({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
-
-  const latest = visibleEvents[0];
 
   const mobileSheet =
     typeof document !== 'undefined'
@@ -270,32 +267,11 @@ export function GameStoryPanel({
           className
         )}
       >
-        <AnimatePresence mode="wait">
-          {latest && !open ? (
-            <motion.div
-              key={`${latest.id}-${pulseKey}`}
-              initial={{ opacity: 0, y: -10, scale: 0.96 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: [0.96, 1.02, 1],
-                transition: { duration: 0.35, ease: 'easeOut' }
-              }}
-              exit={{ opacity: 0, y: -6 }}
-              className={cn('text-sm leading-relaxed sm:text-base', kindStyle[latest.kind])}
-            >
-              <GlassPanel glow="gold" className="px-3.5 py-3 shadow-[0_0_24px_rgba(232,197,71,0.12)] ring-1 ring-gold/20">
-                <span className="mr-2 text-sm opacity-70">{kindIcon[latest.kind]}</span>
-                <span className="font-medium">{latest.text}</span>
-              </GlassPanel>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
+            data-testid="table-history-fab"
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition',
               open
@@ -347,22 +323,12 @@ export function GameStoryPanel({
       {!collapseMobileToolbar && layoutVariant === 'classic' ? (
       <div
         data-testid="table-mobile-toolbar"
-        className={cn(
-          'pointer-events-auto fixed left-3 right-3 z-30',
-          tableFabBottomClass
-        )}
+        className={cn('pointer-events-auto fixed z-30', tableFabBottomClass)}
+        style={{
+          left: 'max(0.75rem, env(safe-area-inset-left))',
+          right: 'max(0.75rem, env(safe-area-inset-right))'
+        }}
       >
-        {latest && !open ? (
-          <div
-            className={cn(
-              'mb-1.5 truncate rounded-lg border border-white/10 bg-black/55 px-2.5 py-1 text-[10px] leading-snug backdrop-blur-md',
-              kindStyle[latest.kind]
-            )}
-          >
-            <span className="mr-1 opacity-60">{kindIcon[latest.kind]}</span>
-            {latest.text}
-          </div>
-        ) : null}
         <div className="glass-shine flex items-center gap-1 rounded-full border border-white/12 bg-black/70 px-1.5 py-1 shadow-panel backdrop-blur-md">
           <button
             type="button"

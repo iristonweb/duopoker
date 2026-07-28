@@ -135,6 +135,7 @@ export function MobileTableSurface({
         />
 
         <div
+          data-testid="table-community-board"
           className="absolute left-1/2 z-board flex -translate-x-1/2 gap-0.5"
           style={tableCenterTopStyle('mobile-arc', 'boardTop')}
         >

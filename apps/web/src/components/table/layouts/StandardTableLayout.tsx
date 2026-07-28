@@ -11,6 +11,7 @@ import { JokerNotebookPanel } from '../JokerNotebookPanel';
 import { BustedPlayerOverlay } from '../BustedPlayerOverlay';
 import { AllInRunoutBanner } from '../AllInRunoutBanner';
 import { TableActionTicker } from '../TableActionTicker';
+import { JokerFeltStatusChip } from '../JokerFeltStatusChip';
 import { TuzovanieTableOverlay } from '../TuzovanieTableOverlay';
 import { TableLeaderboardPanel } from '../TableLeaderboardPanel';
 import { TableSideFabStack } from '../TableSideFabStack';
@@ -143,6 +144,13 @@ export function StandardTableLayout({
               surfaceLayout={surfaceLayout}
             />
             {tableSurface}
+            {p.isJoker ? (
+              <JokerFeltStatusChip
+                street={p.tableView.street}
+                cardsThisDeal={p.tableView.joker?.cardsThisDeal}
+                surfaceLayout={surfaceLayout}
+              />
+            ) : null}
             <AllInRunoutBanner
               visible={p.showAllInRunoutBanner}
               className={surfaceLayout === 'mobile-arc' ? 'top-[9%]' : 'top-[11%]'}
@@ -151,7 +159,7 @@ export function StandardTableLayout({
               events={p.feedEvents}
               pulseKey={p.feedPulseKey}
               hideWhenHeroActive={p.myTurn}
-              className={surfaceLayout === 'mobile-arc' ? 'top-[52%]' : 'top-[50%]'}
+              className={surfaceLayout === 'mobile-arc' ? 'top-[18%]' : 'top-[16%]'}
             />
             <HandResultOverlay
               visible={p.tableView.street === 'COMPLETE' && p.session.street === 'COMPLETE'}

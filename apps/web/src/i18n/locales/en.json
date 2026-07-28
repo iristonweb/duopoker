@@ -318,6 +318,7 @@
     "jokerNoTrumpHint": "No trump — the last card dealt will set trump",
     "jokerDeclCancel": "Cancel",
     "jokerBidPrompt": "Bid your tricks",
+    "jokerBiddingStatus": "Bidding · {{cards}} cards",
     "jokerPlayPrompt": "Choose a card to play",
     "jokerBid": "Bid {{amount}}",
     "submittingBid": "Submitting…",

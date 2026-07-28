@@ -26,12 +26,12 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @duopoker/shared-types build && pnpm --filter @duopoker/db-schema build
+      - run: pnpm --filter @duopoker/game-engine build
       - run: pnpm --filter @duopoker/server-core test
       - run: pnpm lint
       - run: pnpm audit --audit-level=high
       - run: pnpm test
       - run: pnpm --filter @duopoker/game-engine test
-      - run: pnpm --filter @duopoker/game-engine build
       - run: pnpm --filter @duopoker/table-client test
       - run: pnpm --filter @duopoker/table-client build
       - run: node scripts/bundle-vercel-api.mjs

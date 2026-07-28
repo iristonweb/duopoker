@@ -512,11 +512,12 @@ export function JokerNotebookPanel({
   return (
     <div
       className={cn(
-        'pointer-events-auto fixed right-3 z-30 flex flex-col items-end gap-2',
+        'pointer-events-auto fixed z-30 flex flex-col items-end gap-2',
         tableNotebookFabBottomClass,
-        'max-table-compact:absolute max-table-compact:bottom-auto max-table-compact:right-4 max-table-compact:top-[4.5rem]',
+        'max-table-compact:absolute max-table-compact:bottom-auto max-table-compact:top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))]',
         className
       )}
+      style={{ right: 'max(0.75rem, env(safe-area-inset-right))' }}
     >
       {!hideFab ? (
       <button

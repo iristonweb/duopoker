@@ -14,14 +14,24 @@
       "prisma",
       "sharp"
     ],
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-qwww-vcr4-c8h2"
+      ]
+    },
     "overrides": {
       "@babel/plugin-transform-modules-systemjs": ">=7.29.4",
       "@xmldom/xmldom": ">=0.8.13",
-      "fast-uri": ">=3.1.2",
+      "brace-expansion": ">=5.0.8",
+      "engine.io": ">=6.6.7",
+      "fast-uri": ">=4.1.1",
       "form-data": ">=3.0.5",
       "hono": ">=4.12.25",
+      "js-yaml": ">=4.3.0",
+      "minimatch": ">=10.2.0",
+      "postcss": ">=8.5.18",
       "qs": ">=6.15.2",
-      "react-router": "7.15.1",
+      "react-router": "~7.18.0",
       "serialize-javascript": ">=7.0.5",
       "shell-quote": ">=1.8.4",
       "tar": ">=7.5.16",
@@ -73,7 +83,7 @@
     "husky": "^9.1.7",
     "pg": "^8.16.0",
     "prettier": "^3.5.3",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.0",
     "socket.io-client": "^4.8.1",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.58.2",

@@ -22,4 +22,6 @@ export type TablePlayerVisual = {
   isHero?: boolean;
   /** JOKER: tricks won this hand */
   tricksWon?: number;
+  /** JOKER: sticky bid once declared (0 is valid). */
+  jokerBid?: number;
 };

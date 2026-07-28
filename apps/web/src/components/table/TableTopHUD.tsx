@@ -158,6 +158,11 @@ export function TableTopHUD({
         'relative z-30 shrink-0 overflow-hidden border-b border-gold/20 bg-[linear-gradient(180deg,rgba(5,5,8,0.94)_0%,rgba(5,5,8,0.82)_100%)] shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_48px_rgba(232,197,71,0.06)] backdrop-blur-xl',
         className
       )}
+      style={{
+        paddingTop: 'max(0px, env(safe-area-inset-top))',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)'
+      }}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />

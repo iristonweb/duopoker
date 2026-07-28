@@ -13,6 +13,20 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
 }
 
+async function expectLocatorWithinViewport(
+  page: import('@playwright/test').Page,
+  locator: import('@playwright/test').Locator
+) {
+  const box = await locator.boundingBox();
+  const vp = page.viewportSize();
+  expect(box).not.toBeNull();
+  expect(vp).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(-2);
+  expect(box!.y).toBeGreaterThanOrEqual(-2);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(vp!.width + 2);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(vp!.height + 2);
+}
+
 async function expectBoxesDoNotOverlap(
   a: import('@playwright/test').Locator,
   b: import('@playwright/test').Locator
@@ -93,7 +107,6 @@ test.describe('mobile table layout', () => {
       await page.emulateMedia({ orientation: 'portrait' });
       await page.addInitScript(() => {
         localStorage.setItem('duopoker_mobile_immersive_table', '1');
-        sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
       });
       await page.goto(`${BASE}/table/smoke-test-session`);
       await expect(page.locator('body')).toHaveAttribute(
@@ -151,6 +164,28 @@ test.describe('mobile table layout', () => {
     await expect(page.getByTestId('table-orientation-gate')).toBeVisible({ timeout: 10_000 });
   });
 
+  for (const viewport of [
+    { width: 667, height: 375, label: 'iPhone SE landscape' },
+    { width: 812, height: 375, label: 'iPhone X landscape' },
+    { width: 640, height: 360, label: 'compact Android landscape' }
+  ]) {
+    test(`${viewport.label}: chrome stays in viewport`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.emulateMedia({ orientation: 'landscape' });
+      await page.goto(`${BASE}/table/smoke-test-session`);
+      await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      const shell = page.getByTestId('game-table-shell');
+      if (await shell.isVisible().catch(() => false)) {
+        await expectLocatorWithinViewport(page, shell);
+        const hud = page.getByTestId('table-top-hud');
+        if (await hud.isVisible().catch(() => false)) {
+          await expectLocatorWithinViewport(page, hud);
+        }
+      }
+    });
+  }
+
   test('landscape table route has no horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 667, height: 375 });
     await page.emulateMedia({ orientation: 'landscape' });
@@ -195,7 +230,6 @@ test.describe('mobile table layout', () => {
     await page.emulateMedia({ orientation: 'landscape' });
     await page.addInitScript(() => {
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
-      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     });
     await page.goto(`${BASE}/table/smoke-test-session`);
     await expect(page.locator('body')).toHaveAttribute('data-table-layout-mode', 'mobile-classic', {
@@ -241,7 +275,6 @@ test.describe('mobile table layout', () => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
-      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
@@ -250,6 +283,13 @@ test.describe('mobile table layout', () => {
     });
     await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('table-action-dock')).toBeVisible({ timeout: 15_000 });
+    await expectLocatorWithinViewport(page, page.getByTestId('table-top-hud'));
+    await expectLocatorWithinViewport(page, page.getByTestId('table-action-dock'));
+    const pot = page.getByTestId('table-center-pot');
+    const board = page.getByTestId('table-community-board');
+    if ((await pot.isVisible().catch(() => false)) && (await board.isVisible().catch(() => false))) {
+      await expectBoxesDoNotOverlap(pot, board);
+    }
     // Fold / Check|Call appear when it is the hero's turn after display catch-up.
     await expect(
       page.getByTestId('table-action-check').or(page.getByTestId('table-action-call'))
@@ -280,12 +320,17 @@ test.describe('mobile table layout', () => {
       sockets[i]!.emit('joinSession', { sessionId, userId: uid, mode: 'JOKER', buyIn: 100 });
     });
 
+    let bidUserIds: string[] = [];
     try {
-      await waitForState(
+      const state = await waitForState(
         sockets[0]!,
-        (s) => s.street === 'BIDDING' && s.players.length === 4,
-        12_000
+        (s) =>
+          s.street === 'BIDDING' &&
+          s.players.length === 4 &&
+          Object.keys(s.joker?.bids ?? {}).length >= 1,
+        15_000
       );
+      bidUserIds = Object.keys(state.joker?.bids ?? {});
     } catch {
       sockets.forEach((socket) => socket.disconnect());
       testInfo.skip(true, 'Backend Joker socket unavailable — start full backend on port 4000.');
@@ -299,7 +344,6 @@ test.describe('mobile table layout', () => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
-      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     }, userIds[0]);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
@@ -308,6 +352,13 @@ test.describe('mobile table layout', () => {
     });
     await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('table-action-dock')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('joker-felt-status')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('table-center-pot')).toHaveCount(0);
+    // No mid-felt action spam / always-on toast — history is icon-only.
+    await expect(page.getByTestId('table-action-ticker')).toHaveCount(0);
+    for (const uid of bidUserIds.slice(0, 2)) {
+      await expect(page.getByTestId(`seat-joker-bid-${uid}`)).toBeVisible({ timeout: 10_000 });
+    }
     await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
@@ -347,7 +398,6 @@ test.describe('mobile table layout', () => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
-      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);
@@ -396,7 +446,6 @@ test.describe('mobile table layout', () => {
       localStorage.setItem('duopoker_user_id', uid);
       localStorage.setItem('duopoker_guest_id', uid);
       localStorage.setItem('duopoker_mobile_immersive_table', '1');
-      sessionStorage.setItem('duopoker_fullscreen_prompted', '1');
     }, userId);
 
     await page.goto(`${BASE}/table/${encodeURIComponent(sessionId)}`);

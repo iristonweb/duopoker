@@ -87,7 +87,7 @@ export const removePlayerFromTable = (
       activePlayerIndex: 0,
       activePlayerId: players[0],
       street: 'LOBBY',
-      phase: 'WAITING',
+      phase: 'DEAL',
       communityCards: [],
       foldedPlayerIds: [],
       allInPlayerIds: [],

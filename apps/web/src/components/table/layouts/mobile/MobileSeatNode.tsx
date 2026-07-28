@@ -48,6 +48,9 @@ export function MobileSeatNode({
   const avatarSize = premium ? 'mobile-premium' : 'mobile';
   const holeCards = player.holeCards ?? [];
   const hiddenCount = player.hiddenCardCount ?? 0;
+  const jokerBid = player.jokerBid;
+  const showSeatTimer =
+    !player.isHero && player.isActive && secondsLeft !== null && secondsLeft > 0;
 
   return (
     <div className="relative flex flex-col items-center gap-0.5">
@@ -61,16 +64,16 @@ export function MobileSeatNode({
       <button
         type="button"
         className={cn(
-          'relative rounded-full',
-          player.isActive && 'ring-2 ring-emerald/50',
+          'relative rounded-full transition-transform',
+          player.isActive && 'scale-105 ring-[3px] ring-emerald/70 shadow-[0_0_24px_rgba(74,222,128,0.45)]',
           player.isWinner && 'ring-2 ring-gold/60'
         )}
         onClick={() => onAvatarTap?.(player.userId)}
         aria-label={player.name}
       >
-        {player.isActive && secondsLeft !== null ? (
+        {showSeatTimer ? (
           <div className="absolute -inset-1">
-            <TurnTimer secondsLeft={secondsLeft} size={premium ? 72 : 64} className="opacity-90" />
+            <TurnTimer secondsLeft={secondsLeft!} size={premium ? 72 : 64} className="opacity-90" />
           </div>
         ) : null}
         <SeatStatusOverlay
@@ -107,6 +110,14 @@ export function MobileSeatNode({
         compact
         className="w-full"
       />
+      {jokerBid !== undefined ? (
+        <span
+          data-testid={`seat-joker-bid-${player.userId}`}
+          className="rounded-full border border-violet-400/45 bg-violet-950/80 px-2 py-0.5 font-mono text-[9px] font-bold text-violet-200"
+        >
+          {player.tricksWon !== undefined ? `${player.tricksWon}/${jokerBid}` : jokerBid}
+        </span>
+      ) : null}
       {(player.roundBet ?? 0) > 0 ? (
         <span className="rounded-full border border-gold/35 bg-black/70 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-200">
           +{player.roundBet?.toLocaleString()}
