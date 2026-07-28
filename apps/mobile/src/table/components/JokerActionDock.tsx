@@ -7,9 +7,15 @@ import {
   isJokerCard,
   isNominalTrumpBanned,
   jokerLegalPlays,
-  leadSuitFromTrick
+  leadInfoFromTrick
 } from '@duopoker/shared-types/index';
-import { formatCardLabel, formatTableError, jokerTrumpDisplay, suitLabel } from '@duopoker/table-client';
+import {
+  formatCardLabel,
+  formatJokerDeclaration,
+  formatTableError,
+  jokerTrumpDisplay,
+  suitLabel
+} from '@duopoker/table-client';
 import { PlayingCard } from './PlayingCard';
 import { TurnTimer } from './TurnTimer';
 import { tableHaptic } from '../lib/table-haptics';
@@ -76,7 +82,7 @@ export function JokerActionDock({
   const bidding = street === 'BIDDING';
   const trumpChoice = street === 'TRUMP_CHOICE';
   const showHand = street === 'BIDDING' || street === 'TRICKS' || trumpChoice;
-  const trump = jokerTrumpDisplay(joker, t);
+  const trump = jokerTrumpDisplay(joker, t, street);
   const clampedBid = Math.min(maxBid, Math.max(0, bidAmount));
   const isDealer = userId === dealerId;
   const othersBidSum = playerIds
@@ -93,9 +99,18 @@ export function JokerActionDock({
 
   const legalCards = useMemo(() => {
     if (bidding || trumpChoice || !showActions) return new Set<string>();
-    const lead = leadSuitFromTrick(joker.currentTrick);
-    return new Set(jokerLegalPlays(holeCards, lead, joker.trumpSuit, strictJoker));
+    const lead = leadInfoFromTrick(joker.currentTrick);
+    return new Set(
+      jokerLegalPlays(holeCards, lead.suit, joker.trumpSuit, strictJoker, lead.rankMode)
+    );
   }, [bidding, trumpChoice, showActions, holeCards, joker.currentTrick, joker.trumpSuit, strictJoker]);
+
+  const suitForceHint = useMemo(() => {
+    if (bidding || trumpChoice || !showActions || isLeadingTrick) return null;
+    const leadPlay = joker.currentTrick[0];
+    if (!leadPlay || !isJokerCard(leadPlay.card)) return null;
+    return formatJokerDeclaration(leadPlay.declaration, t) ?? null;
+  }, [bidding, trumpChoice, showActions, isLeadingTrick, joker.currentTrick, t]);
 
   const clearPendingTimer = () => {
     if (pendingTimerRef.current) {
@@ -279,11 +294,13 @@ export function JokerActionDock({
                 ])
               : null}
             <Pressable style={styles.chipBtn} onPress={() => setDeclarationCard(null)}>
-              <Text style={styles.chipBtnText}>{t('table.fold')}</Text>
+              <Text style={styles.chipBtnText}>{t('table.jokerDeclCancel')}</Text>
             </Pressable>
           </View>
         </View>
       ) : null}
+
+      {suitForceHint ? <Text style={styles.hint}>{suitForceHint}</Text> : null}
 
       {showHand ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.handRow}>

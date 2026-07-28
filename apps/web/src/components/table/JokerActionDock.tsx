@@ -7,9 +7,10 @@ import {
   isJokerCard,
   isNominalTrumpBanned,
   jokerLegalPlays,
-  leadSuitFromTrick
+  leadInfoFromTrick
 } from '@duopoker/shared-types/index';
 import { formatCardLabel, suitLabel } from '../../lib/joker-labels';
+import { formatJokerDeclaration } from '@duopoker/table-client';
 import { formatTableError } from '../../lib/table-errors';
 import { tableHaptic } from '../../lib/table-haptics';
 import { PlayingCard } from '../cosmetics/PlayingCard';
@@ -92,9 +93,18 @@ export function JokerActionDock({
 
   const legalCards = useMemo(() => {
     if (bidding || trumpChoice || !showActions) return new Set<string>();
-    const lead = leadSuitFromTrick(joker.currentTrick);
-    return new Set(jokerLegalPlays(holeCards, lead, joker.trumpSuit, strictJoker));
+    const lead = leadInfoFromTrick(joker.currentTrick);
+    return new Set(
+      jokerLegalPlays(holeCards, lead.suit, joker.trumpSuit, strictJoker, lead.rankMode)
+    );
   }, [bidding, trumpChoice, showActions, holeCards, joker.currentTrick, joker.trumpSuit, strictJoker]);
+
+  const suitForceHint = useMemo(() => {
+    if (bidding || trumpChoice || !showActions || isLeadingTrick) return null;
+    const leadPlay = joker.currentTrick[0];
+    if (!leadPlay || !isJokerCard(leadPlay.card)) return null;
+    return formatJokerDeclaration(leadPlay.declaration, t) ?? null;
+  }, [bidding, trumpChoice, showActions, isLeadingTrick, joker.currentTrick, t]);
 
   const clearPendingTimer = () => {
     if (pendingTimerRef.current) {
@@ -325,7 +335,7 @@ export function JokerActionDock({
                   ])
                 : null}
               <Button variant="ghost" size="sm" className="text-xs" onClick={() => setDeclarationCard(null)}>
-                {t('table.fold')}
+                {t('table.jokerDeclCancel')}
               </Button>
             </div>
           </div>
@@ -333,6 +343,9 @@ export function JokerActionDock({
 
         {showHand ? (
           <div className="flex flex-col gap-2">
+            {suitForceHint ? (
+              <p className="text-center text-xs font-medium text-gold/90">{suitForceHint}</p>
+            ) : null}
             {!showActions && !lastActionText ? (
               <p className="text-center text-sm text-subtle">{t('table.waitingOpponent')}</p>
             ) : null}

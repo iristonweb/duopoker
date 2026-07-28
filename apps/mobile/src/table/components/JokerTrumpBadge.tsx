@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { JokerHandState } from '@duopoker/shared-types/index';
+import type { GameStreet, JokerHandState } from '@duopoker/shared-types/index';
 import { isRedSuit, jokerTrumpDisplay } from '@duopoker/table-client';
 import { mobileTheme } from '../../theme';
 
@@ -8,14 +8,15 @@ const { colors } = mobileTheme;
 
 type Props = {
   joker: Pick<JokerHandState, 'trumpSuit' | 'trumpCard'>;
+  street?: GameStreet;
   showHint?: boolean;
   compact?: boolean;
   style?: ViewStyle;
 };
 
-export function JokerTrumpBadge({ joker, showHint = false, compact = false, style }: Props) {
+export function JokerTrumpBadge({ joker, street, showHint = false, compact = false, style }: Props) {
   const { t } = useTranslation();
-  const trump = jokerTrumpDisplay(joker, t);
+  const trump = jokerTrumpDisplay(joker, t, street);
 
   return (
     <View style={[styles.shell, compact && styles.shellCompact, style]}>

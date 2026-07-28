@@ -79,7 +79,15 @@ function MetaChipGroup({
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-      {isJoker && joker ? <JokerTrumpBadge joker={joker} showHint={bidding} size="sm" className="scale-90 sm:scale-100" /> : null}
+      {isJoker && joker ? (
+        <JokerTrumpBadge
+          joker={joker}
+          street={street}
+          showHint={bidding || street === 'TRUMP_CHOICE'}
+          size="sm"
+          className="scale-90 sm:scale-100"
+        />
+      ) : null}
       {mode === 'HOLDEM' ? (
         <Badge variant="gold" className="px-2 py-0.5 text-[9px] shadow-[0_0_14px_rgba(232,197,71,0.12)] sm:px-2.5 sm:py-1 sm:text-[10px]">
           {t('table.blinds', { sb: smallBlind, bb: bigBlind })}

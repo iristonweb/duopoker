@@ -1,5 +1,6 @@
 import type { Card, PlayerAction } from '@duopoker/shared-types/index';
 import { formatJokerPlayLine } from '../joker/declaration-label';
+import { suitSymbol } from '../joker/labels';
 
 export type SeatActionKind =
   | 'fold'
@@ -9,6 +10,7 @@ export type SeatActionKind =
   | 'raise'
   | 'allIn'
   | 'bid'
+  | 'trump'
   | 'playCard'
   | 'blindSB'
   | 'blindBB';
@@ -52,6 +54,13 @@ export const formatSeatActionShort = (
           };
     case 'bid':
       return { kind: 'bid', label: t('table.actionBid', { amount: action.amount ?? 0 }) };
+    case 'chooseTrump': {
+      const suit = action.trumpSuit;
+      const label = suit
+        ? t('table.actionChooseTrump', { suit: suitSymbol(suit) })
+        : t('table.actionChooseNoTrump');
+      return { kind: 'trump', label };
+    }
     case 'playCard': {
       const cardLabel = action.card
         ? cardFormatter
@@ -77,6 +86,7 @@ export const seatActionIcon: Record<SeatActionKind, string> = {
   raise: '▲',
   allIn: '★',
   bid: '♠',
+  trump: '♦',
   playCard: '♣',
   blindSB: 'SB',
   blindBB: 'BB'

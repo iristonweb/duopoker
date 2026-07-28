@@ -254,7 +254,7 @@ export const createRealtimeServer = (app: Express) => {
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
-      origin: config.corsOrigin === true ? true : config.corsOrigin,
+      origin: config.corsOrigin,
       credentials: true
     }
   });

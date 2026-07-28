@@ -1,8 +1,10 @@
-import type { Card, JokerDeclaration, JokerTrickPlay, Rank, Suit } from '@duopoker/shared-types/index';
+import type { Card, JokerDeclaration, JokerTrickPlay, Suit } from '@duopoker/shared-types/index';
 import {
+  cardRankIndex as sharedCardRankIndex,
   cardSuit as sharedCardSuit,
   isJokerCard as sharedIsJokerCard,
   jokerLegalPlays as sharedJokerLegalPlays,
+  leadInfoFromTrick as sharedLeadInfoFromTrick,
   leadSuitFromTrick as sharedLeadSuitFromTrick,
   normalizeJokerCard as sharedNormalizeJokerCard
 } from '@duopoker/shared-types/index';
@@ -10,6 +12,7 @@ import {
 export const isJokerCard = sharedIsJokerCard;
 export const cardSuit = sharedCardSuit;
 export const leadSuitFromTrick = sharedLeadSuitFromTrick;
+export const leadInfoFromTrick = sharedLeadInfoFromTrick;
 
 export const normalizeJokerCard = (raw: string): Card | null =>
   sharedNormalizeJokerCard(raw) as Card | null;
@@ -18,25 +21,13 @@ export const jokerLegalPlays = (
   hand: Card[],
   leadSuit: Suit | null,
   trumpSuit: Suit | null,
-  strictJoker = false
-): Card[] => sharedJokerLegalPlays(hand, leadSuit, trumpSuit, strictJoker) as Card[];
+  strictJoker = false,
+  rankMode?: 'senior' | 'minor'
+): Card[] => sharedJokerLegalPlays(hand, leadSuit, trumpSuit, strictJoker, rankMode) as Card[];
 
-const RANK_ORDER: Rank[] = ['6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+export const cardRankIndex = (c: Card): number => sharedCardRankIndex(c);
 
-export const cardRankIndex = (c: Card): number => {
-  const r = c[0] as Rank;
-  const i = RANK_ORDER.indexOf(r);
-  return i >= 0 ? i : 0;
-};
-
-const effectiveLeadSuit = (plays: JokerTrickPlay[]): Suit | null => {
-  const first = plays[0];
-  if (!first) return null;
-  if (isJokerCard(first.card) && first.declaration && typeof first.declaration === 'object') {
-    return first.declaration.suit;
-  }
-  return leadSuitFromTrick(plays);
-};
+const effectiveLeadSuit = (plays: JokerTrickPlay[]): Suit | null => sharedLeadInfoFromTrick(plays).suit;
 
 const playStrength = (
   play: JokerTrickPlay,

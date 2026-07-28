@@ -57,8 +57,10 @@ export const config = {
     const fromEnv = splitOrigins(process.env.CORS_ORIGIN?.trim());
     const primary = defaultPublicWebUrl;
     const merged = new Set([primary, ...fromEnv]);
-    merged.add('http://localhost:5180');
-    merged.add('http://localhost:5173');
+    if (!isProduction) {
+      merged.add('http://localhost:5180');
+      merged.add('http://localhost:5173');
+    }
     if (process.env.VERCEL_URL) {
       merged.add(`https://${process.env.VERCEL_URL}`.replace(/\/$/, ''));
     }

@@ -170,7 +170,7 @@ Login → `GET /api/auth/me` should return `"role":"SUPERADMIN"`. Admin UI: `/ad
 
 ## Founder / Superadmin
 
-The founder account (`iristonweb@gmail.com` by default) receives **SUPERADMIN**, **Royal lifetime**, all cosmetics, and 999 999 chips.
+The founder account (set via `FOUNDER_EMAIL`) receives **SUPERADMIN**, **BLACK lifetime**, all cosmetics, and 999 999 chips.
 
 ### Automatic (after deploy)
 
@@ -212,10 +212,12 @@ Prices are in rubles (see `packages/shared-types/src/pricing.ts`):
 
 | Tier | Price |
 |------|-------|
+| Bronze | 290 ₽/mo |
 | Silver | 490 ₽/mo |
 | Gold | 990 ₽/mo |
 | Platinum | 1 990 ₽/mo |
-| Royal | 4 990 ₽/mo |
+| Diamond | 2 990 ₽/mo |
+| Black | 4 990 ₽/mo |
 
 Checkout: `POST /api/monetization/subscription/checkout` → redirect to YooKassa.
 

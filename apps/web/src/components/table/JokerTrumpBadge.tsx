@@ -1,18 +1,19 @@
 import { useTranslation } from 'react-i18next';
-import type { JokerHandState } from '@duopoker/shared-types/index';
+import type { GameStreet, JokerHandState } from '@duopoker/shared-types/index';
 import { cn } from '@duopoker/ui-kit';
 import { isRedSuit, jokerTrumpDisplay } from '../../lib/joker-labels';
 
 type Props = {
   joker: Pick<JokerHandState, 'trumpSuit' | 'trumpCard'>;
+  street?: GameStreet;
   showHint?: boolean;
   size?: 'sm' | 'md';
   className?: string;
 };
 
-export function JokerTrumpBadge({ joker, showHint = false, size = 'md', className }: Props) {
+export function JokerTrumpBadge({ joker, street, showHint = false, size = 'md', className }: Props) {
   const { t } = useTranslation();
-  const trump = jokerTrumpDisplay(joker, t);
+  const trump = jokerTrumpDisplay(joker, t, street);
   const compact = size === 'sm';
   const trumpKey = joker.trumpSuit ?? joker.trumpCard ?? 'none';
 

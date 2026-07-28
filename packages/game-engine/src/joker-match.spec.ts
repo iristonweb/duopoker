@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
-import { isJokerCard, jokerLegalPlays, leadSuitFromTrick } from '@duopoker/shared-types/index';
+import { isJokerCard, jokerLegalPlays, leadInfoFromTrick } from '@duopoker/shared-types/index';
 import {
   applyTableAction,
   createInitialTableState,
@@ -18,8 +18,14 @@ const jokerActionCandidates = (state: SessionState, userId: string): PlayerActio
 
   if (state.street === 'TRICKS' && state.joker) {
     const hand = state.playerCards[userId] ?? [];
-    const lead = leadSuitFromTrick(state.joker.currentTrick);
-    const legal = jokerLegalPlays(hand, lead, state.joker.trumpSuit, state.jokerRules?.strictJoker);
+    const lead = leadInfoFromTrick(state.joker.currentTrick);
+    const legal = jokerLegalPlays(
+      hand,
+      lead.suit,
+      state.joker.trumpSuit,
+      state.jokerRules?.strictJoker,
+      lead.rankMode
+    );
     for (const card of legal) {
       out.push({
         ...base,

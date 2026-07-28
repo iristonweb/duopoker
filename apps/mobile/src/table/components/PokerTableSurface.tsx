@@ -6,6 +6,7 @@ import { gameChipId, resolveEquipped } from '@duopoker/shared-types';
 import {
   bubbleOffset,
   isBotUserId,
+  resolveSeatLayoutIndex,
   seatCoordinates,
   type ChipFlight,
   type JokerCardFlight,
@@ -49,6 +50,8 @@ type Props = {
   activeSecondsLeft?: number | null;
   deckShuffling?: boolean;
   isLandscape?: boolean;
+  /** Hide chip pot (Joker has no kettle). */
+  showCenterPot?: boolean;
   style?: ViewStyle;
 };
 
@@ -75,6 +78,7 @@ export function PokerTableSurface({
   activeSecondsLeft = null,
   deckShuffling = false,
   isLandscape = true,
+  showCenterPot = true,
   style
 }: Props) {
   const { t } = useTranslation();
@@ -138,7 +142,9 @@ export function PokerTableSurface({
         </View>
 
         <View style={[styles.potCenter, isLandscape && styles.potCenterLandscape]}>
-          <PotDisplay pot={pot} chipId={potChipId} street={street} pulseKey={potPulseKey} sidePots={sidePots} />
+          {showCenterPot ? (
+            <PotDisplay pot={pot} chipId={potChipId} street={street} pulseKey={potPulseKey} sidePots={sidePots} />
+          ) : null}
         </View>
 
         <ChipFlightLayer
@@ -173,7 +179,8 @@ export function PokerTableSurface({
           const isHeroSeat = player.isHero ?? index === players.length - 1;
           const roundBet = player.roundBet ?? 0;
           const bubble = bubbleByUser.get(player.userId);
-          const pos = seatCoordinates(index, players.length);
+          const layoutIndex = resolveSeatLayoutIndex(index, players);
+          const pos = seatCoordinates(layoutIndex, players.length);
           const bOff = bubbleOffset(index, players.length);
 
           const showTimer =
@@ -228,16 +235,22 @@ export function PokerTableSurface({
                     {(cards.length
                       ? cards.slice(0, 2)
                       : Array.from({ length: Math.min(hiddenCount, 2) })
-                    ).map((c, ci) => (
-                      <PlayingCard
-                        key={`peek-${player.userId}-${ci}`}
-                        card={typeof c === 'object' ? c : undefined}
-                        faceUp={Boolean(player.revealCards && typeof c === 'object' && c)}
-                        deckId={deckId}
-                        size="xs"
-                        style={ci === 1 ? styles.holeCardSecond : styles.holeCardFirst}
-                      />
-                    ))}
+                    ).map((c, ci) => {
+                      const card = typeof c === 'string' && c.length > 0 ? c : undefined;
+                      const faceUp = Boolean(
+                        player.revealCards && card && !String(card).startsWith('__')
+                      );
+                      return (
+                        <PlayingCard
+                          key={`peek-${player.userId}-${ci}`}
+                          card={faceUp ? card : undefined}
+                          faceUp={faceUp}
+                          deckId={deckId}
+                          size="xs"
+                          style={ci === 1 ? styles.holeCardSecond : styles.holeCardFirst}
+                        />
+                      );
+                    })}
                   </View>
                 ) : null}
 

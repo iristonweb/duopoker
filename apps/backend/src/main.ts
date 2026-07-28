@@ -34,7 +34,14 @@ app.use(httpRateLimit);
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', mongo: isMongoReady() ? 'up' : 'down' });
 });
-app.get('/metrics', (_req, res) => {
+app.get('/metrics', (req, res) => {
+  if (config.isProduction) {
+    const token = config.metricsToken;
+    const provided = req.headers.authorization?.replace(/^Bearer\s+/i, '') ?? '';
+    if (!token || provided !== token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  }
   res.setHeader('content-type', 'text/plain; version=0.0.4');
   res.send(renderMetrics());
 });

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
-import { config } from '../config.js';
+import { config, allowDevMockCheckout } from '../config.js';
 import { createVoiceRoomToken, isLiveKitConfigured } from '../services/livekit.js';
 import { TIER_RANK } from '@duopoker/shared-types';
 import { assertVoiceSessionAccess } from '../services/session-access.js';
@@ -25,7 +25,7 @@ voiceRoutes.get('/status', (c) => {
   const configured = isLiveKitConfigured(cfg);
   return c.json({
     livekit: configured ? 'configured' : 'missing',
-    minTier: config.mockCheckout ? null : 'GOLD',
+    minTier: allowDevMockCheckout() ? null : 'GOLD',
     requiresAuth: true
   });
 });
@@ -38,7 +38,7 @@ voiceRoutes.post('/token', authGuard, async (c) => {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
 
-  if (!config.mockCheckout) {
+  if (!allowDevMockCheckout()) {
     const tier = await resolveUserSubscriptionTier(userId);
     if (TIER_RANK[tier] < TIER_RANK.GOLD) {
       return c.json({ error: 'Voice chat requires Gold subscription or higher', code: 'TIER_REQUIRED' }, 403);

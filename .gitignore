@@ -1,5 +1,6 @@
 # Accidental nested clone (do not commit)
 /duopoker/
+/temp-agent-skills/
 
 node_modules
 .env
@@ -13,6 +14,7 @@ node_modules
 scripts/_tmp-*
 scripts/_*.json
 .cursor/plans/
+.cursor/rules/imported/
 dist
 **/dist/
 apps/web/dist

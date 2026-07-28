@@ -114,13 +114,16 @@ export {
 
 export {
   JOKER_WILD_IDS,
+  cardRankIndex,
   cardSuit,
   isJokerCard,
   isNominalTrumpBanned,
   jokerLegalPlays,
+  leadInfoFromTrick,
   leadSuitFromTrick,
   normalizeJokerCard
 } from './joker-legality';
+export type { TrickLeadInfo, JokerLeadDeclaration } from './joker-legality';
 
 export type GamePhase = 'DEAL' | 'PRE_FLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
 export type GameStreet =

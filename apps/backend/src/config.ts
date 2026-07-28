@@ -16,14 +16,18 @@ function requireSecret(name: string, value: string | undefined, devFallback: str
   return value;
 }
 
-const splitOrigins = (raw?: string): string[] | true => {
-  if (!raw?.trim()) return true;
-  const list = raw
+const splitOrigins = (raw?: string): string[] => {
+  if (!raw?.trim()) return [];
+  return raw
     .split(',')
-    .map((s) => s.trim())
+    .map((s) => s.trim().replace(/\/$/, ''))
     .filter(Boolean);
-  return list.length ? list : true;
 };
+
+const defaultPublicWebUrl = (process.env.PUBLIC_WEB_URL?.trim() || 'http://localhost:5173').replace(
+  /\/$/,
+  ''
+);
 
 export const config = {
   isProduction,
@@ -64,9 +68,18 @@ export const config = {
   stripePriceBlack: process.env.STRIPE_PRICE_BLACK ?? '',
   yookassaShopId: process.env.YOOKASSA_SHOP_ID ?? '',
   yookassaSecretKey: process.env.YOOKASSA_SECRET_KEY ?? '',
-  publicWebUrl: process.env.PUBLIC_WEB_URL ?? 'http://localhost:5173',
+  publicWebUrl: defaultPublicWebUrl,
+  dailyBonusChips: 500,
   /** Comma-separated list, e.g. https://app.example.com,https://www.example.com */
-  corsOrigin: splitOrigins(process.env.CORS_ORIGIN ?? process.env.PUBLIC_WEB_URL),
+  corsOrigin: (() => {
+    const fromEnv = splitOrigins(process.env.CORS_ORIGIN?.trim());
+    const merged = new Set([defaultPublicWebUrl, ...fromEnv]);
+    if (!isProduction) {
+      merged.add('http://localhost:5180');
+      merged.add('http://localhost:5173');
+    }
+    return [...merged];
+  })(),
   livekitApiKey: process.env.LIVEKIT_API_KEY ?? '',
   livekitApiSecret: process.env.LIVEKIT_API_SECRET ?? '',
   livekitUrl: process.env.LIVEKIT_URL ?? '',
@@ -74,5 +87,10 @@ export const config = {
     'NOTIFY_INTERNAL_SECRET',
     process.env.NOTIFY_INTERNAL_SECRET?.trim(),
     'dev-notify-secret'
-  )
+  ),
+  metricsToken: process.env.METRICS_TOKEN?.trim() ?? ''
 };
+
+/** Mock checkout / purchases only outside production. */
+export const allowDevMockCheckout = (): boolean =>
+  !config.isProduction && (config.mockCheckout || !config.stripeSecretKey);

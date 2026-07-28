@@ -37,12 +37,13 @@ export function HoleCardsPeek({
       aria-hidden
     >
       {slots.map((c, i) => {
-        const faceUp = revealCards && typeof c === 'object' && c;
+        const card = typeof c === 'string' && c.length > 0 ? c : undefined;
+        const faceUp = Boolean(revealCards && card && !String(card).startsWith('__'));
         return (
           <PlayingCard
             key={i}
-            card={typeof c === 'object' && c ? c : undefined}
-            faceUp={Boolean(faceUp)}
+            card={faceUp ? card : undefined}
+            faceUp={faceUp}
             size="xs"
             deckId={deckId}
             className={cn(

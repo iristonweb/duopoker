@@ -14,7 +14,7 @@ import {
   cardSuit,
   isJokerCard,
   jokerLegalPlays,
-  leadSuitFromTrick,
+  leadInfoFromTrick,
   normalizeJokerCard,
   trickWinnerIndex
 } from './joker-trick';
@@ -30,12 +30,17 @@ const leftOfDealer = (state: SessionState): number =>
 const dealFromDeck = (
   deck: Card[],
   players: string[],
-  count: number
+  count: number,
+  dealerIndex = 0
 ): { playerCards: Record<string, Card[]>; deck: Card[] } => {
   const playerCards: Record<string, Card[]> = Object.fromEntries(players.map((p) => [p, []]));
   let d = [...deck];
+  const n = players.length;
+  if (n === 0) return { playerCards, deck: d };
+  const start = nextSeat(n, dealerIndex);
   for (let round = 0; round < count; round += 1) {
-    for (const p of players) {
+    for (let i = 0; i < n; i += 1) {
+      const p = players[(start + i) % n]!;
       if (d.length) {
         playerCards[p] = [...(playerCards[p] ?? []), d[0]!];
         d = d.slice(1);
@@ -156,7 +161,12 @@ export const startJokerHand = (
   const shuffled = shuffle(createJokerDeck(), rng);
   const trumpChoice = needsTrumpChoice(pool, cardsThisDeal);
   const initialDealCount = trumpChoice ? 3 : cardsThisDeal;
-  const { playerCards, deck: afterDeal } = dealFromDeck(shuffled, state.players, initialDealCount);
+  const { playerCards, deck: afterDeal } = dealFromDeck(
+    shuffled,
+    state.players,
+    initialDealCount,
+    state.dealerIndex
+  );
 
   const prevScores = state.joker?.scores;
   const dealHistory = state.joker?.dealHistory ?? [];
@@ -262,12 +272,12 @@ const beginTricks = (state: SessionState): SessionState => {
 
 const trickHadVoidDump = (plays: JokerTrickPlay[], trumpSuit: Suit | null): boolean => {
   if (trumpSuit !== null) return false;
-  const lead = leadSuitFromTrick(plays);
-  if (lead === null) return false;
+  const lead = leadInfoFromTrick(plays);
+  if (lead.suit === null) return false;
   return plays.some((p) => {
     if (isJokerCard(p.card)) return false;
     const suit = cardSuit(p.card);
-    return suit !== lead;
+    return suit !== lead.suit;
   });
 };
 
@@ -368,7 +378,12 @@ const applyChooseTrump = (
   }
 
   const remaining = j.cardsThisDeal - 3;
-  const { playerCards, deck: afterMore } = dealFromDeck(state.deck, state.players, remaining);
+  const { playerCards, deck: afterMore } = dealFromDeck(
+    state.deck,
+    state.players,
+    remaining,
+    state.dealerIndex
+  );
   const mergedCards: Record<string, Card[]> = {};
   for (const p of state.players) {
     mergedCards[p] = [...(state.playerCards[p] ?? []), ...(playerCards[p] ?? [])];
@@ -434,8 +449,14 @@ const applyPlayCard = (
   if (idx < 0) {
     throw new Error('CARD_NOT_IN_HAND');
   }
-  const leadSuit = leadSuitFromTrick(j.currentTrick);
-  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit, state.jokerRules?.strictJoker);
+  const lead = leadInfoFromTrick(j.currentTrick);
+  const allowed = jokerLegalPlays(
+    hand,
+    lead.suit,
+    j.trumpSuit,
+    state.jokerRules?.strictJoker,
+    lead.rankMode
+  );
   if (!allowed.includes(card)) {
     throw new Error('ILLEGAL_CARD');
   }
@@ -542,8 +563,14 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
     return { ...base, type: 'bid', amount: bid };
   }
 
-  const leadSuit = leadSuitFromTrick(j.currentTrick);
-  const allowed = jokerLegalPlays(hand, leadSuit, j.trumpSuit, state.jokerRules?.strictJoker);
+  const lead = leadInfoFromTrick(j.currentTrick);
+  const allowed = jokerLegalPlays(
+    hand,
+    lead.suit,
+    j.trumpSuit,
+    state.jokerRules?.strictJoker,
+    lead.rankMode
+  );
   const filtered = allowed.filter(
     (c) => !isNominalTrumpBanned(c, j.trumpSuit, j.voidTrumpDiscards)
   );
@@ -554,7 +581,7 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
   const rankPlay = (c: Card): number => (isJokerCard(c) ? 100 : cardRankIndex(c));
 
   let card: Card = plays[0] ?? hand[0]!;
-  if (!leadSuit) {
+  if (!lead.suit) {
     const bySuit = (['S', 'H', 'D', 'C'] as Suit[]).map((s) => ({
       suit: s,
       cards: plays.filter((c) => !isJokerCard(c) && cardSuit(c) === s)
@@ -573,7 +600,7 @@ export const pickBotJokerAction = (state: SessionState, userId: string): PlayerA
 
   let declaration: PlayerAction['declaration'];
   if (isJokerCard(card)) {
-    declaration = tricksNeeded > 0 || !leadSuit ? 'senior' : 'minor';
+    declaration = tricksNeeded > 0 || !lead.suit ? 'senior' : 'minor';
   }
   return { ...base, type: 'playCard', card, declaration };
 };

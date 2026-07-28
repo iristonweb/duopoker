@@ -539,6 +539,69 @@ describe('removePlayerFromTable — chip conservation', () => {
     expect(next).toBeDefined();
     expect(r.state.foldedPlayerIds).not.toContain(next);
   });
+
+  it('reaches showdown with conserved chips after multiway leave when two remain', () => {
+    let s = createInitialTableState('leave-sd', 'HOLDEM', 100, 58);
+    s = startNewHand({
+      ...s,
+      players: ['a', 'b', 'c'],
+      stacks: { a: 200, b: 200, c: 200 }
+    });
+    const initialTotal = countChipsInPlay(s);
+
+    let actor = s.players[s.activePlayerIndex]!;
+    let r = applyTableAction(s, {
+      sessionId: 'leave-sd',
+      userId: actor,
+      type: 'raise',
+      amount: 50,
+      at: 1
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    s = r.state;
+
+    const leaver = s.players.find((p) => p !== s.players[s.activePlayerIndex])!;
+    const leaverStack = s.stacks[leaver] ?? 0;
+    r = removePlayerFromTable(s, leaver);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.players).toHaveLength(2);
+    expect(countChipsInPlay(r.state) + leaverStack).toBe(initialTotal);
+
+    s = r.state;
+    for (let i = 0; i < 20 && s.street !== 'COMPLETE' && s.street !== 'LOBBY'; i++) {
+      actor = s.players[s.activePlayerIndex]!;
+      const need =
+        Math.max(...s.players.map((p) => s.playerRoundBet[p] ?? 0)) - (s.playerRoundBet[actor] ?? 0);
+      const action =
+        need > 0
+          ? { sessionId: 'leave-sd', userId: actor, type: 'call' as const, at: i + 2 }
+          : { sessionId: 'leave-sd', userId: actor, type: 'check' as const, at: i + 2 };
+      r = applyTableAction(s, action);
+      if (!r.ok) break;
+      s = r.state;
+    }
+    expect(['COMPLETE', 'LOBBY']).toContain(s.street);
+    expect(countChipsInPlay(s) + leaverStack).toBe(initialTotal);
+  });
+});
+
+describe('Hold’em deal order', () => {
+  it('deals the first hole card to the seat left of the dealer', () => {
+    const base = {
+      ...createInitialTableState('deal-h', 'HOLDEM', 100, 11),
+      players: ['a', 'b', 'c'],
+      stacks: { a: 100, b: 100, c: 100 },
+      handNumber: 1
+    };
+    // handNumber>0 rotates dealer: prev 2→0, prev 0→1
+    const fromDealer0 = startNewHand({ ...base, dealerIndex: 2 });
+    const fromDealer1 = startNewHand({ ...base, dealerIndex: 0 });
+    expect(fromDealer0.dealerIndex).toBe(0);
+    expect(fromDealer1.dealerIndex).toBe(1);
+    expect(fromDealer0.playerCards.b?.[0]).toBe(fromDealer1.playerCards.c?.[0]);
+  });
 });
 
 describe('markReadyForNextHand', () => {

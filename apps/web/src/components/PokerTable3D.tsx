@@ -63,6 +63,8 @@ type Props = {
   activeUserId?: string;
   activeSecondsLeft?: number | null;
   deckShuffling?: boolean;
+  /** Hide chip pot (Joker has no kettle). */
+  showCenterPot?: boolean;
   className?: string;
 };
 
@@ -83,10 +85,12 @@ export function PokerTable3D({
   jokerFlights = [],
   potPulseKey = 0,
   sidePots = [],
+  foldingUsers = [],
   checkRippleUsers = [],
   activeUserId,
   activeSecondsLeft = null,
   deckShuffling = false,
+  showCenterPot = true,
   className
 }: Props) {
   const reduceMotion = useReducedMotion();
@@ -97,6 +101,7 @@ export function PokerTable3D({
   const motionDelay = reduceMotion ? 0 : undefined;
   const playerIndex = new Map(players.map((p, i) => [p.userId, i]));
   const bubbleByUser = new Map(seatBubbles.map((b) => [b.userId, b]));
+  const foldingSet = new Set(foldingUsers);
 
   return (
     <div
@@ -231,14 +236,16 @@ export function PokerTable3D({
           className="absolute left-1/2 z-pot -translate-x-1/2"
           style={tableCenterTopStyle('ring', 'potTop')}
         >
-          <AnimatedPotDisplay
-            pot={pot}
-            chipId={potChipId}
-            street={street}
-            pulseKey={potPulseKey}
-            sidePots={sidePots}
-            className="scale-95 table-short:scale-90 max-table-compact:scale-100"
-          />
+          {showCenterPot ? (
+            <AnimatedPotDisplay
+              pot={pot}
+              chipId={potChipId}
+              street={street}
+              pulseKey={potPulseKey}
+              sidePots={sidePots}
+              className="scale-95 table-short:scale-90 max-table-compact:scale-100"
+            />
+          ) : null}
         </div>
 
         {players.map((player, index) => {
@@ -360,7 +367,7 @@ export function PokerTable3D({
                 className={cn(
                   'flex max-w-[5.5rem] flex-col items-center gap-0.5 max-table-compact:max-w-none max-table-compact:gap-1',
                   isHeroSeat && '[body[data-table-layout-mode=mobile-classic]_&]:hidden',
-                  player.isFolded && 'opacity-50 grayscale-[0.4]',
+                  (player.isFolded || foldingSet.has(player.userId)) && 'opacity-50 grayscale-[0.4]',
                   player.isWinner && 'z-seatActive',
                   player.isActive && 'z-seatActive'
                 )}

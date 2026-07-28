@@ -2,11 +2,16 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth-guard.js';
 import { isValidNickname, normalizeNicknameInput } from '@duopoker/server-shared/lib/nickname';
+import {
+  ownerProfileSelect,
+  publicProfileSelect,
+  safeAvatarField
+} from '@duopoker/server-shared/lib/profile-privacy';
 import { prisma } from '../services/prisma.js';
 
 const profileSchema = z.object({
   displayName: z.string().min(2),
-  avatar: z.string().url().optional()
+  avatar: safeAvatarField.optional()
 });
 
 const nicknameSchema = z.object({ nickname: z.string().min(3).max(20) });
@@ -47,18 +52,12 @@ profileRouter.put('/me/nickname', async (req, res) => {
 });
 
 profileRouter.get('/:id', async (req, res) => {
+  const requesterId = req.auth!.userId;
+  const id = req.params.id;
+  const select = id === requesterId ? ownerProfileSelect : publicProfileSelect;
   const user = await prisma.user.findUnique({
-    where: { id: req.params.id },
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-      nickname: true,
-      avatar: true,
-      chips: true,
-      level: true,
-      xp: true
-    }
+    where: { id },
+    select
   });
   if (!user) return res.status(404).json({ error: 'User not found' });
   return res.json({
@@ -79,16 +78,7 @@ profileRouter.put('/:id', async (req, res) => {
   const updated = await prisma.user.update({
     where: { id: req.params.id },
     data: parsed.data,
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-      nickname: true,
-      avatar: true,
-      chips: true,
-      level: true,
-      xp: true
-    }
+    select: ownerProfileSelect
   });
   return res.json(updated);
 });

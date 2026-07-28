@@ -1,11 +1,34 @@
 import { getMongoDb, isMongoReady } from './mongo.js';
 import { prisma } from './prisma.js';
 
-export const creditDailyBonus = async (userId: string, amount: number) => {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { chips: { increment: amount } }
-  });
+export const creditDailyBonus = async (
+  userId: string,
+  amount: number
+): Promise<{ ok: true; amount: number } | { ok: false; error: string }> => {
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const providerEventId = `daily_bonus:${userId}:${dayKey}`;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.paymentEvent.create({
+        data: {
+          userId,
+          provider: 'STRIPE',
+          providerEventId,
+          amount: 0,
+          status: 'SUCCEEDED',
+          metadata: { type: 'daily_bonus', chips: amount, day: dayKey }
+        }
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { chips: { increment: amount } }
+      });
+    });
+  } catch {
+    return { ok: false, error: 'ALREADY_CLAIMED' };
+  }
+
   if (isMongoReady()) {
     try {
       await getMongoDb().collection('chip_ledger').insertOne({
@@ -19,6 +42,7 @@ export const creditDailyBonus = async (userId: string, amount: number) => {
       /* ledger optional when Mongo degraded */
     }
   }
+  return { ok: true, amount };
 };
 
 const CHIP_PACKS: Record<string, number> = {

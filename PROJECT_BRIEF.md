@@ -1,26 +1,26 @@
-# 🎯 POKER DUALITY — ИНСТРУКЦИЯ ДЛЯ CURSOR
+# POKER DUALITY / DuoPoker — project brief (historical)
 
-## 📌 КОНТЕКСТ & ЦЕЛИ
-Создать премиум кроссплатформенную покер-платформу с двумя режимами: Texas Hold'em и Расписной покер.
-✅ Единый аккаунт: Web (PWA) + iOS + Android + Desktop
-✅ Реальный мультиплеер в реальном времени (WebSocket)
-✅ 🚫 БЕЗ азартных игр на реальные деньги. Монетизация ТОЛЬКО через виртуальные фишки, косметику, подписки и геймификацию
-✅ Премиум UI: 3D-сцена стола, glassmorphism, неон, PBR-материалы, микро-анимации
-✅ Масштабируемая архитектура, готовая к 100k+ CCU, авто-масштабирование, региональные ноды
-Сгенерировать крутые баннеры и фоны со скинами и прочим, возможны и анимации
+> **Note (2026):** This brief is aspirational history. Canonical stack and layout: [README.md](./README.md), [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), [docs/DEPLOY.md](./docs/DEPLOY.md).  
+> Current production: **Node 24**, **Hono on Vercel** + Neon Postgres, mode name **JOKER** (not RASPISNOY), tiers **BRONZE…BLACK** (not Royal). Express+Socket.IO remains for local/Mode B realtime. Mongo is optional/legacy.
+
+## CONTEXT & GOALS
+Premium cross-platform poker platform with Texas Hold'em and classic Joker («расписной»).
+- Single account: Web (PWA) + iOS + Android
+- Multiplayer: REST polling on Vercel; Socket.IO optional for realtime hosts
+- No real-money gambling. Monetization via virtual chips, cosmetics, subscriptions, organizer SaaS
+- Premium UI: 3D table scene, glassmorphism, micro-animations
 
 ---
 
-## 🛠️ ТЕХНОЛОГИЧЕСКИЙ СТЕК (STRICT)
-- **Frontend (Web)**: React 18 + TypeScript + Vite + `@react-three/fiber` + `@react-three/drei` + TailwindCSS + Framer Motion + Zustand
-- **Mobile**: Expo (React Native) + TypeScript + `react-native-reanimated` + `react-native-skia` + Expo Router
-- **Backend**: Node.js 20 + Express + TypeScript + `socket.io` + `@fastify/websocket` (опционально)
-- **Database**: PostgreSQL (Prisma ORM) + Redis (sessions, matchmaking, pub/sub) + MongoDB (logs, analytics, replays)
-- **Auth**: JWT + Refresh Tokens + OAuth2 (Google/Apple) + Device Sync via Redis
-- **Payments**: Stripe (Web) + RevenueCat / Apple IAP / Google Play Billing (Mobile)
-- **Infra**: Docker + Docker Compose → AWS/GCP → CI/CD GitHub Actions → Nginx/Cloudflare
-- **State/Realtime**: Zustand (UI) + Socket.IO Rooms + Redis Pub/Sub + Zod validation
-- **3D/Effects**: Three.js + `@react-three/drei` + GSAP/Lottie/Rive (UI states)
+## TECH STACK (current)
+
+- **Frontend (Web)**: React 18 + TypeScript + Vite + R3F + Tailwind + Framer Motion + Zustand
+- **Mobile**: Expo 52 (React Native) + Expo Router
+- **API**: Node.js 24 + Hono (Vercel) ; legacy Express + Socket.IO (`apps/backend`)
+- **Database**: PostgreSQL (Prisma) ; Redis/Mongo optional for legacy stack
+- **Auth**: JWT + refresh + Google/Apple OAuth
+- **Payments**: Stripe + YooKassa (web); RevenueCat (mobile)
+- **Infra**: Vercel + Neon (+ optional Render for Socket.IO)
 
 ---
 

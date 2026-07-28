@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { TIER_RANK } from '@duopoker/shared-types';
 import { verifyAccessToken } from '../auth/jwt.js';
-import { config } from '../config.js';
+import { config, allowDevMockCheckout } from '../config.js';
 import { createVoiceRoomToken, isLiveKitConfigured } from '@duopoker/server-shared/services/livekit';
 import { getUserSubscriptionTier } from '../services/subscription-tier.js';
 import { assertVoiceSessionAccess } from '../services/session-access.js';
@@ -24,7 +24,7 @@ voiceRouter.get('/status', (_req, res) => {
   const configured = isLiveKitConfigured(cfg);
   res.json({
     livekit: configured ? 'configured' : 'missing',
-    minTier: config.mockCheckout ? null : 'GOLD',
+    minTier: allowDevMockCheckout() ? null : 'GOLD',
     requiresAuth: true,
     checks: {
       apiKey: Boolean(cfg.apiKey),
@@ -71,7 +71,7 @@ voiceRouter.post('/token', async (req, res) => {
     });
   }
 
-  if (!config.mockCheckout) {
+  if (!allowDevMockCheckout()) {
     const tier = await getUserSubscriptionTier(parsed.data.userId);
     if (TIER_RANK[tier] < TIER_RANK.GOLD) {
       return res.status(403).json({

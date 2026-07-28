@@ -63,6 +63,7 @@ export function StandardTableLayout({
       secondsLeft={p.activeSecondsLeft}
       deckShuffling={p.deckShuffling}
       reduceMotion={p.reduceMotion}
+      showCenterPot={p.tableView.mode !== 'JOKER'}
       className="h-full"
     />
   ) : (
@@ -90,6 +91,7 @@ export function StandardTableLayout({
       activeUserId={p.activeUserId}
       activeSecondsLeft={p.activeSecondsLeft}
       deckShuffling={p.deckShuffling}
+      showCenterPot={p.tableView.mode !== 'JOKER'}
       className="h-full"
     />
   );

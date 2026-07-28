@@ -102,7 +102,9 @@ export {
   computeRaiseBounds,
   halfPotRaise,
   potSizedRaise,
-  type RaiseBounds
+  isHeroActionTurn,
+  type RaiseBounds,
+  type HeroActionTurnInput
 } from './table-derivations';
 
 export {

@@ -59,7 +59,9 @@ export const jokerPointsForHand = (
     7: 700,
     8: 800
   };
-  if (cardsDealt >= bid && bonus[bid] !== undefined) {
+  // Club rules: elevated points only when the deal size matches the bid
+  // (e.g. bid 2 = 150, or 200 only «в раздаче по две карты»).
+  if (cardsDealt === bid && bonus[bid] !== undefined) {
     return bonus[bid]!;
   }
   return base[bid] ?? bid * 100;

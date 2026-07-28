@@ -15,6 +15,17 @@ describe('jokerPointsForHand', () => {
     expect(jokerPointsForHand(3, 3, 3)).toBe(300);
   });
 
+  it('uses base points when exact bid on a larger deal', () => {
+    expect(jokerPointsForHand(2, 2, 9)).toBe(150);
+    expect(jokerPointsForHand(8, 8, 9)).toBe(450);
+    expect(jokerPointsForHand(3, 3, 5)).toBe(200);
+  });
+
+  it('awards deal-size bonus only when cardsDealt matches bid', () => {
+    expect(jokerPointsForHand(2, 2, 2)).toBe(200);
+    expect(jokerPointsForHand(8, 8, 8)).toBe(800);
+  });
+
   it('uses minus scoring when mode is minus', () => {
     expect(jokerPointsForHand(4, 2, 5, 'minus')).toBe(-200);
     expect(jokerPointsForHand(4, 4, 5, 'minus')).toBe(400);

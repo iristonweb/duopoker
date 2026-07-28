@@ -15,6 +15,7 @@ export const seatActionStyles: Record<SeatActionKind, SeatActionStyle> = {
   raise: { backgroundColor: 'rgba(232,197,71,0.12)', borderColor: 'rgba(232,197,71,0.5)', color: colors.goldLight },
   allIn: { backgroundColor: 'rgba(244,63,94,0.15)', borderColor: 'rgba(244,63,94,0.55)', color: colors.danger },
   bid: { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(167,139,250,0.45)', color: '#ddd6fe' },
+  trump: { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(167,139,250,0.45)', color: '#ddd6fe' },
   playCard: { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(167,139,250,0.45)', color: '#ddd6fe' },
   blindSB: { backgroundColor: 'rgba(232,197,71,0.1)', borderColor: 'rgba(232,197,71,0.35)', color: colors.goldLight },
   blindBB: { backgroundColor: 'rgba(232,197,71,0.15)', borderColor: 'rgba(232,197,71,0.45)', color: colors.goldLight }

@@ -14,7 +14,8 @@ export function useTableDisplayState(
   session: SessionState | undefined,
   heroId: string,
   formatAction: (action: PlayerAction) => string,
-  reduceMotion: boolean
+  reduceMotion: boolean,
+  formatBlind?: (type: 'SB' | 'BB', amount: number) => string
 ): SessionState | DisplaySessionState | undefined {
   const [display, setDisplay] = useState<SessionState | DisplaySessionState | undefined>(session);
   const prevRef = useRef<SessionSnap | null>(null);
@@ -94,7 +95,7 @@ export function useTableDisplayState(
       prevRef.current = snap;
       displayRef.current = initial;
       setDisplay(initial);
-      queueRef.current = buildTableSessionSteps(null, session, formatAction);
+      queueRef.current = buildTableSessionSteps(null, session, formatAction, formatBlind);
       if (queueRef.current.length) void drain();
       else {
         displayRef.current = session;
@@ -103,9 +104,17 @@ export function useTableDisplayState(
       return;
     }
 
-    const steps = buildTableSessionSteps(prev, session, formatAction);
+    const steps = buildTableSessionSteps(prev, session, formatAction, formatBlind);
     if (steps.length) {
-      queueRef.current.push(...steps);
+      if (prev.handNumber !== snap.handNumber) {
+        // Clear prior hand visuals before deal/blinds so action math isn't polluted mid-queue.
+        const initial = initHandDisplay(session, heroId);
+        displayRef.current = initial;
+        setDisplay(initial);
+        queueRef.current = steps;
+      } else {
+        queueRef.current.push(...steps);
+      }
       if (!processingRef.current) void drain();
     } else if (!processingRef.current) {
       displayRef.current = session;
@@ -113,7 +122,7 @@ export function useTableDisplayState(
     }
 
     prevRef.current = snap;
-  }, [session, heroId, formatAction, reduceMotion, drain, resetDisplayPipeline]);
+  }, [session, heroId, formatAction, formatBlind, reduceMotion, drain, resetDisplayPipeline]);
 
   useEffect(
     () => () => {

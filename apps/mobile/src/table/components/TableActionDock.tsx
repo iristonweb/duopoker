@@ -130,7 +130,9 @@ export function TableActionDock({
           <View style={styles.headerText}>
             {showActions ? (
               <Text style={styles.prompt}>
-                {t('table.yourAction', { amount: need })}
+                {need === 0
+                  ? t('table.yourActionCheck')
+                  : t('table.yourAction', { amount: need })}
                 {secondsLeft !== null ? ` · ${t('table.timeLeft', { seconds: secondsLeft })}` : ''}
               </Text>
             ) : street !== 'COMPLETE' ? (

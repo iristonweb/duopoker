@@ -65,6 +65,65 @@ export const removePlayerFromTable = (
     return { ok: false, reason: 'NOT_SEATED' };
   }
 
+  // Joker mid-hand leave: abort the deal so the table cannot stall mid-trick/bid.
+  if (
+    state.mode === 'JOKER' &&
+    state.street !== 'LOBBY' &&
+    state.street !== 'COMPLETE'
+  ) {
+    const idx = state.players.indexOf(userId);
+    const players = state.players.filter((p) => p !== userId);
+    let dealerIndex = state.dealerIndex;
+    if (idx < dealerIndex) dealerIndex -= 1;
+    else if (dealerIndex >= players.length) dealerIndex = Math.max(0, players.length - 1);
+
+    const scores = { ...(state.joker?.scores ?? {}) };
+    delete scores[userId];
+
+    let ns: SessionState = {
+      ...state,
+      players,
+      dealerIndex,
+      activePlayerIndex: 0,
+      activePlayerId: players[0],
+      street: 'LOBBY',
+      phase: 'WAITING',
+      communityCards: [],
+      foldedPlayerIds: [],
+      allInPlayerIds: [],
+      readyForNextHand: [],
+      actionLog: [],
+      actionDeadlineAt: undefined,
+      winners: undefined,
+      winnersShare: undefined,
+      stacks: omitPlayerKey(state.stacks, userId),
+      playerRoundBet: Object.fromEntries(players.map((p) => [p, 0])),
+      playerCards: Object.fromEntries(players.map((p) => [p, []])),
+      actedThisRound: Object.fromEntries(players.map((p) => [p, false])),
+      handContributions: Object.fromEntries(players.map((p) => [p, 0])),
+      joker: state.joker
+        ? {
+            ...state.joker,
+            scores,
+            bids: Object.fromEntries(players.map((p) => [p, state.joker!.bids[p] ?? 0])),
+            tricksWon: Object.fromEntries(players.map((p) => [p, 0])),
+            currentTrick: [],
+            tuzovanieLog: (state.joker.tuzovanieLog ?? []).filter((e) => e.userId !== userId)
+          }
+        : state.joker
+    };
+
+    if (players.length < 2) {
+      ns = {
+        ...resetToLobbyAfterGame(ns),
+        activePlayerIndex: 0,
+        activePlayerId: players[0]
+      };
+    }
+
+    return { ok: true, state: ns };
+  }
+
   let ns = state;
 
   if (ns.street !== 'LOBBY' && ns.street !== 'COMPLETE' && !ns.foldedPlayerIds.includes(userId)) {
@@ -107,7 +166,10 @@ export const removePlayerFromTable = (
     dealerIndex,
     activePlayerIndex,
     activePlayerId: players[activePlayerIndex],
-    foldedPlayerIds: ns.foldedPlayerIds.filter((id) => id !== userId),
+    // Keep mid-hand leavers folded so their pot share is dead money, not awarded to a removed seat.
+    foldedPlayerIds: ns.foldedPlayerIds.includes(userId)
+      ? ns.foldedPlayerIds
+      : [...ns.foldedPlayerIds, userId].filter((id, i, arr) => arr.indexOf(id) === i),
     readyForNextHand: ns.readyForNextHand.filter((id) => id !== userId),
     allInPlayerIds: ns.allInPlayerIds.filter((id) => id !== userId),
     stacks: omitPlayerKey(ns.stacks, userId),

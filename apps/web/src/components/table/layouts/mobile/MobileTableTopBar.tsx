@@ -43,7 +43,7 @@ export function MobileTableTopBar({
             #{handNumber}
           </Badge>
         ) : null}
-        {isJoker ? <JokerTrumpBadge joker={joker} size="sm" /> : null}
+        {isJoker ? <JokerTrumpBadge joker={joker} street={street} size="sm" /> : null}
         {streetLabel && street && street !== 'LOBBY' ? (
           <Badge variant="gold" className="px-2 py-0.5 text-[10px]">
             {streetLabel}

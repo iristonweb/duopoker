@@ -3,11 +3,13 @@
 ## Monorepo layout
 
 - `apps/web` — React + Vite + Tailwind + R3F lobby and table UI.
-- `packages/api` — Hono serverless API (Vercel `api/[[...path]].ts`), Prisma → PostgreSQL, stateless game sessions.
-- `apps/backend` — **Legacy** Express + Socket.IO stack for local Docker dev (not used on Vercel).
-- `apps/mobile` — Expo shell.
-- `packages/game-engine` — Hold'em / Joker rules, hand evaluation, table state machine, side pots, per-viewer state sanitization. See [JOKER.md](./JOKER.md).
-- `packages/shared-types` — Shared TS types (sessions, cards, theme tokens).
+- `apps/mobile` — Expo companion (auth, lobby, table, shop, invites).
+- `apps/backend` — **Legacy** Express + Socket.IO stack for local Docker / Mode B realtime.
+- `packages/api` — Hono serverless API (Vercel), Prisma → PostgreSQL, polling game sessions.
+- `packages/game-engine` — Hold'em / Joker rules, hand evaluation, table state machine. See [JOKER.md](./JOKER.md).
+- `packages/shared-types` — Shared TS types, theme, joker schedule, pricing.
+- `packages/table-client` — Shared table store/hooks for web + mobile.
+- `packages/server-core` / `session-core` / `server-shared` — Shared server helpers (oauth, session, crypto, LiveKit).
 - `packages/ui-kit` — Glass-morphism UI primitives.
 - `packages/db-schema` — Prisma schema and migrations.
 
@@ -25,7 +27,7 @@
 
 - Game state is **Postgres-authoritative** — safe for multi-instance serverless (read-modify-write per action).
 - Matchmaking uses the `matchmaking_tickets` table instead of in-memory queues.
-- Optional: add Upstash Redis later for rate limits or pub/sub if sub-second latency is required.
+- Optional: Upstash Redis (`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`) for distributed rate limits; falls back to process-local Map.
 
 ## Compliance posture
 

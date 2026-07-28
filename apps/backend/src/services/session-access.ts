@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { canJoinPrivateSession, getPrivateTableBySessionId } from './private-table-auth.js';
 import { loadGameSnapshot } from './session-persistence.js';
 import { prisma } from './prisma.js';
+import { config } from '../config.js';
 
 /** Verify user is allowed to join a session (matchmaking assignment, club seat, or rejoin). */
 export const assertCanJoinSession = async (
@@ -11,12 +12,14 @@ export const assertCanJoinSession = async (
   const snapshot = await loadGameSnapshot(sessionId);
   if (snapshot?.players.includes(userId)) return { ok: true };
 
-  if (sessionId.startsWith('e2e-') || process.env.ALLOW_OPEN_JOIN === 'true') {
-    return { ok: true };
-  }
-
-  if (!process.env.DATABASE_URL) {
-    return { ok: true };
+  // Dev/E2E open-join escapes — never in production.
+  if (!config.isProduction) {
+    if (sessionId.startsWith('e2e-') || process.env.ALLOW_OPEN_JOIN === 'true') {
+      return { ok: true };
+    }
+    if (!process.env.DATABASE_URL) {
+      return { ok: true };
+    }
   }
 
   const assignment = await prisma.matchAssignment.findUnique({ where: { userId } });

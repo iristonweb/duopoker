@@ -71,12 +71,12 @@ function MetaChips({
   streetStyle: { bg: string; border: string; text: string } | null;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
-  const bidding = street === 'BIDDING';
+  const bidding = street === 'BIDDING' || street === 'TRUMP_CHOICE';
 
   return (
     <View style={styles.metaWrap}>
       {isJoker && joker ? (
-        <JokerTrumpBadge joker={joker} showHint={bidding} compact />
+        <JokerTrumpBadge joker={joker} street={street} showHint={bidding} compact />
       ) : null}
       {showStreet && streetStyle ? (
         <View style={[styles.streetBadge, { backgroundColor: streetStyle.bg, borderColor: streetStyle.border }]}>

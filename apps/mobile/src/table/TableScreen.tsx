@@ -17,6 +17,7 @@ import {
   NEXT_HAND_DELAY_MS,
   defaultEquipped,
   gameChipId,
+  resolveEquipped,
   tierMeetsRequirement
 } from '@duopoker/shared-types';
 import {
@@ -31,6 +32,7 @@ import {
   holdemShowdownHandLines,
   holdemSidePotAmounts,
   holdemSidePotSummary,
+  isHeroActionTurn,
   leaderboardLeaders,
   potSizedRaise,
   rotatePlayersForHero,
@@ -141,22 +143,37 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!accessToken) return;
-    void apiFetch('/profile', {}, accessToken)
+    void apiFetch('/auth/me', {}, accessToken)
       .then((r) => (r.ok ? r.json() : null))
       .then(
         (
           data: {
-            equipped?: EquippedCosmetics;
-            subscriptionTier?: SubscriptionTier;
-            inventory?: string[];
-            avatar?: string | null;
-            tableStatus?: string | null;
+            subscription?: { tier?: SubscriptionTier } | null;
+            inventory?: Array<{ itemId: string; equipped?: boolean }>;
           } | null
         ) => {
           if (!data) return;
-          if (data.equipped) setEquipped(data.equipped);
-          if (data.subscriptionTier) setSubscriptionTier(data.subscriptionTier);
-          if (data.inventory) setInventory(data.inventory);
+          const tier = data.subscription?.tier ?? 'FREE';
+          setSubscriptionTier(tier);
+          const inventoryRows = data.inventory ?? [];
+          setInventory(inventoryRows.map((row) => row.itemId));
+          const partial: Partial<EquippedCosmetics> = {};
+          for (const row of inventoryRows) {
+            if (!row.equipped) continue;
+            const id = row.itemId;
+            if (id.startsWith('deck_')) partial.deck = id;
+            if (id.startsWith('chip_')) partial.chip = id;
+            if (id.startsWith('frame_')) partial.frame = id;
+            if (id.startsWith('title_')) partial.title = id;
+            if (id.startsWith('table_')) partial.table = id;
+          }
+          setEquipped(
+            resolveEquipped(
+              partial,
+              tier,
+              inventoryRows.map((row) => row.itemId)
+            )
+          );
         }
       )
       .catch(() => undefined);
@@ -306,7 +323,17 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
     [label, t]
   );
 
-  const viewSession = useTableDisplayState(session, userId, formatDisplayAction, reduceMotion) ?? session;
+  const formatDisplayBlind = useCallback(
+    (type: 'SB' | 'BB', amount: number) =>
+      type === 'SB'
+        ? t('table.postsBlindSB', { amount })
+        : t('table.postsBlindBB', { amount }),
+    [t]
+  );
+
+  const viewSession =
+    useTableDisplayState(session, userId, formatDisplayAction, reduceMotion, formatDisplayBlind) ??
+    session;
 
   const soundCallbacks = useMemo(
     () => ({
@@ -351,6 +378,11 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
   });
 
   const activeId = useMemo(() => {
+    if (!viewSession || viewSession.players.length === 0) return undefined;
+    return viewSession.players[viewSession.activePlayerIndex];
+  }, [viewSession]);
+
+  const serverActiveId = useMemo(() => {
     if (!session || session.players.length === 0) return undefined;
     return session.players[session.activePlayerIndex];
   }, [session]);
@@ -359,7 +391,9 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
     if (!viewSession || !session) return [];
     const dealerUid = viewSession.players[viewSession.dealerIndex];
     const visualActiveId =
-      session.players.length > 0 ? session.players[session.activePlayerIndex] : undefined;
+      viewSession.players.length > 0
+        ? viewSession.players[viewSession.activePlayerIndex]
+        : undefined;
     const atShowdown = viewSession.street === 'SHOWDOWN' || viewSession.street === 'COMPLETE';
     const inHandStreet = viewSession.street && viewSession.street !== 'LOBBY';
     const visuals = viewSession.players.map((uid) => {
@@ -517,7 +551,11 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
   );
   const matchLeaderNames = leaderboardLeaders(session).map(label).join(', ');
   const need = amountToCall(session, userId);
-  const myTurn = activeId === userId && session.street !== 'LOBBY' && session.street !== 'COMPLETE';
+  const myTurn = isHeroActionTurn({
+    session,
+    heroId: userId,
+    displayActiveId: activeId
+  });
   const secondsLeft =
     myTurn && session.actionDeadlineAt
       ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
@@ -551,9 +589,18 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
     playersWithStackCount: playersWithStack.length
   });
   const { showBustedOverlay, showAllInRunoutBanner, heroSpectating } = bustState;
-  const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay;
+  const tuzovanieActive =
+    isJoker &&
+    session.handNumber === 1 &&
+    (session.joker?.tuzovanieLog?.length ?? 0) > 0 &&
+    session.street === 'LOBBY';
+  const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay && !tuzovanieActive;
   const activeSecondsLeft =
-    activeId && session.actionDeadlineAt && session.street !== 'LOBBY' && session.street !== 'COMPLETE'
+    serverActiveId &&
+    activeId === serverActiveId &&
+    session.actionDeadlineAt &&
+    session.street !== 'LOBBY' &&
+    session.street !== 'COMPLETE'
       ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
       : null;
   const kettle = sessionKettle(session);
@@ -566,7 +613,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
       ? (tableView.communityCards ?? [])
       : tableView.street === 'TRICKS' && tableView.joker
         ? tableView.joker.currentTrick.map((p) => p.card)
-        : tableView.street === 'BIDDING'
+        : tableView.street === 'BIDDING' || tableView.street === 'TRUMP_CHOICE'
           ? (tableView.communityCards ?? [])
           : [];
 
@@ -575,6 +622,11 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
       ? tableView.joker.currentTrick.map(
           (p, i) => `h${tableView.handNumber}-trick-${tableView.joker!.trickNumber}-${p.userId}-${i}`
         )
+      : tableView.mode === 'JOKER' &&
+          (tableView.street === 'BIDDING' || tableView.street === 'TRUMP_CHOICE')
+        ? (tableView.communityCards ?? []).map(
+            (c, i) => `h${tableView.handNumber}-trump-${c}-${i}`
+          )
       : tableView.mode !== 'JOKER'
         ? (tableView.communityCards ?? []).map((c, i) => `h${tableView.handNumber}-board-${c}-${i}`)
         : undefined;
@@ -686,6 +738,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
                 activeUserId={activeId}
                 activeSecondsLeft={activeSecondsLeft}
                 deckShuffling={deckShuffling}
+                showCenterPot={tableView.mode !== 'JOKER'}
                 isLandscape={orientation.isLandscape}
               />
               <TableOrientationGate visible={orientation.showOrientationGate} />
@@ -787,7 +840,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
               onBidAmountChange={setJokerBid}
               secondsLeft={secondsLeft}
               activeLabel={activeLabel}
-              isHeroActive={activeId === userId}
+              isHeroActive={myTurn}
               lastActionText={lastActionText}
               sessionError={sessionError}
               actionLogLen={session.actionLog?.length ?? 0}
@@ -821,7 +874,7 @@ export function TableScreen({ sessionId }: { sessionId: string }) {
               holeCards={holeCards}
               deckId={equipped.deck}
               activeLabel={activeLabel}
-              isHeroActive={activeId === userId}
+              isHeroActive={myTurn}
               lastActionText={lastActionText}
               heroSpectating={heroSpectating}
               street={session.street}

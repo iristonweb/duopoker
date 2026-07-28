@@ -5,7 +5,7 @@ import {
   isJokerCard,
   isNominalTrumpBanned,
   jokerLegalPlays,
-  leadSuitFromTrick
+  leadInfoFromTrick
 } from '@duopoker/shared-types/index';
 
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:4000';
@@ -39,8 +39,8 @@ const connectClient = (): Socket =>
 const pickJokerPlay = (state: SessionState, actor: string) => {
   const hand = state.playerCards[actor] ?? [];
   const trump = state.joker?.trumpSuit ?? null;
-  const lead = leadSuitFromTrick(state.joker?.currentTrick ?? []);
-  const legal = jokerLegalPlays(hand, lead, trump, state.jokerRules?.strictJoker);
+  const lead = leadInfoFromTrick(state.joker?.currentTrick ?? []);
+  const legal = jokerLegalPlays(hand, lead.suit, trump, state.jokerRules?.strictJoker, lead.rankMode);
   const card = legal[0] ?? hand[0];
   if (!card) throw new Error(`no legal card for ${actor}`);
   if (isJokerCard(card)) {

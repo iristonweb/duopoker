@@ -40,19 +40,19 @@ import { holdemShowdownHandLines } from '../lib/holdem-hand-rank';
 import { holdemSidePotAmounts, holdemSidePotSummary } from '../lib/holdem-side-pots';
 import { PwaInstallHint } from '../components/PwaInstallHint';
 import {
+  amountToCall,
   buildTableLeaderboard,
   computeHeroBustState,
+  computeRaiseBounds,
   formatTableError,
+  halfPotRaise,
+  isHeroActionTurn,
   leaderboardLeaders,
+  potSizedRaise,
+  sessionKettle,
   useTableChat
 } from '@duopoker/table-client';
 import { useTableLayoutMode } from '../hooks/useTableLayoutMode';
-
-const maxRoundBet = (s: SessionState) =>
-  s.players.reduce((m, p) => Math.max(m, s.playerRoundBet[p] ?? 0), 0);
-
-const amountToCall = (s: SessionState, uid: string) =>
-  Math.max(0, maxRoundBet(s) - (s.playerRoundBet[uid] ?? 0));
 
 export const Table = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -251,8 +251,17 @@ function TableSession() {
     [label, t]
   );
 
+  const formatDisplayBlind = useCallback(
+    (type: 'SB' | 'BB', amount: number) =>
+      type === 'SB'
+        ? t('table.postsBlindSB', { amount })
+        : t('table.postsBlindBB', { amount }),
+    [t]
+  );
+
   const viewSession =
-    useTableDisplayState(session, userId, formatDisplayAction, reduceMotion) ?? session;
+    useTableDisplayState(session, userId, formatDisplayAction, reduceMotion, formatDisplayBlind) ??
+    session;
 
   const activeId = useMemo(() => {
     if (!viewSession || viewSession.players.length === 0) return undefined;
@@ -392,22 +401,10 @@ function TableSession() {
     resumeTable
   ]);
 
-  const raiseBounds = useMemo(() => {
-    const s = viewSession ?? session;
-    if (!s || s.mode === 'JOKER' || !userId) {
-      return { minTotal: 0, maxTotal: 0, canRaise: false, need: 0, roundBet: 0 };
-    }
-    const roundBet = s.playerRoundBet[userId] ?? 0;
-    const need = amountToCall(s, userId);
-    const heroStack = s.stacks[userId] ?? 0;
-    const minIncrement = s.bigBlind;
-    const minTotal =
-      need > 0
-        ? roundBet + need + minIncrement
-        : Math.max(s.bigBlind, roundBet + minIncrement);
-    const maxTotal = roundBet + heroStack;
-    return { minTotal, maxTotal, canRaise: minTotal <= maxTotal, need, roundBet };
-  }, [session, viewSession, userId]);
+  const raiseBounds = useMemo(
+    () => computeRaiseBounds(session, userId),
+    [session, userId]
+  );
 
   useEffect(() => {
     if (!session || session.mode === 'JOKER') return;
@@ -565,13 +562,14 @@ function TableSession() {
   );
   const matchLeaderNames = session ? leaderboardLeaders(session).map(label).join(', ') : '';
 
-  const need = amountToCall(viewSession ?? session, userId);
-  const myTurn =
-    activeId === userId &&
-    viewSession.street !== 'LOBBY' &&
-    viewSession.street !== 'COMPLETE';
+  const need = amountToCall(session, userId);
+  const myTurn = isHeroActionTurn({
+    session,
+    heroId: userId,
+    displayActiveId: activeId
+  });
   const secondsLeft =
-    myTurn && !animationCatchUp && session.actionDeadlineAt
+    myTurn && session.actionDeadlineAt
       ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
       : null;
   const nextHandMsLeft =
@@ -605,48 +603,47 @@ function TableSession() {
     playersWithStackCount: playersWithStack.length
   });
   const { showBustedOverlay, showAllInRunoutBanner, heroSpectating } = bustState;
-  const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay;
+  const tuzovanieActive =
+    isJoker &&
+    session.handNumber === 1 &&
+    (session.joker?.tuzovanieLog?.length ?? 0) > 0 &&
+    session.street === 'LOBBY';
+  const waitingForPlayers = session.street === 'LOBBY' && !showBustedOverlay && !tuzovanieActive;
   const activeSecondsLeft =
     activeId &&
     !animationCatchUp &&
     session.actionDeadlineAt &&
-    viewSession.street !== 'LOBBY' &&
-    viewSession.street !== 'COMPLETE'
+    session.street !== 'LOBBY' &&
+    session.street !== 'COMPLETE'
       ? Math.max(0, Math.ceil((session.actionDeadlineAt - now) / 1000))
       : null;
 
-  const kettle =
-    session.pot +
-    Object.values(session.playerRoundBet ?? {}).reduce(
-      (s, v) => s + (typeof v === 'number' ? v : 0),
-      0
-    );
+  const kettle = sessionKettle(session);
   const { minTotal, maxTotal, canRaise, roundBet } = raiseBounds;
-  const halfPotRaise = Math.max(
-    minTotal,
-    need > 0 ? roundBet + need + Math.floor(kettle / 2) : roundBet + Math.floor(kettle / 2)
-  );
-  const potRaise = Math.max(minTotal, need > 0 ? roundBet + need + kettle : roundBet + kettle);
+  const halfPotRaiseAmt = Math.min(maxTotal, halfPotRaise(raiseBounds, kettle));
+  const potRaiseAmt = Math.min(maxTotal, potSizedRaise(raiseBounds, kettle));
   const holeCards = session.playerCards[userId] ?? [];
-  const viewKettle =
-    tableView.pot +
-    Object.values(tableView.playerRoundBet ?? {}).reduce(
-      (s, v) => s + (typeof v === 'number' ? v : 0),
-      0
-    );
+  const viewKettle = sessionKettle(tableView);
 
   const jokerBoardCards =
     tableView.mode !== 'JOKER'
       ? (tableView.communityCards ?? [])
       : tableView.street === 'TRICKS' && tableView.joker
         ? tableView.joker.currentTrick.map((p) => p.card)
-        : [];
+        : tableView.street === 'BIDDING' || tableView.street === 'TRUMP_CHOICE'
+          ? (tableView.communityCards ?? [])
+          : [];
   const jokerBoardKeys =
     tableView.mode === 'JOKER' && tableView.street === 'TRICKS' && tableView.joker
       ? tableView.joker.currentTrick.map(
           (p, i) =>
             `h${tableView.handNumber}-trick-${tableView.joker!.trickNumber}-${p.userId}-${i}`
         )
+      : tableView.mode === 'JOKER' &&
+          (tableView.street === 'BIDDING' || tableView.street === 'TRUMP_CHOICE')
+        ? (tableView.communityCards ?? []).map(
+            (c, i) => `h${tableView.handNumber}-trump-${c}-${i}`
+          )
       : tableView.mode !== 'JOKER'
         ? (tableView.communityCards ?? []).map((c, i) => `h${tableView.handNumber}-board-${c}-${i}`)
         : undefined;
@@ -779,8 +776,8 @@ function TableSession() {
         minTotal={minTotal}
         maxTotal={maxTotal}
         canRaise={canRaise}
-        halfPotRaise={Math.min(maxTotal, halfPotRaise)}
-        potRaise={Math.min(maxTotal, potRaise)}
+        halfPotRaise={halfPotRaiseAmt}
+        potRaise={potRaiseAmt}
         kettle={kettle}
         onFold={() => playerAction({ sessionId: sid, type: 'fold' })}
         onCheck={() => playerAction({ sessionId: sid, type: 'check' })}

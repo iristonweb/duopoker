@@ -250,6 +250,10 @@ test.describe('mobile table layout', () => {
     });
     await expect(page.getByTestId('game-table-shell')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('table-action-dock')).toBeVisible({ timeout: 15_000 });
+    // Fold / Check|Call appear when it is the hero's turn after display catch-up.
+    await expect(
+      page.getByTestId('table-action-check').or(page.getByTestId('table-action-call'))
+    ).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('mobile-immersive-table')).not.toBeVisible();
     await expect(page.getByTestId('table-orientation-gate')).not.toBeVisible();
     await expectNoHorizontalOverflow(page);

@@ -129,7 +129,9 @@ export function TableActionDock({
             <div className="min-w-0">
               {showActions ? (
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold/85 sm:text-sm">
-                  {t('table.yourAction', { amount: need })}
+                  {need === 0
+                    ? t('table.yourActionCheck')
+                    : t('table.yourAction', { amount: need })}
                   {secondsLeft !== null ? (
                     <span className="ml-1.5 font-mono normal-case tracking-normal text-subtle">
                       · {t('table.timeLeft', { seconds: secondsLeft, defaultValue: `${secondsLeft}s` })}
@@ -198,6 +200,7 @@ export function TableActionDock({
                     variant="secondary"
                     size="lg"
                     className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] shadow-[0_0_14px_rgba(74,222,128,0.12)] table-compact:px-2 table-compact:text-xs max-table-compact:min-h-12 max-table-compact:min-w-[5.5rem]"
+                    data-testid="table-action-check"
                     onClick={() => {
                       tableHaptic('medium');
                       onCheck();
@@ -210,6 +213,7 @@ export function TableActionDock({
                     variant="secondary"
                     size="lg"
                     className="min-h-11 w-full min-w-0 rounded-none border-0 border-r border-emerald/20 bg-emerald/[0.1] px-2 shadow-[0_0_14px_rgba(74,222,128,0.12)] table-compact:text-xs max-table-compact:min-h-12 max-table-compact:min-w-[5.5rem] max-table-compact:px-4"
+                    data-testid="table-action-call"
                     onClick={() => {
                       tableHaptic('medium');
                       onCall();

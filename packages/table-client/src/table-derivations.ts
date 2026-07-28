@@ -25,9 +25,11 @@ export const computeRaiseBounds = (session: SessionState | undefined, userId: st
   const roundBet = session.playerRoundBet[userId] ?? 0;
   const need = amountToCall(session, userId);
   const heroStack = session.stacks[userId] ?? 0;
-  const minIncrement = session.bigBlind;
+  const minIncrement = session.lastRaiseSize ?? session.bigBlind;
   const minTotal =
-    need > 0 ? roundBet + need + minIncrement : Math.max(session.bigBlind, roundBet + minIncrement);
+    need > 0
+      ? roundBet + need + minIncrement
+      : Math.max(session.bigBlind, roundBet + minIncrement);
   const maxTotal = roundBet + heroStack;
   return { minTotal, maxTotal, canRaise: minTotal <= maxTotal, need, roundBet };
 };
@@ -45,3 +47,25 @@ export const potSizedRaise = (bounds: RaiseBounds, kettle: number) =>
     bounds.minTotal,
     bounds.need > 0 ? bounds.roundBet + bounds.need + kettle : bounds.roundBet + kettle
   );
+
+export type HeroActionTurnInput = {
+  session: SessionState | undefined;
+  heroId: string | undefined;
+  /** Active player id from the animated display snapshot (viewSession). */
+  displayActiveId: string | undefined;
+};
+
+/** True when the server says it is hero's turn and display catch-up has finished. */
+export const isHeroActionTurn = ({
+  session,
+  heroId,
+  displayActiveId
+}: HeroActionTurnInput): boolean => {
+  if (!session || !heroId) return false;
+  if (session.street === 'LOBBY' || session.street === 'COMPLETE') return false;
+  if (session.players.length === 0) return false;
+  const serverActiveId = session.players[session.activePlayerIndex];
+  if (!serverActiveId || serverActiveId !== heroId) return false;
+  if (!displayActiveId || displayActiveId !== serverActiveId) return false;
+  return true;
+};

@@ -93,13 +93,17 @@ const dealHoleCards = (
   state.players.forEach((pid) => {
     playerCards[pid] = [];
   });
+  const n = state.players.length;
+  if (n === 0) return { playerCards, deck: d };
+  const start = (state.dealerIndex + 1) % n;
   for (let c = 0; c < count; c += 1) {
-    state.players.forEach((pid) => {
+    for (let i = 0; i < n; i += 1) {
+      const pid = state.players[(start + i) % n]!;
       if (d.length) {
         playerCards[pid] = [...(playerCards[pid] ?? []), d[0]!];
         d = d.slice(1);
       }
-    });
+    }
   }
   return { playerCards, deck: d };
 };

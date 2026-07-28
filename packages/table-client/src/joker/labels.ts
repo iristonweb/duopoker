@@ -1,4 +1,4 @@
-import type { Card, JokerHandState, Suit } from '@duopoker/shared-types/index';
+import type { Card, GameStreet, JokerHandState, Suit } from '@duopoker/shared-types/index';
 
 const SUIT_SYMBOLS: Record<Suit, string> = { S: '♠', H: '♥', D: '♦', C: '♣' };
 const RED_SUITS = new Set<Suit>(['H', 'D']);
@@ -48,8 +48,18 @@ export type JokerTrumpDisplay = {
 
 export const jokerTrumpDisplay = (
   joker: Pick<JokerHandState, 'trumpSuit' | 'trumpCard'>,
-  t: Translate
+  t: Translate,
+  street?: GameStreet
 ): JokerTrumpDisplay => {
+  if (street === 'TRUMP_CHOICE') {
+    const value = t('table.jokerTrumpChoosing');
+    return {
+      line: t('table.jokerTrump', { trump: value }),
+      value,
+      suit: null,
+      noTrump: false
+    };
+  }
   if (joker.trumpSuit) {
     const value = `${suitSymbol(joker.trumpSuit)} ${suitLabel(joker.trumpSuit, t)}`;
     return {

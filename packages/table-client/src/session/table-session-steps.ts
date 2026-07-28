@@ -74,6 +74,29 @@ export const sessionSnap = (session: SessionState): SessionSnap => {
   };
 };
 
+const appendPostBlindSteps = (
+  steps: TableSessionStep[],
+  session: SessionState,
+  formatBlind: (type: 'SB' | 'BB', amount: number) => string
+) => {
+  if (session.mode !== 'HOLDEM') return;
+  const bb = session.bigBlind ?? 0;
+  const posted = new Set<string>();
+  for (const uid of session.players) {
+    const bet = session.playerRoundBet?.[uid] ?? 0;
+    if (bet <= 0 || posted.has(uid)) continue;
+    const blindType: 'SB' | 'BB' = bet >= bb ? 'BB' : 'SB';
+    steps.push({
+      kind: 'postBlind',
+      userId: uid,
+      amount: bet,
+      blindType,
+      text: formatBlind(blindType, bet)
+    });
+    posted.add(uid);
+  }
+};
+
 export const buildTableSessionSteps = (
   prev: SessionSnap | null,
   session: SessionState,
@@ -93,6 +116,7 @@ export const buildTableSessionSteps = (
         steps.push({ kind: 'dealHole', userId: uid, cardIndex: i });
       }
     }
+    if (formatBlind) appendPostBlindSteps(steps, session, formatBlind);
     return steps;
   }
 
@@ -111,23 +135,7 @@ export const buildTableSessionSteps = (
       }
     }
 
-    if (session.mode === 'HOLDEM' && formatBlind) {
-      const bb = session.bigBlind ?? 0;
-      const posted = new Set<string>();
-      for (const uid of session.players) {
-        const bet = session.playerRoundBet?.[uid] ?? 0;
-        if (bet <= 0 || posted.has(uid)) continue;
-        const blindType: 'SB' | 'BB' = bet >= bb ? 'BB' : 'SB';
-        steps.push({
-          kind: 'postBlind',
-          userId: uid,
-          amount: bet,
-          blindType,
-          text: formatBlind(blindType, bet)
-        });
-        posted.add(uid);
-      }
-    }
+    if (formatBlind) appendPostBlindSteps(steps, session, formatBlind);
 
     return steps;
   }
@@ -255,6 +263,14 @@ export const initHandDisplay = (target: SessionState, heroId: string): DisplaySe
   } else if (heroId) {
     display.playerCards = { ...display.playerCards, [heroId]: [] };
   }
+  if (target.mode === 'HOLDEM') {
+    // Blinds animate via postBlind — start with empty round bets so catch-up isn't polluted.
+    display.pot = 0;
+    display.currentBet = 0;
+    display.playerRoundBet = Object.fromEntries(target.players.map((uid) => [uid, 0]));
+    // Hold turn until holes are dealt so the dock does not flash Check mid-shuffle.
+    display.activePlayerIndex = -1;
+  }
   return display;
 };
 
@@ -289,7 +305,7 @@ export const applyDisplayStep = (
         const hidden = (next.playerCards[uid] ?? []).filter((c) => String(c).startsWith('__')).length;
         return hidden >= expected;
       });
-      if (allDealt && next.street !== target.street) {
+      if (allDealt) {
         next.street = target.street;
         next.activePlayerIndex = target.activePlayerIndex;
         if (target.joker && next.joker) {
@@ -306,22 +322,28 @@ export const applyDisplayStep = (
       break;
     }
     case 'postBlind': {
+      // Do not move activePlayerIndex — blinds must not trip animationCatchUp / hide Check.
       next.playerRoundBet = { ...(next.playerRoundBet ?? {}), [step.userId]: step.amount };
-      next.activePlayerIndex = target.activePlayerIndex;
+      next.currentBet = Math.max(next.currentBet ?? 0, step.amount);
       break;
     }
     case 'action': {
       next.actionLog = [...(next.actionLog ?? []), step.action];
-      next.activePlayerIndex = target.activePlayerIndex;
       const logLen = next.actionLog.length;
       const targetLen = target.actionLog?.length ?? 0;
       if (logLen >= targetLen) {
+        next.activePlayerIndex = target.activePlayerIndex;
         next.stacks = { ...target.stacks };
         next.playerRoundBet = { ...(target.playerRoundBet ?? {}) };
         next.pot = target.pot;
         next.foldedPlayerIds = [...(target.foldedPlayerIds ?? [])];
         next.currentBet = target.currentBet;
       } else {
+        const nextActorId = target.actionLog![logLen]?.userId;
+        if (nextActorId) {
+          const idx = next.players.indexOf(nextActorId);
+          if (idx >= 0) next.activePlayerIndex = idx;
+        }
         const uid = step.action.userId;
         if (step.action.type === 'fold') {
           next.foldedPlayerIds = [...(next.foldedPlayerIds ?? []), uid].filter(
@@ -339,14 +361,37 @@ export const applyDisplayStep = (
       break;
     }
     case 'collectBets': {
+      const roundTotal = Object.values(next.playerRoundBet ?? {}).reduce((sum, v) => sum + (v ?? 0), 0);
+      next.pot = (next.pot ?? 0) + roundTotal;
       next.playerRoundBet = Object.fromEntries(next.players.map((uid) => [uid, 0]));
-      next.pot = target.pot;
-      next.street = target.street;
+      next.currentBet = 0;
+      // Do not jump to COMPLETE before board runout animates — keep prior street until settle.
+      if (target.street !== 'COMPLETE') {
+        next.street = target.street;
+        next.activePlayerIndex = target.activePlayerIndex;
+      } else {
+        const boardLen = target.communityCards?.length ?? 0;
+        const shown = next.communityCards?.length ?? 0;
+        if (boardLen === 0 || shown >= boardLen) {
+          next.street = 'COMPLETE';
+          next.pot = target.pot;
+          next.winners = target.winners ? [...target.winners] : undefined;
+          next.activePlayerIndex = target.activePlayerIndex;
+        }
+      }
       break;
     }
     case 'dealBoard': {
       const board = target.communityCards ?? [];
       next.communityCards = board.slice(0, step.cardIndex + 1);
+      const n = next.communityCards.length;
+      if (target.street === 'COMPLETE' || target.phase === 'SHOWDOWN') {
+        if (n >= 5) next.street = 'RIVER';
+        else if (n >= 4) next.street = 'TURN';
+        else if (n >= 3) next.street = 'FLOP';
+      } else if (target.street !== 'COMPLETE') {
+        next.street = target.street;
+      }
       break;
     }
     case 'jokerPlay':
@@ -364,11 +409,17 @@ export const applyDisplayStep = (
       break;
     case 'potPulse':
       next.stacks = { ...target.stacks };
-      next.pot = target.pot;
       if (target.street === 'COMPLETE') {
-        next.street = target.street;
-        next.winners = target.winners ? [...target.winners] : undefined;
-        next.playerRoundBet = Object.fromEntries(next.players.map((uid) => [uid, 0]));
+        const boardLen = target.communityCards?.length ?? 0;
+        const shown = next.communityCards?.length ?? 0;
+        if (boardLen === 0 || shown >= boardLen) {
+          next.pot = target.pot;
+          next.street = 'COMPLETE';
+          next.winners = target.winners ? [...target.winners] : undefined;
+          next.playerRoundBet = Object.fromEntries(next.players.map((uid) => [uid, 0]));
+        }
+      } else {
+        next.pot = target.pot;
       }
       break;
     default:

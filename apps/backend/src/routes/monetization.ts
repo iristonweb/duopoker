@@ -14,12 +14,12 @@ import {
 } from '@duopoker/shared-types';
 import { ORGANIZER_PLAN_PRICES_RUB, PLAN_LIMITS } from '../services/club-plans.js';
 import { handleYooKassaWebhook } from '../services/yookassa.js';
-import { config } from '../config.js';
+import { config, allowDevMockCheckout } from '../config.js';
 import { authGuard } from '../middleware/auth-guard.js';
 import { creditDailyBonus, recordPurchase } from '../services/monetization.js';
 import { prisma } from '../services/prisma.js';
 
-const bonusSchema = z.object({ userId: z.string(), amount: z.number().int().positive() });
+const bonusSchema = z.object({ userId: z.string() });
 const purchaseSchema = z.object({
   userId: z.string(),
   itemId: z.string(),
@@ -177,7 +177,7 @@ monetizationRouter.post('/checkout-session', async (req, res, next) => {
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     const uid = req.auth!.userId;
 
-    if (config.mockCheckout) {
+    if (allowDevMockCheckout()) {
       const url = `${config.publicWebUrl.replace(/\/$/, '')}/lobby?checkout=mock&success=1&tier=${encodeURIComponent(parsed.data.priceId)}`;
       return res.json({ id: 'mock_checkout_session', url });
     }
@@ -209,12 +209,15 @@ monetizationRouter.post('/bonus', async (req, res) => {
   if (parsed.data.userId !== req.auth?.userId) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  await creditDailyBonus(parsed.data.userId, parsed.data.amount);
-  return res.json({ ok: true });
+  const result = await creditDailyBonus(parsed.data.userId, config.dailyBonusChips);
+  if (!result.ok) {
+    return res.status(409).json({ error: result.error });
+  }
+  return res.json({ ok: true, amount: result.amount });
 });
 
 monetizationRouter.post('/purchase', async (req, res) => {
-  if (config.isProduction && !config.mockCheckout) {
+  if (!allowDevMockCheckout()) {
     return res.status(403).json({ error: 'Purchases must be confirmed via Stripe webhooks in production' });
   }
   const parsed = purchaseSchema.safeParse(req.body);

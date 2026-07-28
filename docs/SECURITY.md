@@ -31,16 +31,16 @@ Email и пароли: email в БД в открытом виде (нужен д
 
 | Проблема | Исправление |
 |---|---|
-| Клиент задавал сумму daily bonus | Фиксированный бонус 500 фишек, 1 раз в день, idempotent `paymentEvent` |
+| Клиент задавал сумму daily bonus | Фиксированный бонус 500 фишек, 1 раз в день, idempotent `paymentEvent` (**Hono + Express**) |
 | LiveKit token без auth | `POST /voice/token` требует JWT + членство в сессии |
-| Join в чужую игру | `assertCanJoinSession`: match assignment, club seat или rejoin |
+| Join в чужую игру | `assertCanJoinSession`: match assignment, club seat или rejoin (open-join только вне production) |
 | Предсказуемые session ID | UUID (`sess-{uuid}`, `club-{uuid}`) |
 | IDOR закрытия клубного стола | Проверка `tableId` + `clubId` перед close |
-| Email в публичном профиле | `GET /profile/:id` — без email (только `/me`) |
-| YooKassa webhook без проверки | Платёж верифицируется через API YooKassa перед активацией |
-| Mock Stripe/YooKassa в prod | `allowDevMockCheckout()` — только dev |
+| Email в публичном профиле | `GET /profile/:id` — без email (только owner) |
+| YooKassa webhook без проверки | Платёж верифицируется через API YooKassa перед активацией (**Hono + Express**) |
+| Mock Stripe/YooKassa в prod | `allowDevMockCheckout()` — только dev (**Hono + Express**) |
 | Socket impersonation | JWT обязателен в production; `userId` из payload игнорируется |
-| CORS reflect-any | Whitelist origins из `CORS_ORIGIN` + `PUBLIC_WEB_URL` |
+| CORS reflect-any | Whitelist origins из `CORS_ORIGIN` + `PUBLIC_WEB_URL` (localhost только вне production) |
 
 ## HTTP-заголовки
 
@@ -65,7 +65,7 @@ API (`security-headers` middleware) и статика (`vercel.json`):
 
 ## Rate limiting
 
-API: 120 req/min глобально, 20 req/min на `/auth/*`.
+API: 120 req/min globally, 20 req/min on `/auth/*`. Uses **Upstash Redis** when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set; otherwise process-local Map (not multi-instance safe).
 
 ## Чеклист деплоя Vercel
 
