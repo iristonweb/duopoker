@@ -11,14 +11,14 @@ const t = (key: string, opts?: Record<string, unknown>) => {
 describe('formatSeatActionShort', () => {
   it('maps chooseTrump to trump kind', () => {
     const withSuit = formatSeatActionShort(
-      { type: 'chooseTrump', userId: 'a', trumpSuit: 'H', at: 1 },
+      { sessionId: 's1', type: 'chooseTrump', userId: 'a', trumpSuit: 'H', at: 1 },
       t
     );
     expect(withSuit.kind).toBe('trump');
     expect(withSuit.label).toContain('♥');
 
     const noTrump = formatSeatActionShort(
-      { type: 'chooseTrump', userId: 'a', trumpSuit: null, at: 1 },
+      { sessionId: 's1', type: 'chooseTrump', userId: 'a', trumpSuit: null, at: 1 },
       t
     );
     expect(noTrump.kind).toBe('trump');
@@ -26,7 +26,7 @@ describe('formatSeatActionShort', () => {
   });
 
   it('keeps check distinct from trump', () => {
-    const check = formatSeatActionShort({ type: 'check', userId: 'a', at: 1 }, t);
+    const check = formatSeatActionShort({ sessionId: 's1', type: 'check', userId: 'a', at: 1 }, t);
     expect(check.kind).toBe('check');
   });
 });

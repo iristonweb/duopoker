@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PlayerAction, SessionState } from '@duopoker/shared-types/index';
+import type { DisplaySessionState, PlayerAction, SessionState } from '@duopoker/shared-types/index';
 import {
   applyDisplayStep,
   buildTableSessionSteps,
@@ -133,7 +133,7 @@ describe('applyDisplayStep — action active seat', () => {
       playerRoundBet: { hero: 10, villain: 10, utg: 10 },
       currentBet: 10
     });
-    let display = {
+    let display: DisplaySessionState = {
       ...structuredClone(target),
       actionLog: [] as PlayerAction[],
       activePlayerIndex: 2
@@ -179,9 +179,9 @@ describe('applyDisplayStep — all-in runout', () => {
       winnersShare: { hero: 150 },
       activePlayerIndex: 0
     });
-    let display = {
+    let display: DisplaySessionState = {
       ...structuredClone(target),
-      street: 'PREFLOP' as const,
+      street: 'PREFLOP',
       communityCards: [] as SessionState['communityCards'],
       pot: 0,
       playerRoundBet: { hero: 50, villain: 50, utg: 50 },
@@ -213,9 +213,9 @@ describe('applyDisplayStep — all-in runout', () => {
       pot: 30,
       activePlayerIndex: 0
     });
-    let display = {
+    let display: DisplaySessionState = {
       ...structuredClone(target),
-      street: 'PREFLOP' as const,
+      street: 'PREFLOP',
       communityCards: [] as SessionState['communityCards'],
       pot: 0,
       playerRoundBet: { hero: 10, villain: 10, utg: 10 },
@@ -293,7 +293,7 @@ describe('sessionSnap', () => {
       actionLog: [],
       communityCards: [],
       joker: { currentTrick: [{ userId: 'a', card: '7S' }] }
-    } as SessionState);
+    } as unknown as SessionState);
     expect(snap.jokerTrickLen).toBe(1);
     expect(snap.boardLen).toBe(1);
   });

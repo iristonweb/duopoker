@@ -389,7 +389,7 @@ export const applyDisplayStep = (
         if (n >= 5) next.street = 'RIVER';
         else if (n >= 4) next.street = 'TURN';
         else if (n >= 3) next.street = 'FLOP';
-      } else if (target.street !== 'COMPLETE') {
+      } else {
         next.street = target.street;
       }
       break;
