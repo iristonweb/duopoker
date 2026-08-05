@@ -10,6 +10,9 @@ const webServer = process.env.CI
         timeout: 120_000,
         env: {
           PORT: '4000',
+          DATABASE_URL: process.env.DATABASE_URL ?? '',
+          DIRECT_DATABASE_URL:
+            process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL ?? '',
           ALLOW_OPEN_JOIN: 'true',
           ALLOW_SOLO_QUEUE: 'true',
           JWT_SECRET: 'ci-jwt-secret-minimum-32-characters-long',

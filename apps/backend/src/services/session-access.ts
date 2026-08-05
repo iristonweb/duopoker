@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { canJoinPrivateSession, getPrivateTableBySessionId } from './private-table-auth.js';
+import { getSessionSnapshot } from './game-session.js';
 import { loadGameSnapshot } from './session-persistence.js';
 import { prisma } from './prisma.js';
 import { config } from '../config.js';
@@ -9,10 +10,8 @@ export const assertCanJoinSession = async (
   sessionId: string,
   userId: string
 ): Promise<{ ok: true } | { ok: false; reason: string }> => {
-  const snapshot = await loadGameSnapshot(sessionId);
-  if (snapshot?.players.includes(userId)) return { ok: true };
-
-  // Dev/E2E open-join escapes — never in production.
+  // Dev/E2E open-join escapes — never in production. Checked before DB so a
+  // transient Prisma failure cannot block ALLOW_OPEN_JOIN / e2e-* sessions.
   if (!config.isProduction) {
     if (sessionId.startsWith('e2e-') || process.env.ALLOW_OPEN_JOIN === 'true') {
       return { ok: true };
@@ -21,6 +20,14 @@ export const assertCanJoinSession = async (
       return { ok: true };
     }
   }
+
+  let snapshot: Awaited<ReturnType<typeof loadGameSnapshot>> = null;
+  try {
+    snapshot = await loadGameSnapshot(sessionId);
+  } catch {
+    snapshot = null;
+  }
+  if (snapshot?.players.includes(userId)) return { ok: true };
 
   const assignment = await prisma.matchAssignment.findUnique({ where: { userId } });
   if (assignment?.sessionId === sessionId) return { ok: true };
@@ -47,7 +54,12 @@ export const assertSeatedInSession = async (
   sessionId: string,
   userId: string
 ): Promise<{ ok: true } | { ok: false; reason: string }> => {
-  const snapshot = await loadGameSnapshot(sessionId);
+  let snapshot: Awaited<ReturnType<typeof getSessionSnapshot>> = null;
+  try {
+    snapshot = await getSessionSnapshot(sessionId);
+  } catch {
+    snapshot = null;
+  }
   if (!snapshot) return { ok: false, reason: 'SESSION_NOT_FOUND' };
   if (!snapshot.players.includes(userId)) return { ok: false, reason: 'NOT_SEATED' };
   return { ok: true };

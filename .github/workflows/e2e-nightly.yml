@@ -11,35 +11,8 @@ concurrency:
 
 jobs:
   full-joker-match:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      CI: 'true'
-      HUSKY: '0'
-      E2E_FULL_JOKER_MATCH: '1'
-      E2E_API_URL: http://127.0.0.1:4000
-      ALLOW_OPEN_JOIN: 'true'
-      ALLOW_SOLO_QUEUE: 'true'
-      JWT_SECRET: ci-jwt-secret-minimum-32-characters-long
-      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-min-32-chars-long
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @duopoker/game-engine build
-      - run: pnpm --filter @duopoker/shared-types build
-      - run: pnpm --filter @duopoker/backend build
-
-      - uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: stable
-
-      - name: Install Playwright system dependencies
-        run: pnpm exec playwright install-deps chrome
-
-      - name: Socket E2E — full 24-hand Joker match
-        run: pnpm exec playwright test tests/game.e2e.spec.ts -g "full 24-hand"
+    uses: ./.github/workflows/reusable-socket-e2e.yml
+    with:
+      playwright_args: tests/game.e2e.spec.ts -g "full 24-hand"
+      timeout_minutes: 45
+      full_joker_match: true

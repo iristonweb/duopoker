@@ -1,0 +1,73 @@
+name: Reusable Socket E2E
+
+on:
+  workflow_call:
+    inputs:
+      playwright_args:
+        description: Arguments passed to `pnpm exec playwright test`
+        required: true
+        type: string
+      timeout_minutes:
+        description: Job timeout in minutes
+        required: false
+        type: number
+        default: 20
+      full_joker_match:
+        description: Set E2E_FULL_JOKER_MATCH=1 for the full 24-hand socket match
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  socket-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    env:
+      CI: 'true'
+      HUSKY: '0'
+      DATABASE_URL: postgresql://duopoker:duopoker@localhost:5432/duopoker
+      DIRECT_DATABASE_URL: postgresql://duopoker:duopoker@localhost:5432/duopoker
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      ALLOW_OPEN_JOIN: 'true'
+      ALLOW_SOLO_QUEUE: 'true'
+      JWT_SECRET: ci-jwt-secret-minimum-32-characters-long
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-min-32-chars-long
+      E2E_API_URL: http://127.0.0.1:4000
+      E2E_FULL_JOKER_MATCH: ${{ inputs.full_joker_match && '1' || '' }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: duopoker
+          POSTGRES_PASSWORD: duopoker
+          POSTGRES_DB: duopoker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U duopoker -d duopoker"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @duopoker/db-schema build
+      - run: pnpm --filter @duopoker/db-schema exec prisma migrate deploy --schema prisma/schema.prisma
+      - run: pnpm --filter @duopoker/game-engine build
+      - run: pnpm --filter @duopoker/shared-types build
+      - run: pnpm --filter @duopoker/backend build
+
+      - uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Install Playwright system dependencies
+        run: pnpm exec playwright install-deps chrome
+
+      - name: Playwright E2E (Socket.IO path)
+        run: pnpm exec playwright test ${{ inputs.playwright_args }}

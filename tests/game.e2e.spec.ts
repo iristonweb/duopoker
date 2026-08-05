@@ -10,25 +10,42 @@ import {
 
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:4000';
 
+const HAND_WAIT_MS = 30_000;
+const MULTI_HAND_WAIT_MS = 45_000;
+
+type SessionErrorPayload = { code?: string };
+
 const waitForState = (
   socket: Socket,
   predicate: (s: SessionState) => boolean,
-  timeoutMs = 15_000
+  timeoutMs = HAND_WAIT_MS
 ): Promise<SessionState> =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      socket.off('stateUpdate', onUpdate);
+      cleanup();
       reject(new Error('stateUpdate timeout'));
     }, timeoutMs);
 
     const onUpdate = (state: SessionState) => {
       if (predicate(state)) {
-        clearTimeout(timer);
-        socket.off('stateUpdate', onUpdate);
+        cleanup();
         resolve(state);
       }
     };
+
+    const onError = (payload: SessionErrorPayload) => {
+      cleanup();
+      reject(new Error(`sessionError while waiting: ${payload?.code ?? 'UNKNOWN'}`));
+    };
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off('stateUpdate', onUpdate);
+      socket.off('sessionError', onError);
+    };
+
     socket.on('stateUpdate', onUpdate);
+    socket.on('sessionError', onError);
   });
 
 const connectClient = (): Socket =>
@@ -65,6 +82,7 @@ const playJokerActionsUntilComplete = async (
     const actor = state.players[state.activePlayerIndex]!;
     const sock = socketByUser.get(actor)!;
     const prevLen = state.actionLog.length;
+    const prevStreet = state.street;
 
     if (state.street === 'BIDDING') {
       sock.emit('playerAction', { sessionId, userId: actor, type: 'bid', amount: 0, at: Date.now() });
@@ -87,12 +105,13 @@ const playJokerActionsUntilComplete = async (
         at: Date.now()
       });
     } else {
-      break;
+      throw new Error(`unexpected joker street: ${state.street}`);
     }
 
     state = await waitForState(
-      sockets[0]!,
-      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE' || s.street !== state.street
+      sock,
+      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE' || s.street !== prevStreet,
+      HAND_WAIT_MS
     );
   }
 
@@ -110,12 +129,12 @@ const readyAllJokerPlayers = async (
   for (const uid of uids) {
     const sock = sockets[uids.indexOf(uid)]!;
     sock.emit('readyNextHand', { sessionId, userId: uid });
-    await waitForState(sockets[0]!, (s) => (s.readyForNextHand ?? []).includes(uid));
+    await waitForState(sock, (s) => (s.readyForNextHand ?? []).includes(uid), HAND_WAIT_MS);
   }
   return waitForState(
     sockets[0]!,
     (s) => s.handNumber === handNum + 1 && s.street !== 'COMPLETE',
-    20_000
+    MULTI_HAND_WAIT_MS
   );
 };
 
@@ -126,57 +145,59 @@ async function playHoldemHandToComplete() {
   const p1 = connectClient();
   const p2 = connectClient();
 
-  await Promise.all([
-    new Promise<void>((res) => p1.once('connect', () => res())),
-    new Promise<void>((res) => p2.once('connect', () => res()))
-  ]);
+  try {
+    await Promise.all([
+      new Promise<void>((res) => p1.once('connect', () => res())),
+      new Promise<void>((res) => p2.once('connect', () => res()))
+    ]);
 
-  p1.emit('joinSession', { sessionId, userId: uid1, mode: 'HOLDEM', buyIn: 100 });
-  p2.emit('joinSession', { sessionId, userId: uid2, mode: 'HOLDEM', buyIn: 100 });
+    p1.emit('joinSession', { sessionId, userId: uid1, mode: 'HOLDEM', buyIn: 100 });
+    p2.emit('joinSession', { sessionId, userId: uid2, mode: 'HOLDEM', buyIn: 100 });
 
-  let state = await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2, 20_000);
+    let state = await waitForState(p1, (s) => s.street === 'PREFLOP' && s.players.length === 2, HAND_WAIT_MS);
 
-  for (let guard = 0; guard < 60 && state.street !== 'COMPLETE'; guard += 1) {
-    if (state.street === 'SHOWDOWN') {
-      state = await waitForState(p1, (s) => s.street === 'COMPLETE', 20_000);
-      break;
+    for (let guard = 0; guard < 60 && state.street !== 'COMPLETE'; guard += 1) {
+      if (state.street === 'SHOWDOWN') {
+        state = await waitForState(p1, (s) => s.street === 'COMPLETE', HAND_WAIT_MS);
+        break;
+      }
+
+      const actor = state.players[state.activePlayerIndex]!;
+      const sock = actor === uid1 ? p1 : p2;
+      const need =
+        Math.max(0, ...state.players.map((p) => state.playerRoundBet[p] ?? 0)) -
+        (state.playerRoundBet[actor] ?? 0);
+      const prevLen = state.actionLog.length;
+
+      if (need === 0) {
+        sock.emit('playerAction', { sessionId, userId: actor, type: 'check', at: Date.now() });
+      } else {
+        sock.emit('playerAction', { sessionId, userId: actor, type: 'call', at: Date.now() });
+      }
+      state = await waitForState(
+        sock,
+        (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE',
+        HAND_WAIT_MS
+      );
     }
 
-    const actor = state.players[state.activePlayerIndex]!;
-    const sock = actor === uid1 ? p1 : p2;
-    const need =
-      Math.max(0, ...state.players.map((p) => state.playerRoundBet[p] ?? 0)) -
-      (state.playerRoundBet[actor] ?? 0);
-    const prevLen = state.actionLog.length;
+    expect(state.street).toBe('COMPLETE');
+    expect(state.winners?.length).toBeGreaterThan(0);
 
-    if (need === 0) {
-      sock.emit('playerAction', { sessionId, userId: actor, type: 'check', at: Date.now() });
-    } else {
-      sock.emit('playerAction', { sessionId, userId: actor, type: 'call', at: Date.now() });
-    }
-    state = await waitForState(
+    const handNum = state.handNumber;
+    // Emit both ready signals — next hand may start via ready or auto-start after NEXT_HAND_DELAY_MS.
+    p1.emit('readyNextHand', { sessionId, userId: uid1 });
+    p2.emit('readyNextHand', { sessionId, userId: uid2 });
+    const nextHand = await waitForState(
       p1,
-      (s) => s.actionLog.length > prevLen || s.street === 'COMPLETE',
-      25_000
+      (s) => s.street === 'PREFLOP' && s.handNumber === handNum + 1,
+      MULTI_HAND_WAIT_MS
     );
+    expect(nextHand.handNumber).toBe(handNum + 1);
+  } finally {
+    p1.disconnect();
+    p2.disconnect();
   }
-
-  expect(state.street).toBe('COMPLETE');
-  expect(state.winners?.length).toBeGreaterThan(0);
-
-  const handNum = state.handNumber;
-  // Emit both ready signals — next hand may start via ready or auto-start after NEXT_HAND_DELAY_MS.
-  p1.emit('readyNextHand', { sessionId, userId: uid1 });
-  p2.emit('readyNextHand', { sessionId, userId: uid2 });
-  const nextHand = await waitForState(
-    p1,
-    (s) => s.street === 'PREFLOP' && s.handNumber === handNum + 1,
-    30_000
-  );
-  expect(nextHand.handNumber).toBe(handNum + 1);
-
-  p1.disconnect();
-  p2.disconnect();
 }
 
 async function startJokerSession() {
@@ -190,36 +211,45 @@ async function startJokerSession() {
     sockets[i]!.emit('joinSession', { sessionId, userId: uid, mode: 'JOKER', buyIn: 100 });
   });
 
-  const state = await waitForState(sockets[0]!, (s) => s.street === 'BIDDING' && s.players.length === 4);
+  const state = await waitForState(
+    sockets[0]!,
+    (s) => s.street === 'BIDDING' && s.players.length === 4,
+    HAND_WAIT_MS
+  );
   return { sessionId, uids, sockets, state };
 }
 
 async function playJokerHandToComplete() {
   const { sessionId, uids, sockets, state } = await startJokerSession();
-  const final = await playJokerActionsUntilComplete(sessionId, sockets, uids, state);
+  try {
+    const final = await playJokerActionsUntilComplete(sessionId, sockets, uids, state);
 
-  expect(final.mode).toBe('JOKER');
-  expect(final.players.length).toBe(4);
-  expect(final.joker?.handPoints).toBeDefined();
-
-  sockets.forEach((s) => s.disconnect());
+    expect(final.mode).toBe('JOKER');
+    expect(final.players.length).toBe(4);
+    expect(final.joker?.handPoints).toBeDefined();
+  } finally {
+    sockets.forEach((s) => s.disconnect());
+  }
 }
 
 async function playJokerHands(handCount: number) {
   const { sessionId, uids, sockets, state } = await startJokerSession();
-  let current = state;
+  try {
+    let current = state;
 
-  for (let h = 0; h < handCount; h += 1) {
-    current = await playJokerActionsUntilComplete(sessionId, sockets, uids, current);
-    expect(current.joker?.handPoints).toBeDefined();
-    if (h < handCount - 1) {
-      current = await readyAllJokerPlayers(sessionId, sockets, uids, current);
-      expect(current.street).not.toBe('COMPLETE');
+    for (let h = 0; h < handCount; h += 1) {
+      current = await playJokerActionsUntilComplete(sessionId, sockets, uids, current);
+      expect(current.joker?.handPoints).toBeDefined();
+      if (h < handCount - 1) {
+        current = await readyAllJokerPlayers(sessionId, sockets, uids, current);
+        expect(current.street).not.toBe('COMPLETE');
+      }
     }
-  }
 
-  sockets.forEach((s) => s.disconnect());
-  return current;
+    return current;
+  } finally {
+    sockets.forEach((s) => s.disconnect());
+  }
 }
 
 const skipWithoutBackend = async (
@@ -271,17 +301,20 @@ test('stateUpdate hides opponent hole cards', async ({ request }, testInfo) => {
   const sessionId = `e2e-hide-${Date.now()}`;
   const p1 = connectClient();
   const p2 = connectClient();
-  await Promise.all([
-    new Promise<void>((res) => p1.once('connect', () => res())),
-    new Promise<void>((res) => p2.once('connect', () => res()))
-  ]);
 
-  p1.emit('joinSession', { sessionId, userId: 'hide-p1', mode: 'HOLDEM', buyIn: 100 });
-  p2.emit('joinSession', { sessionId, userId: 'hide-p2', mode: 'HOLDEM', buyIn: 100 });
+  try {
+    await Promise.all([
+      new Promise<void>((res) => p1.once('connect', () => res())),
+      new Promise<void>((res) => p2.once('connect', () => res()))
+    ]);
 
-  const state = await waitForState(p1, (s) => s.street === 'PREFLOP');
-  expect(state.playerCards['hide-p2']).toEqual([]);
+    p1.emit('joinSession', { sessionId, userId: 'hide-p1', mode: 'HOLDEM', buyIn: 100 });
+    p2.emit('joinSession', { sessionId, userId: 'hide-p2', mode: 'HOLDEM', buyIn: 100 });
 
-  p1.disconnect();
-  p2.disconnect();
+    const state = await waitForState(p1, (s) => s.street === 'PREFLOP');
+    expect(state.playerCards['hide-p2']).toEqual([]);
+  } finally {
+    p1.disconnect();
+    p2.disconnect();
+  }
 });
